@@ -1,0 +1,1046 @@
+# -*- coding: utf-8 -*-
+
+from mpi4py import MPI
+import numpy as np
+import sys, os
+
+# runko + auxiliary modules
+import pytools  # runko python tools
+
+
+# problem specific modules
+from init_problem import Configuration_Turbulence as Configuration
+from init_problem import velocity_profile
+from init_problem import density_profile
+from init_problem import weigth_profile
+
+from qed_toolset import QEDToolset
+
+#--------------------------------------------------
+live_plot = True
+
+#--------------------------------------------------
+rnd_seed_default = 1
+np.random.seed(rnd_seed_default)  # global simulation seed
+
+#--------------------------------------------------
+# Field initialization (guide field)
+def insert_em_fields(grid, conf, do_initialization=True):
+
+    for tile in pytools.tiles_all(grid):
+        yee = tile.get_yee(0)
+
+        ii,jj,kk = tile.index if conf.threeD else (*tile.index, 0)
+
+
+        # insert values into Yee lattices; includes halos from -3 to n+3
+        if do_initialization:
+            for n in range(-3, conf.NzMesh + 3):
+                for m in range(-3, conf.NyMesh + 3):
+                    for l in range(-3, conf.NxMesh + 3):
+
+                        if not(conf.use_maxwell_split): # if no static component
+
+                            # get global coordinates
+                            #iglob, jglob, kglob = pytools.ind2loc((ii, jj, kk), (l, m, n), conf)
+                            #r = np.sqrt(iglob ** 2 + jglob ** 2 + kglob ** 2)
+
+                            yee.ex[l,m,n] = 0.0
+                            yee.ey[l,m,n] = 0.0
+                            yee.ez[l,m,n] = 0.0
+
+                            yee.bx[l,m,n] = 0.0
+                            yee.by[l,m,n] = 0.0 
+                            yee.bz[l,m,n] = 0.0 #conf.binit
+
+                        elif conf.use_maxwell_split: # static component
+                            1
+                            # TODO
+    return
+        
+#-------------------------------------------------- 
+#-------------------------------------------------- 
+#-------------------------------------------------- 
+if __name__ == "__main__":
+
+
+    # --------------------------------------------------
+    # initialize auxiliary tools
+    sch  = pytools.Scheduler() # Set MPI aware task scheduler
+    args = pytools.parse_args() # parse command line arguments
+    tplt = pytools.TerminalPlot(32, 32) # terminal plotting tool
+
+
+    # create conf object with simulation parameters based on them
+    conf = Configuration(args.conf_filename, do_print=sch.is_master)
+    sch.conf = conf # remember to update scheduler
+
+    if conf.mpi_task_mode: sch.switch_to_task_mode()
+
+    # --------------------------------------------------
+    # Timer for profiling
+    timer = pytools.Timer()
+    timer.start("total")
+    timer.start("init")
+    timer.do_print = sch.is_example_worker
+    timer.verbose = 0  # 0 normal; 1 - debug mode
+
+    sch.timer = timer # remember to update scheduler
+
+
+    #--------------------------------------------------
+    toolset = QEDToolset(conf)
+
+    # --------------------------------------------------
+    # create output folders
+    if sch.is_master: pytools.create_output_folders(conf)
+
+    # --------------------------------------------------
+    # load runko
+    if conf.threeD:
+        # 3D modules
+        import pycorgi.threeD as pycorgi      # corgi ++ bindings
+        import pyrunko.pic.threeD as pypic    # pic c++ bindings
+        import pyrunko.fields.threeD as pyfld # fld c++ bindings
+    elif conf.twoD:
+        # 2D modules
+        import pycorgi.twoD as pycorgi  # corgi ++ bindings
+        import pyrunko.pic.twoD as pypic  # runko pic c++ bindings
+        import pyrunko.fields.twoD as pyfld  # runko fld c++ bindings
+
+    import pyrunko.qed as pyqed           # qed c++ bindings
+
+
+    # --------------------------------------------------
+    # setup grid
+    grid = pycorgi.Grid(conf.Nx, conf.Ny, conf.Nz)
+    grid.set_grid_lims(conf.xmin, conf.xmax, conf.ymin, conf.ymax, conf.zmin, conf.zmax)
+    sch.grid = grid # remember to update scheduler
+
+
+    # compute initial mpi ranks using Hilbert's curve partitioning
+    if conf.use_injector:
+        pytools.load_catepillar_track_mpi(grid, conf.mpi_track, conf) 
+    else:
+        #pytools.load_mpi_y_strides(grid, conf) #equal x stripes
+
+        #if grid.size() > 24: # big run
+        #    pytools.balance_mpi_3D_rootmem(grid, 4) # advanced Hilbert curve optimization (leave 4 first ranks empty)
+        #else:
+        pytools.balance_mpi(grid, conf) #Hilbert curve optimization 
+
+
+    # load pic tiles into grid
+    pytools.pic.load_tiles(grid, conf)
+    #load_damping_tiles(grid, conf)
+
+    # --------------------------------------------------
+    # simulation restart
+
+    # get current restart file status
+    io_stat = pytools.check_for_restart(conf)
+
+
+    # no restart file; initialize simulation
+    if io_stat["do_initialization"]:
+        if sch.is_master: print("initializing simulation...")
+        lap = 0
+
+        rseed = MPI.COMM_WORLD.Get_rank()
+        np.random.seed(rseed + rnd_seed_default)  # sync rnd generator seed for different mpi ranks
+
+        # injecting plasma particles
+        # NOTE: we still need to call injector to set the container types; density_profile ensure = 0
+        if not(conf.use_injector): 
+            prtcl_stat = pytools.pic.inject(grid, velocity_profile, density_profile, conf)
+            if sch.is_example_worker: 
+                print("injected:")
+                print("     e- prtcls: {}".format(prtcl_stat[0]))
+                print("     e+ prtcls: {}".format(prtcl_stat[1]))
+
+        # inserting em grid
+        insert_em_fields(grid, conf, do_initialization=True)
+
+        # save a snapshot of the state to disk
+        pytools.save_mpi_grid_to_disk(conf.outdir, 0, grid, conf)
+
+    else:
+        if sch.is_master:
+            print("restarting simulation from lap {}...".format(io_stat["lap"]))
+
+        # insert damping reference values
+        insert_em_fields(grid, conf, do_initialization=False)
+
+        # read restart files
+        pyfld.read_yee(grid, io_stat["read_lap"], io_stat["read_dir"])
+        pypic.read_particles(grid, io_stat["read_lap"], io_stat["read_dir"])
+
+        # set particle types
+        for tile in pytools.tiles_all(grid):
+            for ispcs in range(conf.Nspecies):
+                container = tile.get_container(ispcs)
+                container.type = conf.prtcl_types[ispcs] # name container
+
+        # step one step ahead
+        lap = io_stat["lap"] + 1
+
+    # --------------------------------------------------
+    # static load balancing setup; communicate neighborhood info once
+
+    if sch.is_master: print("load balancing grid..."); sys.stdout.flush()
+
+
+    # update boundaries
+    grid.analyze_boundaries()
+    grid.send_tiles()
+    grid.recv_tiles()
+    MPI.COMM_WORLD.barrier()
+
+    if sch.is_master: print("loading virtual tiles..."); sys.stdout.flush()
+
+    # load virtual mpi halo tiles
+    pytools.pic.load_virtual_tiles(grid, conf)
+
+
+    # --------------------------------------------------
+    # load physics solvers
+
+    if sch.is_master: print("loading solvers..."); sys.stdout.flush()
+
+
+    sch.fldpropE = pyfld.FDTD2_pml()
+    sch.fldpropB = pyfld.FDTD2_pml()
+
+    #sch.fldpropE = pyfld.FDTD2()
+    #sch.fldpropB = pyfld.FDTD2()
+
+    #sch.fldpropE = pyfld.FDTD4()
+    #sch.fldpropB = pyfld.FDTD4()
+
+    # enhance numerical speed of light slightly to suppress numerical Cherenkov instability
+    sch.fldpropE.corr = conf.c_corr
+    sch.fldpropB.corr = conf.c_corr
+
+    # --------------------------------------------------
+    # set PML absorption region into the pusher
+ 
+    # setup perfectly matching layer; vacuum outside boundaries
+    for prop in [ sch.fldpropE, sch.fldpropB]:
+        prop.cenx = conf.Lx//2
+        prop.ceny = conf.Ly//2 
+        prop.cenz = 0
+
+        prop.radx = conf.Lx//2 # box x half length
+        prop.rady = conf.Ly//2 # box y half length
+        prop.radz = 1;        # box z half length
+
+        prop.norm_abs = conf.cfl/3.0 # PML coefficient
+        prop.rad_lim = 0.80 # PML sphere damping radius
+
+
+    # --------------------------------------------------
+    #sch.pusher = pypic.BorisPusher()
+    #sch.pusher = pypic.VayPusher()
+    sch.pusher = pypic.HigueraCaryPusher()
+    #sch.pusher  = pypic.rGCAPusher()
+
+    #if conf.gammarad > 0:
+    #    sch.pusher   = pypic.BorisDragPusher()
+    #    sch.pusher.drag = conf.drag_amplitude
+    #    sch.pusher.temp = 0.0
+
+    sch.pusherx= pypic.PhotonPusher() # photon pusher
+
+    # background field from external pusher components
+    if conf.use_maxwell_split:
+        sch.pusher.bx_ext = conf.bx_ext 
+        sch.pusher.by_ext = conf.by_ext
+        sch.pusher.bz_ext = conf.bz_ext
+
+        sch.pusher.ex_ext = conf.ex_ext 
+        sch.pusher.ey_ext = conf.ey_ext
+        sch.pusher.ez_ext = conf.ez_ext
+
+
+    sch.fintp = pypic.LinearInterpolator()
+    #sch.fintp = pypic.QuadraticInterpolator() #2nd order quadratic
+    #sch.fintp = pypic.CubicInterpolator() #3rd order cubic 3d
+    #sch.fintp = pypic.QuarticInterpolator() #4th order quartic; 3d
+
+    sch.currint = pypic.ZigZag()
+    #sch.currint = pypic.ZigZag_2nd()
+    #sch.currint = pypic.ZigZag_3rd()
+    #sch.currint = pypic.ZigZag_4th()
+    #sch.currint = pypic.Esikerpov_2nd() # 3d
+    #sch.currint = pypic.Esikerpov_4th() # 3d
+
+    sch.flt = pyfld.Binomial2(conf.NxMesh, conf.NyMesh, conf.NzMesh)
+
+
+    # QED
+    mc = pyqed.threeD.Pairing()
+    mc.prob_norm = 1/(conf.N_time*conf.N_wgt*conf.N_qdt) # units of [per prtcl per time]
+
+    # histogram edges of leaking photons
+    mc.update_hist_lims(toolset.xxlims[0], toolset.xxlims[1], toolset.Nhist)
+
+    a = pyqed.PhotAnn("ph", "ph")
+    b = pyqed.PairAnn("e-", "e+")
+    c = pyqed.PairAnn("e+", "e-")
+    d = pyqed.Compton("ph", "e-")
+    e = pyqed.Compton("ph", "e+")
+    f = pyqed.Compton("e-", "ph")
+    g = pyqed.Compton("e+", "ph")
+
+    mc.add_interaction(a) # ON                      # phot-ann
+    mc.add_interaction(b) # ON                      # pair-ann
+    mc.add_interaction(c) # off for double counting # pair-ann
+    mc.add_interaction(d) # ON
+    mc.add_interaction(e) # ON
+    mc.add_interaction(f) # off for double counting
+    mc.add_interaction(g) # off for double counting
+
+
+    # --------------------------------------------------
+    # I/O objects
+    if sch.is_master: print("loading IO objects..."); sys.stdout.flush()
+
+    # quick field snapshots
+    #fld_writer = pyfld.MasterFieldsWriter(
+    fld_writer = pyfld.FieldsWriter(
+        conf.outdir,
+        conf.Nx,
+        conf.NxMesh,
+        conf.Ny,
+        conf.NyMesh,
+        conf.Nz,
+        conf.NzMesh,
+        conf.stride,
+    )
+
+
+    # test particles; only works with no injector (id's are messed up when coming out from injector)
+    prtcl_writers = []
+
+    #for ispc in [0]: #electrons
+    #for ispc in [0, 1, 2]: #electrons & positrons
+    #    mpi_comm_size = grid.size() if not(conf.mpi_task_mode) else grid.size() - 1
+    #    n_local_tiles = int(conf.Nx*conf.Ny*conf.Nz/mpi_comm_size)
+    #    #print("average n_local_tiles:", n_local_tiles, " / ", mpi_comm_size)
+
+    #    prtcl_writer = pypic.TestPrtclWriter(
+    #            conf.outdir,
+    #            conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh,
+    #            conf.ppc,
+    #            n_local_tiles, #len(grid.get_local_tiles()),
+    #            conf.n_test_prtcls,)
+    #    prtcl_writer.ispc = ispc
+    #    prtcl_writers.append(prtcl_writer)
+
+
+    #mom_writer = pypic.MasterPicMomentsWriter(
+    mom_writer = pypic.PicMomentsWriter(
+        conf.outdir,
+        conf.Nx,
+        conf.NxMesh,
+        conf.Ny,
+        conf.NyMesh,
+        conf.Nz,
+        conf.NzMesh,
+        conf.stride_mom,
+    )
+
+    # 3D box peripherals
+    if conf.threeD:
+        slice_xy_writer = pyfld.FieldSliceWriter( conf.outdir, 
+                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, 1, 
+                0, 1)
+        slice_xz_writer = pyfld.FieldSliceWriter( conf.outdir, 
+                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, 1, 
+                1, 1)
+        slice_yz_writer = pyfld.FieldSliceWriter( conf.outdir, 
+                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, 1, 
+                2, 1)
+
+    # --------------------------------------------------
+    #star = pyfld.Conductor()
+    star = pypic.Star()
+    star.radius = conf.Rstar 
+    star.period = conf.period  
+    star.B0     = conf.binit*conf.Rstar**3  # TODO normalization here?
+    star.chi    = np.deg2rad(0.0)       # magnetic inclination
+    star.phase  = 0.0
+
+    star.delta  = 2 # in units of cells; smoothing function sharpness
+
+    star.Nx = conf.Lx
+    star.Ny = conf.Ly
+    star.Nz = conf.Lz
+    
+    # transverse polar cap smoothing (g(x) function)
+    star.radius_pc = conf.Rpc
+    star.delta_pc  = 2
+
+    if conf.twoD:
+        star.cenx   = conf.Lx//2 #- 0.5
+        star.ceny   = -conf.Rstar + conf.Ratmos
+        star.cenz   = 0 
+    elif conf.threeD:
+        star.cenx   = conf.Lx//2 #- 0.5
+        star.ceny   = 0
+        star.cenz   = -conf.Rstar + conf.Ratmos
+        sys.exit() # TODO
+
+    sch.lwall = star # add to scheduler
+
+    if sch.is_master:
+        phase = 0.0 #global rotator phase
+        Omega = 2.0*np.pi/conf.period    
+        RLC = 1.0/Omega
+
+        print('P:    ', star.period)
+        print('Omega:', Omega)
+        print('R_*:  ', star.radius)
+        print('R_LC: ', 1.0/Omega)
+        print('chi:  ', np.rad2deg(star.chi))
+
+        bstar = star.B0*star.radius**(-3.0)
+        print('B_*   ', bstar)
+        print('B_LC  ', bstar*(RLC/star.radius)**(-3.0))
+
+
+    # induce initial magnetic and electric field from the star
+    for tile in pytools.tiles_all(grid):
+        star.insert_em(tile)
+
+
+    # --------------------------------------------------
+    # --------------------------------------------------
+    # --------------------------------------------------
+    # end of initialization
+    timer.stop("init")
+    timer.stats("init")
+
+    if sch.is_master: print('init: starting simulation...'); sys.stdout.flush()
+
+
+    ##################################################
+    # simulation time step loop
+
+    # simulation loop
+    time = lap * (conf.cfl / conf.c_omp)
+    for lap in range(lap, conf.Nt + 1):
+
+        # --------------------------------------------------
+        # QED interaction loop
+        if conf.qed_mode and lap % conf.qed_step == 0:
+            timer.start_comp("ph_inj")
+            if conf.zeta_xinj1 > 0 and conf.lum_ph1 > 0:
+                for tile in pytools.tiles_local(grid):
+                    mc.inject_photons(tile, conf.kTbb1, conf.wph_inj1, conf.Nph_inj1 )
+
+            if conf.zeta_xinj2 > 0 and conf.lum_ph2 > 0:
+                for tile in pytools.tiles_local(grid):
+                    mc.inject_photons(tile, conf.kTbb2, conf.wph_inj2, conf.Nph_inj2 )
+            timer.stop_comp("ph_inj")
+
+            #timer.start_comp("ep_inj")
+            #for tile in pytools.tiles_local(grid):
+            #    if conf.zeta_pinj > 0 and conf.lum_ep > 0:
+            #        mc.inject_plaw_pairs(tile, conf.pslope, conf.pmin, conf.pmax, conf.wep_inj, conf.Nep_inj )
+            #timer.stop_comp("ep_inj")
+
+            #--------------------------------------------------
+            timer.start_comp("qed")
+            for tile in pytools.tiles_local(grid):
+                i,j,k = pytools.get_index(tile, conf)
+                mc.solve_mc(tile)
+            timer.stop_comp("qed")
+
+            #--------------------------------------------------
+            timer.start_comp("ph_esc")
+
+            # ver2: local tau
+            tau_tile_min = 1e7
+            tau_tile_max = 0
+            for tile in pytools.tiles_local(grid): 
+                mc.tau_global = 0.0 # clear tau measure 
+                mc.comp_tau(tile, conf.N_wgt) # sum over tiles
+
+                # TODO
+                #mc.leak_photons(tile, conf.N_qdt*conf.t_c/conf.dt, conf.tau_ext)  # apply photon escape
+                mc.leak_photons(tile, conf.t_c/conf.dt/conf.N_qdt, conf.tau_ext)  # apply photon escape
+
+                tau_tile_min = mc.tau_global if mc.tau_global < tau_tile_min else tau_tile_min
+                tau_tile_max = mc.tau_global if mc.tau_global > tau_tile_max else tau_tile_max
+
+            # store values
+            toolset.tau_tile_min = tau_tile_min
+            toolset.tau_tile_max = tau_tile_max
+
+
+            # ver1; global tau
+            #mc.tau_global = 0.0 # clear tau measure 
+            #for tile in pytools.tiles_local(grid): 
+            #    mc.comp_tau(tile, conf.N_tau) # sum over tiles # TODO
+            #
+            # MPI sum over ranks TODO no tau reduction
+            #tau_global = mc.tau_global
+            #tau_global = MPI.COMM_WORLD.allreduce(tau_global, op=MPI.SUM)
+            #mc.tau_global = tau_global
+
+            #for tile in pytools.tiles_local(grid):
+            #    mc.leak_photons(tile, conf.t_c/conf.dt, conf.tau_ext)  # apply photon escape
+
+            timer.stop_comp("ph_esc")
+
+            # TODO testing second particle comm after QED
+
+            # local and global particle exchange 
+            #sch.operate( dict(name='check_outg_prtcls',     solver='tile',  method='check_outgoing_particles',     nhood='local', ) )
+            #sch.operate( dict(name='pack_outg_prtcls',      solver='tile',  method='pack_outgoing_particles',      nhood='boundary', ) )
+
+            #sch.operate( dict(name='mpi_prtcls',            solver='mpi',   method='p1',                           nhood='all', ) )
+            #sch.operate( dict(name='mpi_prtcls',            solver='mpi',   method='p2',                           nhood='all', ) )
+
+            #sch.operate( dict(name='unpack_vir_prtcls',     solver='tile',  method='unpack_incoming_particles',    nhood='virtual', ) )
+            #sch.operate( dict(name='check_outg_vir_prtcls', solver='tile',  method='check_outgoing_particles',     nhood='virtual', ) )
+            #sch.operate( dict(name='get_inc_prtcls',        solver='tile',  method='get_incoming_particles',       nhood='local', args=[grid,]) )
+
+            #sch.operate( dict(name='del_trnsfrd_prtcls',    solver='tile',  method='delete_transferred_particles', nhood='local', ) )
+            #sch.operate( dict(name='del_vir_prtcls',        solver='tile',  method='delete_all_particles',         nhood='virtual', ) )
+
+
+        # --------------------------------------------------
+        # comm E and B
+        sch.operate( dict(name='mpi_b0', solver='mpi', method='b', ) )
+        sch.operate( dict(name='mpi_e0', solver='mpi', method='e', ) )
+        sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid,[1,2] ], nhood='local', ) )
+
+        # --------------------------------------------------
+        # push B half
+        sch.operate( dict(name='push_half_b1', solver='fldpropB', method='push_half_b', nhood='local',) )
+        sch.operate( dict(name='wall_bc',      solver='lwall',    method='update_b',    nhood='local',) )
+
+        # comm B
+        sch.operate( dict(name='mpi_b1',    solver='mpi', method='b',                 ) )
+        sch.operate( dict(name='upd_bc ',   solver='tile',method='update_boundaries',args=[grid, [2,] ], nhood='local',) )
+
+        # --------------------------------------------------
+        # move particles (only locals tiles)
+
+        # interpolate fields and push particles in x and u
+        sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
+        #sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', ) )
+
+        sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[0]) ) # e^-
+        sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[1]) ) # e^+
+        sch.operate( dict(name='push',      solver='pusherx',method='solve', nhood='local', args=[2]) ) # x
+
+
+        # clear currents; need to call this before wall operations since they can deposit currents too 
+        sch.operate( dict(name='clear_cur', solver='tile',   method='clear_current', nhood='all', ) )
+
+        # apply moving/reflecting/injecting walls
+        if lap*conf.cfl > 1.5*conf.Rpc: # apply after a fraction of the disk light crossing time 
+            sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
+
+
+        # --------------------------------------------------
+        # advance half B 
+        sch.operate( dict(name='push_half_b2', solver='fldpropB', method='push_half_b', nhood='local', ) )
+        sch.operate( dict(name='wall_bc',      solver='lwall',    method='update_b',    nhood='local',) ) # dynamic B
+
+        # comm B
+        sch.operate( dict(name='mpi_b2', solver='mpi', method='b',                 ) )
+        sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid, [2,] ], nhood='local',) )
+
+
+        # --------------------------------------------------
+        # push E
+        sch.operate( dict(name='push_e',    solver='fldpropE', method='push_e',  nhood='local', ) )
+        sch.operate( dict(name='wall_bc',   solver='lwall',    method='update_e',nhood='local', ) )
+
+
+        # TODO current deposit + MPI was here
+
+        # --------------------------------------------------
+        # particle communication (only local/boundary tiles)
+
+        # local and global particle exchange 
+        sch.operate( dict(name='check_outg_prtcls',     solver='tile',  method='check_outgoing_particles',     nhood='local', ) )
+        sch.operate( dict(name='pack_outg_prtcls',      solver='tile',  method='pack_outgoing_particles',      nhood='boundary', ) )
+
+        sch.operate( dict(name='mpi_prtcls',            solver='mpi',   method='p1',                           nhood='all', ) )
+        sch.operate( dict(name='mpi_prtcls',            solver='mpi',   method='p2',                           nhood='all', ) )
+
+        sch.operate( dict(name='unpack_vir_prtcls',     solver='tile',  method='unpack_incoming_particles',    nhood='virtual', ) )
+        sch.operate( dict(name='check_outg_vir_prtcls', solver='tile',  method='check_outgoing_particles',     nhood='virtual', ) )
+        sch.operate( dict(name='get_inc_prtcls',        solver='tile',  method='get_incoming_particles',       nhood='local', args=[grid,]) )
+
+        sch.operate( dict(name='del_trnsfrd_prtcls',    solver='tile',  method='delete_transferred_particles', nhood='local', ) )
+        sch.operate( dict(name='del_vir_prtcls',        solver='tile',  method='delete_all_particles',         nhood='virtual', ) )
+
+
+        # --------------------------------------------------
+        # current calculation; charge conserving current deposition
+        # clear virtual current arrays for boundary addition after mpi, send currents, and exchange between tiles
+        sch.operate( dict(name='comp_curr', solver='currint', method='solve', nhood='local', ) )
+        sch.operate( dict(name='clear_vir_cur', solver='tile',method='clear_current',     nhood='virtual', ) )
+        sch.operate( dict(name='mpi_cur',       solver='mpi', method='j',                 nhood='all', ) )
+        sch.operate( dict(name='cur_exchange',  solver='tile',method='exchange_currents', nhood='local', args=[grid,], ) )
+
+
+        # --------------------------------------------------
+        # filter
+        for fj in range(conf.npasses):
+
+
+            # flt uses halo=2 padding so only every 3rd (0,1,2) pass needs update
+            if fj % 2 == 0:
+                sch.operate( dict(name='mpi_cur_flt', solver='mpi', method='j', ) )
+                sch.operate( dict(name='upd_bc',      solver='tile',method='update_boundaries',args=[grid, [0,] ], nhood='local', ) )
+                MPI.COMM_WORLD.barrier()
+            sch.operate( dict(name='filter', solver='flt', method='solve', nhood='local', ) )
+
+
+        # --------------------------------------------------
+        # add antenna
+        #sch.antenna.update_rnd_phases()
+        #antenna.get_brms(grid)
+        #sch.operate( dict(name='add_antenna', solver='antenna', method='add_ext_cur', nhood='local', ) )
+
+        # --------------------------------------------------
+        # add current to E
+        sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current',       nhood='local', ) )
+        sch.operate( dict(name='wall_bc',   solver='lwall', method='update_e',              nhood='local', ) )
+
+
+        ##################################################
+        # data reduction and I/O
+
+        timer.lap("step")
+        if lap % conf.interval == 0:
+            if sch.is_master:
+                print("--------------------------------------------------")
+                print("------ lap: {} / t: {}".format(lap, time))
+
+            timer.stats("step")
+            timer.comp_stats()
+            timer.purge_comps()
+
+            # internal pairing timers
+            if sch.is_example_worker: 
+                mc.timer_stats()
+            mc.timer_clear()
+
+
+            # io/analyze (independent)
+            timer.start("io")
+            # shrink particle arrays
+            for tile in pytools.tiles_all(grid):
+                tile.shrink_to_fit_all_particles()
+
+            # barrier for quick writers
+            MPI.COMM_WORLD.barrier()
+
+            # shallow IO
+            # NOTE: do moms before other IOs to keep rho up-to-date
+            mom_writer.write(grid, lap)  # pic distribution moments; 
+            fld_writer.write(grid, lap)  # quick field snapshots
+
+            for pw in prtcl_writers:
+                pw.write(grid, lap)  # test particles
+            
+            #pytools.save_mpi_grid_to_disk(conf.outdir, lap, grid, conf)
+
+            #box peripheries 
+            if conf.threeD:
+                slice_xy_writer.write(grid, lap)
+                slice_xz_writer.write(grid, lap)
+                slice_yz_writer.write(grid, lap)
+
+            #--------------------------------------------------
+            # terminal plot 
+            if sch.is_master:
+
+                #epar
+                #d = fld_writer.get_slice(1) # use ex xy-slice as the image
+                #d_norm = 0.1*conf.binit #
+
+                # rho
+                d = fld_writer.get_slice(9) # rho
+                d_norm = conf.ppc
+
+                tplt.plot(np.abs(d)/d_norm)
+
+            #--------------------------------------------------
+
+            #print statistics
+            if sch.is_master:
+                print('simulation time    {:7d} ({:7.1f} omp)   {:5.1f}%'.format( int(lap), time, 100.0*lap/conf.Nt))
+                #print('sim time {:7d} ({:7.1f} omp) ({:5.1f} H/c) ({:7.2f} l0/c) {:5.2f}%'.format(int(lap), 
+                #                                                                         time, 
+                #                                                                         lap*conf.dt/conf.t_c,
+                #                                                                         sch.antenna.tcur,
+                #                                                                         100.0*lap/conf.Nt))
+
+
+            #--------------------------------------------------
+            # deep IO
+            if conf.full_interval > 0 and (lap % conf.full_interval == 0) and (lap > 0):
+                pyfld.write_yee(grid, lap, conf.outdir + "/full_output/")
+                pypic.write_particles(grid, lap, conf.outdir + "/full_output/")
+
+
+            # restart IO (overwrites)
+            if (lap % conf.restart == 0) and (lap > 0):
+
+                # flip between two sets of files
+                io_stat["deep_io_switch"] = 1 if io_stat["deep_io_switch"] == 0 else 0
+
+                pyfld.write_yee(
+                    grid, io_stat["deep_io_switch"] + io_stat['restart_num'],
+                    conf.outdir + "/restart/"
+                )
+
+                pypic.write_particles(
+                    grid, io_stat["deep_io_switch"] + io_stat['restart_num'],
+                    conf.outdir + "/restart/"
+                )
+
+                # if successful adjust info file
+                MPI.COMM_WORLD.barrier()  # sync everybody in case of failure before write
+                if grid.rank() == 0:
+                    with open(conf.outdir + "/restart/laps.txt", "a") as lapfile:
+                        lapfile.write("{},{}\n".format(
+                            lap, 
+                            io_stat["deep_io_switch"]+io_stat['restart_num']))
+
+            MPI.COMM_WORLD.barrier() # extra barrier to synch everybody after IOs
+
+            timer.stop("io")
+            timer.stats("io")
+
+
+        ###################################################
+        # QED plotting
+        if conf.qed_mode and lap % conf.N_qdt == 0:
+            toolset.update_stats(grid, lap, conf)
+
+
+        if lap % conf.plot_interval == 0 and live_plot:
+
+            timer.start("io2")
+
+            if conf.qed_mode:
+                toolset.update_hists(grid, lap, conf)
+                toolset.update_esc_stats(mc, lap, conf) # needs to be called w/ plot_interval
+                toolset.update_esc_hists(mc, lap, conf) # needs to be called w/ plot_interval
+                mc.clear_hist() # remember to clear histogram after reading
+
+            if conf.qed_mode and sch.is_master:
+
+                col = cmap(norm(lap)) # NOTE overwrite color
+                lw = 0.8
+                ls = 'solid'
+
+                axs[0,0].plot(toolset.lnxs, toolset.h1_enes['ph'], 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                if lap > 1: # ignore first time step
+                    axs[0,2].plot(toolset.lnxs, toolset.h1_enes['esc'], 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                zs = toolset.zs
+                axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e-']*zs, 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                # LP weight spectrum
+
+                axs[1,0].plot(toolset.lnxs, toolset.h1_ws['ph'], 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                axs[1,1].plot(toolset.lnzs, toolset.h1_ws['e-']*zs, 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                axs[1,1].plot(toolset.lnzs, toolset.h1_ws['e+']*zs, 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                #--------------------------------------------------
+                # LP w spectrum
+                axs[2,0].plot(toolset.lnws, toolset.h1_nums['ph'], 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                axs[2,1].plot(toolset.lnws, toolset.h1_nums['e-'], 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                axs[2,1].plot(toolset.lnws, toolset.h1_nums['e+'], 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                im30.set_data(np.log10(toolset.h2_nums.T))
+
+                #--------------------------------------------------
+                # line plots
+                laps = toolset.storage.data['lap']
+                laps_sparse = toolset.storage.data['lap_sparse']
+                ts = (conf.dt/conf.t_c)*np.array(laps)
+
+                # optical depth
+                axs[0,3].plot(laps[-1],        toolset.storage.data['tau'][-1],      color='C0', marker='.')
+                axs[0,3].plot(laps_sparse[-1], toolset.storage.data['tau_meas'][-1], color='C1', marker='.')
+                axs[0,3].plot(laps_sparse[-1], toolset.storage.data['tau_min'][-1],  color='C1', marker='^')
+                axs[0,3].plot(laps_sparse[-1], toolset.storage.data['tau_max'][-1],  color='C1', marker='v')
+
+                # energy
+                axs[1,3].plot(ts[-1], toolset.storage.data['ene_e-'][-1], color='C0', marker='.')
+                axs[1,3].plot(ts[-1], toolset.storage.data['ene_e+'][-1], color='C1', marker='.')
+                axs[1,3].plot(ts[-1], toolset.storage.data['ene_ph'][-1], color='C2', marker='.')
+
+                # energy
+                Ux = np.array(toolset.storage.data['ene_ph'])
+                Ue = np.array(toolset.storage.data['ene_e-'])
+                Up = np.array(toolset.storage.data['ene_e+'])
+
+                axs[1,2].plot(ts[-1], Ux[-1]/(Ue[-1]+Up[-1]), color='C0', marker='.')
+
+                # LP number
+                #print('num_e', toolset.storage.data['num_e-'])
+                axs[2,3].plot(laps[-1], toolset.storage.data['lp_num_e-'][-1], color='C0', marker='.')
+                axs[2,3].plot(laps[-1], toolset.storage.data['lp_num_e+'][-1], color='C1', marker='.')
+                axs[2,3].plot(laps[-1], toolset.storage.data['lp_num_ph'][-1], color='C2', marker='.')
+
+                axs[2,3].plot(laps_sparse[-1], toolset.storage.data['lp_num_esc'][-1], color='C3', marker='.')
+
+                lum_in = conf.lum_ep + conf.lum_ant + conf.lum_ph1 + conf.lum_ph2
+                axs[3,3].axhline(y=lum_in, lw=0.5)
+
+                axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_inj_ep'][-1], color='C0', marker='.')
+                axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_inj_ph'][-1], color='C2', marker='.')
+                axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_esc'][-1],    color='C3', marker='.')
+
+                axs[4,3].plot(laps_sparse[-1], toolset.storage.data['lum_rat'][-1], color='C0', marker='.')
+                axs[4,3].axhline(y=1.0, lw=0.5)
+
+                axs[2,2].plot(laps[-1], toolset.storage.data['num_e-'][-1], color='C0', marker='.')
+                axs[2,2].plot(laps[-1], toolset.storage.data['num_e+'][-1], color='C1', marker='.')
+                axs[2,2].plot(laps[-1], toolset.storage.data['num_ph'][-1], color='C2', marker='.')
+                axs[2,2].plot(laps_sparse[-1], toolset.storage.data['num_esc'][-1], color='C3', marker='.')
+
+
+                # QED analysis
+                toolset.save(lap, conf)
+
+                #--------------------------------------------------    
+                # close and save fig
+                fig.subplots_adjust(left=axleft, bottom=axbottom, right=axright, top=axtop)
+                fname = conf.outdir + '/qed_analysis.pdf'
+                plt.savefig(fname)
+
+
+                #--------------------------------------------------    
+                # extra prints
+                print("--------------------------------------------------")
+                print(' tau:  {:6.3f} min/max ({:6.3f}, {:6.3f}'.format(
+                    toolset.storage.data['tau'][-1],
+                    toolset.storage.data['tau_min'][-1],
+                    toolset.storage.data['tau_max'][-1])
+                      )
+                print(' lin/lout: {:5.1f} / {:5.1f} = {:6.3f}'.format(
+                    toolset.storage.data['ene_inj_ep'][-1] + 
+                    toolset.storage.data['ene_inj_ph'][-1] +
+                    conf.lum_ant,
+                    toolset.storage.data['ene_esc'][-1],
+                    toolset.storage.data['lum_rat'][-1],
+                      ))
+                print(' N/N_0: ph {:6.1f} e- {:6.1f} e+ {:6.1f}'.format(
+                    toolset.storage.data['lp_num_ph'][-1],
+                    toolset.storage.data['lp_num_e-'][-1],
+                    toolset.storage.data['lp_num_e+'][-1]
+                      ))
+
+            # erase histogram and start a new monitoring cycle
+            if lap % conf.plot_interval == 0:
+                mc.clear_hist()
+
+
+
+            timer.stop("io2")
+            timer.stats("io2")
+            #--------------------------------------------------
+
+
+            timer.start("step")  # refresh lap counter (avoids IO profiling)
+
+            sys.stdout.flush()
+
+        # next step
+        time += conf.cfl / conf.c_omp
+        #MPI.COMM_WORLD.barrier() # extra barrier to synch everybody
+    # end of loop
+
+    # --------------------------------------------------
+    # end of simulation
+
+    timer.stop("total")
+    timer.stats("total")
+
+    if conf.qed_mode and sch.is_master and live_plot:
+        print('-------finishing plotting---------')
+
+        laps = toolset.storage.data['lap']
+        laps_sparse = toolset.storage.data['lap_sparse']
+
+        ts = (conf.dt/conf.t_c)*np.array(laps)
+
+        # optical depth
+        axs[0,3].plot(laps, toolset.storage.data['tau'])
+        axs[0,3].plot(laps_sparse, toolset.storage.data['tau_meas'], color='C1', ls='solid')
+        axs[0,3].plot(laps_sparse, toolset.storage.data['tau_min'],  color='C1', ls='solid')
+        axs[0,3].plot(laps_sparse, toolset.storage.data['tau_max'],  color='C1', ls='solid')
+
+        # energy
+        axs[1,3].plot(ts, toolset.storage.data['ene_e-'], color='C0')
+        axs[1,3].plot(ts, toolset.storage.data['ene_e+'], color='C1')
+        axs[1,3].plot(ts, toolset.storage.data['ene_ph'], color='C2')
+
+        # energy
+        Ux = np.array(toolset.storage.data['ene_ph'])
+        Ue = np.array(toolset.storage.data['ene_e-'])
+        Up = np.array(toolset.storage.data['ene_e+'])
+
+        axs[1,2].plot(ts, Ux/(Ue+Up), color='C0')
+
+        # LP number
+        #print('num_e', toolset.storage.data['num_e-'])
+        axs[2,3].plot(laps, toolset.storage.data['lp_num_e-'], color='C0')
+        axs[2,3].plot(laps, toolset.storage.data['lp_num_e+'], color='C1')
+        axs[2,3].plot(laps, toolset.storage.data['lp_num_ph'], color='C2')
+
+        axs[2,3].plot(laps_sparse, toolset.storage.data['lp_num_esc'], color='C3', ls='dashed')
+
+
+        lum_in = conf.lum_ep + conf.lum_ph1 + conf.lum_ph2
+        axs[3,3].axhline(y=lum_in, lw=0.5)
+
+        axs[3,3].plot(laps_sparse, toolset.storage.data['ene_inj_ep'], color='C0', ls='solid')
+        axs[3,3].plot(laps_sparse, toolset.storage.data['ene_inj_ph'], color='C2', ls='solid')
+        axs[3,3].plot(laps_sparse, toolset.storage.data['ene_esc'],    color='C3', ls='dashed')
+
+        axs[4,3].plot(laps_sparse, toolset.storage.data['lum_rat'], color='C0', ls='solid')
+        axs[4,3].axhline(y=1.0, lw=0.5)
+
+
+        axs[2,2].plot(laps, toolset.storage.data['num_e-'], color='C0')
+        axs[2,2].plot(laps, toolset.storage.data['num_e+'], color='C1')
+        axs[2,2].plot(laps, toolset.storage.data['num_ph'], color='C2')
+        axs[2,2].plot(laps_sparse, toolset.storage.data['num_esc'], color='C3', ls='dashed')
+
+        # plot the final spectrum
+
+        col = 'C0'
+        axs[4,0].plot(toolset.lnxs, toolset.h1_enes['ph'], 
+                            drawstyle='steps-pre',
+                            color=col,
+                            alpha=1.0,
+                            lw = lw,
+                            linestyle=ls,
+                            )
+
+
+        axs[4,2].plot(toolset.lnxs, toolset.h1_enes['esc'], 
+                            drawstyle='steps-pre',
+                            color=col,
+                            alpha=1.0,
+                            lw = lw,
+                            linestyle=ls,
+                            )
+
+        axs[4,1].plot(toolset.lnzs, toolset.h1_enes['e-'], 
+                            drawstyle='steps-pre',
+                            color=col,
+                            alpha=1.0,
+                            lw = lw,
+                            linestyle=ls,
+                            )
+
+        axs[4,1].plot(toolset.lnzs, toolset.h1_enes['e+'], 
+                            drawstyle='steps-pre',
+                            color=col,
+                            alpha=1.0,
+                            lw = lw,
+                            linestyle=ls,
+                            )
+
+        #--------------------------------------------------    
+        # close and save fig
+        if True:
+            axleft    = 0.10
+            axbottom  = 0.13
+            axright   = 0.97
+            axtop     = 0.97
+
+            pos1 = axs[0,0].get_position()
+            axwidth  = axright - axleft
+            axheight = (axtop - axbottom)*0.02
+            axpad = 0.01
+
+            fig.subplots_adjust(left=axleft, bottom=axbottom, right=axright, top=axtop)
+
+        fname = conf.outdir + '/qed_analysis.pdf'
+        plt.savefig(fname)
+
+
