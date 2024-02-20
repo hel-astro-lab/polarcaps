@@ -18,9 +18,9 @@ class QEDToolset:
         self.nz = conf.Nz*conf.NzMesh
 
         # limits for various histograms
-        self.xxlims = (-8, 2) # photon xlim
+        self.xxlims = (-2, 4) # photon xlim
         self.xylims = (1e-3, 1e2) # photon ylim (1e-4, 1e2)
-        self.pxlims = (-2, 2) # pair xlim
+        self.pxlims = (-2, 4) # pair xlim
         self.wxlims = (-1, 5) # pair xlim
 
         self.Nhist = 128
@@ -183,7 +183,7 @@ class QEDToolset:
             # ver2: NOTE value varies based on what tile ran comp_tau the last
             tau_meas = mc.tau_global # tau used in escape prob calc; 
 
-            lum_in  = ene_inj_ph + ene_inj_ep + conf.lum_ant 
+            lum_in  = ene_inj_ph + ene_inj_ep #+ conf.lum_ant 
             lum_out = ene_esc
             lum_rat = lum_in/(lum_out + 1e-7)
 

@@ -128,6 +128,36 @@ if __name__ == "__main__":
     print('chi pa', chipa)
     print('chi ph', chiph)
 
+    print('---------------------------------------------')
+    print(' reduced xi table for storing ')
+
+    print('range')
+    print(list(range(0,256,8)))
+
+    print('chi pa')
+    for i in range(0, 256, 8):
+        #print(i, chipa[i])
+        print('{:1.7e}'.format(chipa[i]))
+
+    print()
+    print('xi')
+    print()
+
+    for j in range(0, 256, 8):
+        print('{ ', end='')
+        for i in range(0, 256, 8):
+            #print(xi[i,j], end=',')
+            print('{:1.7e}'.format(xi[i,j]), end=',')
+        print('1.0000000e+00},')
+
+    print('---------------------------------------------')
+
+    #chipa = chipa[::8]
+    #chiph = chiph[::8]
+    #xi = xi[::8,::8]
+    #size_particle_chi = 32 
+    #size_photon_chi = 32 
+
 
     #chiph = np.logspace(np.log10(chipa_min),np.log10(chipa_max),size_particle_chi)
     #xi_app = np.zeros_like(xi)
@@ -166,11 +196,13 @@ if __name__ == "__main__":
 
         #for i in range(0, size_particle_chi, 40):
         for i in [0, 40, 80, 120, 255]:
+            i = int( (i/256)*len(chipa) )
             print("chipa", i, chipa[i])
             axs[row,1].plot(chiph, xi[:, i])
 
         #for i in [0, 40, 80, 120, 255]:
         for i in range(0,256,8):
+            i = int( (i/256)*len(chipa) )
             print("chiph", i, chiph[i])
             axs[row,2].plot(chipa, xi[i, :])
 
@@ -193,6 +225,8 @@ if __name__ == "__main__":
 
         icol = 0
         for i in [0, 40, 80, 120, 255]:
+            i = int( (i/256)*len(chipa) )
+
             #print("chipa", i, chipa[i])
             axs[row,1].plot(chiph, xi[:, i], color='C'+str(icol))
             axs[row,1].plot(chiph,  d[:, i], color='C'+str(icol), linestyle='dotted')
@@ -201,6 +235,8 @@ if __name__ == "__main__":
         icol = 0
         #for i in [0, 40, 80, 120, 255]:
         for i in range(0,256,8):
+            i = int( (i/256)*len(chipa) )
+
             #print("chiph", i, chiph[i])
             axs[row,2].plot(chipa, xi[i, :], color='C'+str(icol))
             axs[row,2].plot(chipa,  d[i, :], color='C'+str(icol), linestyle='dotted')

@@ -6,6 +6,7 @@ import sys, os
 
 # runko + auxiliary modules
 import pytools  # runko python tools
+import pyrunko
 
 
 # problem specific modules
@@ -18,10 +19,13 @@ from qed_toolset import QEDToolset
 
 #--------------------------------------------------
 live_plot = True
-
-#--------------------------------------------------
 rnd_seed_default = 1
 np.random.seed(rnd_seed_default)  # global simulation seed
+
+import warnings
+#warnings.filterwarnings("once") # suppress warnings after reporting them once
+warnings.filterwarnings('ignore')
+
 
 #--------------------------------------------------
 # Field initialization (guide field)
@@ -68,7 +72,7 @@ if __name__ == "__main__":
     # initialize auxiliary tools
     sch  = pytools.Scheduler() # Set MPI aware task scheduler
     args = pytools.parse_args() # parse command line arguments
-    tplt = pytools.TerminalPlot(32, 32) # terminal plotting tool
+    tplt = pytools.TerminalPlot(13, 13) # terminal plotting tool
 
 
     # create conf object with simulation parameters based on them
@@ -91,6 +95,157 @@ if __name__ == "__main__":
     #--------------------------------------------------
     toolset = QEDToolset(conf)
 
+    if live_plot and sch.is_master:
+        import matplotlib
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import Normalize
+        from matplotlib.cm import get_cmap
+        from matplotlib import colorbar
+
+        fig = plt.figure(1, figsize=(12.0, 12.0))
+
+        #plt.style.use('classic')    
+        plt.rc('xtick', top = True)
+        plt.rc('ytick', right = True)
+
+        plt.rc('font',  family='sans-serif', size=8)
+        plt.rc('text',  usetex=False)
+        plt.rc('xtick', labelsize=7)
+        plt.rc('ytick', labelsize=7)
+        plt.rc('axes',  labelsize=8)
+        plt.rc('legend',  handlelength=4.0)
+
+        nrow_fig = 5
+        ncol_fig = 4
+
+        gs = plt.GridSpec(nrow_fig, ncol_fig)
+        gs.update(hspace = 0.3)
+        gs.update(wspace = 0.3)
+        
+        axs = np.empty( (nrow_fig,ncol_fig), dtype=object)
+
+        for j in range(ncol_fig):
+            for i in range(nrow_fig):
+                axs[i,j] = plt.subplot(gs[i,j])
+                axs[i,j].minorticks_on()
+                axs[i,j].set_yscale('log')
+
+        axleft    = 0.10
+        axbottom  = 0.13
+        axright   = 0.97
+        axtop     = 0.97
+
+        pos1 = axs[0,0].get_position()
+        axwidth  = axright - axleft
+        axheight = (axtop - axbottom)*0.02
+        axpad = 0.01
+
+        # colormap
+        Nsteps = conf.Nt + 1
+        norm = matplotlib.colors.Normalize(vmin=0.0, vmax=Nsteps)
+        cmap = matplotlib.colormaps['turbo_r']
+
+
+        # photon spectra
+        for (i,j) in [ (0,0), (4,0), (4,2) ]:
+            axs[i,j].set_title('photons')
+            axs[i,j].set_xlabel(r'$\log x$')
+            axs[i,j].set_ylabel(r'$x \ell_x \propto x d n_p/d \log x$') # lx
+            axs[i,j].set_ylim(toolset.xylims)
+            axs[i,j].set_xlim(toolset.xxlims)
+
+        axs[0,0].set_ylim((1e-1, 1e5))
+        axs[4,0].set_ylim((1e-1, 1e5))
+
+
+        axs[0,2].set_title('esc photons')
+        axs[0,2].set_xlabel(r'$\log x$')
+        axs[0,2].set_ylabel(r'$x \ell_x \propto x d n_p/d \log x$') # lx
+        axs[0,2].set_xlim(toolset.xxlims)
+        axs[0,2].set_ylim(toolset.xylims)
+
+        # pair spectra
+        for (i,j) in [ (0,1), (4,1),]:
+            axs[i,j].set_xlabel(r'$\log p$')
+            axs[i,j].set_ylabel(r'$p d\tau/d p$ $\propto f_e$')
+            axs[i,j].set_ylim(( 1e-1,   3e1 ))
+            axs[i,j].set_xlim(toolset.pxlims)
+            axs[i,j].set_title('pairs')
+
+        # photon LP distribution
+        #axs[1,0].set_title('photon weights')
+        axs[1,0].set_xlabel(r'$\log x$')
+        axs[1,0].set_ylabel(r'$d N_x/d \log x$') 
+        axs[1,0].set_xlim(toolset.xxlims)
+
+        # pair LP distribution
+        #axs[1,1].set_title('pair weights')
+        axs[1,1].set_xlabel(r'$\log p$')
+        axs[1,1].set_ylabel(r'$d N_p/d \log p$') 
+        axs[1,1].set_xlim(toolset.pxlims)
+
+        # photon w distribution
+        axs[2,0].set_xlabel(r'$\log w$')
+        axs[2,0].set_ylabel(r'$d N_x/d \log w$') 
+        axs[2,0].set_xlim(toolset.wxlims)
+
+        # pair w distribution
+        axs[2,1].set_xlabel(r'$\log w$')
+        axs[2,1].set_ylabel(r'$d N_p/d \log w$') 
+        axs[2,1].set_xlim(toolset.wxlims)
+
+        # optical depth
+        axs[0,3].set_xlabel(r'lap')
+        axs[0,3].set_ylabel(r'$\tau$') 
+        #axs[0,3].set_yscale('linear')
+        axs[0,3].set_yscale('log')
+        axs[0,3].set_ylim((1.0, 100.0))
+
+        axs[1,2].set_xlabel(r'$t$ ($H/c$)')
+        axs[1,2].set_ylabel(r'$U_x/U_\pm$') 
+        axs[1,2].set_ylim((1e-2, 1e2))
+
+        axs[1,3].set_xlabel(r'$t$ ($H/c$)')
+        axs[1,3].set_ylabel(r'energy $\ell$') 
+        axs[1,3].set_ylim((1, 1e8))
+
+        axs[2,2].set_xlabel(r'lap')
+        axs[2,2].set_ylabel(r'$n_p/n_0$') 
+        axs[2,2].set_ylim((1e-1, 1e5))
+
+        axs[2,3].set_xlabel(r'lap')
+        axs[2,3].set_ylabel(r'$N_p/N_0$') 
+        axs[2,3].set_ylim((1e0, 1e4))
+
+        # 2d histogram
+        axs[3,0].set_xscale("linear")
+        axs[3,0].set_yscale("linear")
+        axs[3,0].set_xlabel("log w")
+        axs[3,0].set_ylabel("log x")
+        axs[3,0].set_xlim(toolset.wxlims)
+        axs[3,0].set_ylim(toolset.xxlims)
+        im30 = axs[3,0].imshow( np.zeros((toolset.Nhist, toolset.Nhist)),
+                         extent=[toolset.wxlims[0], toolset.wxlims[1], 
+                                 toolset.xxlims[0], toolset.xxlims[1]],
+                         origin='lower',
+                         cmap='turbo',
+                         aspect='auto',
+                         interpolation='nearest',
+                         vmin=-1,
+                         vmax=6,
+                         )
+
+        axs[3,3].set_xlabel(r'lap')
+        axs[3,3].set_ylabel(r'$\ell_\mathrm{inj}$, $\ell_\mathrm{esc}$') 
+        axs[3,3].set_ylim((1e0, 1e3))
+
+        axs[4,3].set_xlabel(r'lap')
+        axs[4,3].set_ylabel(r'$\ell_\mathrm{inj}/\ell_\mathrm{out}$') 
+        axs[4,3].set_yscale('linear')
+        axs[4,3].set_ylim((0.0, 4.0))
+
+
+
     # --------------------------------------------------
     # create output folders
     if sch.is_master: pytools.create_output_folders(conf)
@@ -102,13 +257,14 @@ if __name__ == "__main__":
         import pycorgi.threeD as pycorgi      # corgi ++ bindings
         import pyrunko.pic.threeD as pypic    # pic c++ bindings
         import pyrunko.fields.threeD as pyfld # fld c++ bindings
+        import pyrunko.qed.threeD as pyqed    # qed c++ bindings
     elif conf.twoD:
         # 2D modules
-        import pycorgi.twoD as pycorgi  # corgi ++ bindings
-        import pyrunko.pic.twoD as pypic  # runko pic c++ bindings
+        import pycorgi.twoD as pycorgi       # corgi ++ bindings
+        import pyrunko.pic.twoD as pypic     # runko pic c++ bindings
         import pyrunko.fields.twoD as pyfld  # runko fld c++ bindings
+        import pyrunko.qed.twoD as pyqed     # qed c++ bindings
 
-    import pyrunko.qed as pyqed           # qed c++ bindings
 
 
     # --------------------------------------------------
@@ -208,11 +364,11 @@ if __name__ == "__main__":
     if sch.is_master: print("loading solvers..."); sys.stdout.flush()
 
 
-    sch.fldpropE = pyfld.FDTD2_pml()
-    sch.fldpropB = pyfld.FDTD2_pml()
+    #sch.fldpropE = pyfld.FDTD2_pml()
+    #sch.fldpropB = pyfld.FDTD2_pml()
 
-    #sch.fldpropE = pyfld.FDTD2()
-    #sch.fldpropB = pyfld.FDTD2()
+    sch.fldpropE = pyfld.FDTD2()
+    sch.fldpropB = pyfld.FDTD2()
 
     #sch.fldpropE = pyfld.FDTD4()
     #sch.fldpropB = pyfld.FDTD4()
@@ -225,24 +381,24 @@ if __name__ == "__main__":
     # set PML absorption region into the pusher
  
     # setup perfectly matching layer; vacuum outside boundaries
-    for prop in [ sch.fldpropE, sch.fldpropB]:
-        prop.cenx = conf.Lx//2
-        prop.ceny = conf.Ly//2 
-        prop.cenz = 0
+    #for prop in [ sch.fldpropE, sch.fldpropB]:
+    #    prop.cenx = conf.Lx//2
+    #    prop.ceny = conf.Ly//2 
+    #    prop.cenz = 0
 
-        prop.radx = conf.Lx//2 # box x half length
-        prop.rady = conf.Ly//2 # box y half length
-        prop.radz = 1;        # box z half length
+    #    prop.radx = conf.Lx//2 # box x half length
+    #    prop.rady = conf.Ly//2 # box y half length
+    #    prop.radz = 1;        # box z half length
 
-        prop.norm_abs = conf.cfl/3.0 # PML coefficient
-        prop.rad_lim = 0.80 # PML sphere damping radius
+    #    prop.norm_abs = conf.cfl/3.0 # PML coefficient
+    #    prop.rad_lim = 0.80 # PML sphere damping radius
 
 
     # --------------------------------------------------
     #sch.pusher = pypic.BorisPusher()
     #sch.pusher = pypic.VayPusher()
-    sch.pusher = pypic.HigueraCaryPusher()
-    #sch.pusher  = pypic.rGCAPusher()
+    #sch.pusher = pypic.HigueraCaryPusher()
+    sch.pusher  = pypic.rGCAPusher()
 
     #if conf.gammarad > 0:
     #    sch.pusher   = pypic.BorisDragPusher()
@@ -278,27 +434,47 @@ if __name__ == "__main__":
 
 
     # QED
-    mc = pyqed.threeD.Pairing()
+    mc = pyqed.Pairing()
     mc.prob_norm = 1/(conf.N_time*conf.N_wgt*conf.N_qdt) # units of [per prtcl per time]
 
     # histogram edges of leaking photons
     mc.update_hist_lims(toolset.xxlims[0], toolset.xxlims[1], toolset.Nhist)
 
-    a = pyqed.PhotAnn("ph", "ph")
-    b = pyqed.PairAnn("e-", "e+")
-    c = pyqed.PairAnn("e+", "e-")
-    d = pyqed.Compton("ph", "e-")
-    e = pyqed.Compton("ph", "e+")
-    f = pyqed.Compton("e-", "ph")
-    g = pyqed.Compton("e+", "ph")
+    a = pyrunko.qed.PhotAnn("ph", "ph")
+    b = pyrunko.qed.PairAnn("e-", "e+")
+    c = pyrunko.qed.PairAnn("e+", "e-")
+    d = pyrunko.qed.Compton("ph", "e-")
+    e = pyrunko.qed.Compton("ph", "e+")
+    f = pyrunko.qed.Compton("e-", "ph")
+    g = pyrunko.qed.Compton("e+", "ph")
 
-    mc.add_interaction(a) # ON                      # phot-ann
-    mc.add_interaction(b) # ON                      # pair-ann
-    mc.add_interaction(c) # off for double counting # pair-ann
-    mc.add_interaction(d) # ON
-    mc.add_interaction(e) # ON
-    mc.add_interaction(f) # off for double counting
-    mc.add_interaction(g) # off for double counting
+    #mc.add_interaction(a) # ON                      # phot-ann
+    #mc.add_interaction(b) # ON                      # pair-ann
+    #mc.add_interaction(c) # off for double counting # pair-ann
+    #mc.add_interaction(d) # ON
+    #mc.add_interaction(e) # ON
+    #mc.add_interaction(f) # off for double counting
+    #mc.add_interaction(g) # off for double counting
+
+
+    #--------------------------------------------------
+    mc.prob_norm_onebody = 1.0/(conf.N_lamC*conf.N_qdt) # units of [TODO]
+
+    a0 = pyrunko.qed.Synchrotron("e-")
+    a1 = pyrunko.qed.Synchrotron("e+")
+    a0.do_accumulate = True
+    a1.do_accumulate = True
+
+    b  = pyrunko.qed.MultiPhotAnn("ph")
+
+    # set critical magnetic field 
+    for intr in [a0, a1, b]:
+        intr.B_QED = 1e1*conf.binit
+
+    mc.add_interaction(a0) 
+    mc.add_interaction(a1) 
+    mc.add_interaction(b ) # 
+
 
 
     # --------------------------------------------------
@@ -365,12 +541,13 @@ if __name__ == "__main__":
     # --------------------------------------------------
     #star = pyfld.Conductor()
     star = pypic.Star()
-    star.radius = conf.Rstar 
-    star.period = conf.period  
-    star.B0     = conf.binit*conf.Rstar**3  # TODO normalization here?
-    star.chi    = np.deg2rad(0.0)       # magnetic inclination
-    star.phase  = 0.0
+    star.radius    = conf.rad_star
+    star.radius_pc = conf.rad_pcap
+    star.period    = conf.period_star # NOTE should be period_star for normal runs 
 
+    star.B0     = conf.b_dipole_norm    # TODO normalization here?
+    star.chi    = np.deg2rad(conf.chi)  # magnetic inclination
+    star.phase  = 0.0
     star.delta  = 2 # in units of cells; smoothing function sharpness
 
     star.Nx = conf.Lx
@@ -378,41 +555,24 @@ if __name__ == "__main__":
     star.Nz = conf.Lz
     
     # transverse polar cap smoothing (g(x) function)
-    star.radius_pc = conf.Rpc
     star.delta_pc  = 2
 
     if conf.twoD:
         star.cenx   = conf.Lx//2 #- 0.5
-        star.ceny   = -conf.Rstar + conf.Ratmos
+        star.ceny   = -conf.rad_star + conf.rad_atms
         star.cenz   = 0 
     elif conf.threeD:
         star.cenx   = conf.Lx//2 #- 0.5
         star.ceny   = 0
-        star.cenz   = -conf.Rstar + conf.Ratmos
+        star.cenz   = -conf.rad_star + conf.rad_atms
         sys.exit() # TODO
 
     sch.lwall = star # add to scheduler
-
-    if sch.is_master:
-        phase = 0.0 #global rotator phase
-        Omega = 2.0*np.pi/conf.period    
-        RLC = 1.0/Omega
-
-        print('P:    ', star.period)
-        print('Omega:', Omega)
-        print('R_*:  ', star.radius)
-        print('R_LC: ', 1.0/Omega)
-        print('chi:  ', np.rad2deg(star.chi))
-
-        bstar = star.B0*star.radius**(-3.0)
-        print('B_*   ', bstar)
-        print('B_LC  ', bstar*(RLC/star.radius)**(-3.0))
 
 
     # induce initial magnetic and electric field from the star
     for tile in pytools.tiles_all(grid):
         star.insert_em(tile)
-
 
     # --------------------------------------------------
     # --------------------------------------------------
@@ -431,18 +591,24 @@ if __name__ == "__main__":
     time = lap * (conf.cfl / conf.c_omp)
     for lap in range(lap, conf.Nt + 1):
 
+        # ramp up plate smoothly
+        ramp_up_laps = 0.5*conf.rad_pcap/conf.cfl # duration of the ramp up in polar cap light crossing times
+        pc_freq = min(max(1,lap)/ramp_up_laps, 1.0)*(1/conf.period_star) # polar cap rotation frequency
+        star.period = 1/pc_freq
+
         # --------------------------------------------------
         # QED interaction loop
         if conf.qed_mode and lap % conf.qed_step == 0:
-            timer.start_comp("ph_inj")
-            if conf.zeta_xinj1 > 0 and conf.lum_ph1 > 0:
-                for tile in pytools.tiles_local(grid):
-                    mc.inject_photons(tile, conf.kTbb1, conf.wph_inj1, conf.Nph_inj1 )
 
-            if conf.zeta_xinj2 > 0 and conf.lum_ph2 > 0:
-                for tile in pytools.tiles_local(grid):
-                    mc.inject_photons(tile, conf.kTbb2, conf.wph_inj2, conf.Nph_inj2 )
-            timer.stop_comp("ph_inj")
+            #timer.start_comp("ph_inj")
+            #if conf.zeta_xinj1 > 0 and conf.lum_ph1 > 0:
+            #    for tile in pytools.tiles_local(grid):
+            #        mc.inject_photons(tile, conf.kTbb1, conf.wph_inj1, conf.Nph_inj1 )
+
+            #if conf.zeta_xinj2 > 0 and conf.lum_ph2 > 0:
+            #    for tile in pytools.tiles_local(grid):
+            #        mc.inject_photons(tile, conf.kTbb2, conf.wph_inj2, conf.Nph_inj2 )
+            #timer.stop_comp("ph_inj")
 
             #timer.start_comp("ep_inj")
             #for tile in pytools.tiles_local(grid):
@@ -451,11 +617,11 @@ if __name__ == "__main__":
             #timer.stop_comp("ep_inj")
 
             #--------------------------------------------------
-            timer.start_comp("qed")
-            for tile in pytools.tiles_local(grid):
-                i,j,k = pytools.get_index(tile, conf)
-                mc.solve_mc(tile)
-            timer.stop_comp("qed")
+            #timer.start_comp("qed")
+            #for tile in pytools.tiles_local(grid):
+            #    i,j,k = pytools.get_index(tile, conf)
+            #    mc.solve_mc(tile)
+            #timer.stop_comp("qed")
 
             #--------------------------------------------------
             timer.start_comp("ph_esc")
@@ -468,8 +634,7 @@ if __name__ == "__main__":
                 mc.comp_tau(tile, conf.N_wgt) # sum over tiles
 
                 # TODO
-                #mc.leak_photons(tile, conf.N_qdt*conf.t_c/conf.dt, conf.tau_ext)  # apply photon escape
-                mc.leak_photons(tile, conf.t_c/conf.dt/conf.N_qdt, conf.tau_ext)  # apply photon escape
+                #mc.leak_photons(tile, conf.t_c/conf.dt/conf.N_qdt, conf.tau_ext)  # apply photon escape
 
                 tau_tile_min = mc.tau_global if mc.tau_global < tau_tile_min else tau_tile_min
                 tau_tile_max = mc.tau_global if mc.tau_global > tau_tile_max else tau_tile_max
@@ -533,6 +698,14 @@ if __name__ == "__main__":
         sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
         #sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', ) )
 
+        # single-body QED interactions
+        if conf.qed_mode and lap % conf.qed_step == 0:
+            timer.start_comp("qed_onebody")
+            for tile in pytools.tiles_local(grid):
+                #print("calling onebody")
+                mc.solve_onebody(tile)
+            timer.stop_comp("qed_onebody")
+
         sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[0]) ) # e^-
         sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[1]) ) # e^+
         sch.operate( dict(name='push',      solver='pusherx',method='solve', nhood='local', args=[2]) ) # x
@@ -542,8 +715,9 @@ if __name__ == "__main__":
         sch.operate( dict(name='clear_cur', solver='tile',   method='clear_current', nhood='all', ) )
 
         # apply moving/reflecting/injecting walls
-        if lap*conf.cfl > 1.5*conf.Rpc: # apply after a fraction of the disk light crossing time 
-            sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
+        # TODO
+        #if lap*conf.cfl > 1.5*conf.Rpc: # apply after a fraction of the disk light crossing time 
+        sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
 
 
         # --------------------------------------------------
@@ -669,10 +843,21 @@ if __name__ == "__main__":
                 #d_norm = 0.1*conf.binit #
 
                 # rho
-                d = fld_writer.get_slice(9) # rho
-                d_norm = conf.ppc
+                #d = fld_writer.get_slice(9) # rho
+                #d_norm = conf.ppc
+                #tplt.plot(np.abs(d)/d_norm)
 
-                tplt.plot(np.abs(d)/d_norm)
+                tplt.col_mode = False
+                tplt.plot_panels( (2,3),
+                    dict(axs=(0,0), data=fld_writer.get_slice( 0)/conf.e_norm, name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(0,1), data=fld_writer.get_slice( 1)/conf.e_norm, name='ey', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    #dict(axs=(0,2), data=fld_writer.get_slice( 2)/conf.e_norm, name='ez', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(0,2), data=fld_writer.get_slice( 9)/conf.p_norm, name='ne', cmap='viridis',vmin= 0, vmax=4),
+                    dict(axs=(1,0), data=fld_writer.get_slice( 3)/conf.b_norm, name='bx', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(1,1), data=fld_writer.get_slice( 4)/conf.b_norm, name='by', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    #dict(axs=(1,2), data=fld_writer.get_slice( 5)/conf.b_norm, name='bz', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(1,2), data=mom_writer.get_slice(14)/conf.x_norm, name='ph', cmap='viridis',vmin= 0, vmax=4),
+                    )
 
             #--------------------------------------------------
 
@@ -865,7 +1050,7 @@ if __name__ == "__main__":
 
                 axs[2,3].plot(laps_sparse[-1], toolset.storage.data['lp_num_esc'][-1], color='C3', marker='.')
 
-                lum_in = conf.lum_ep + conf.lum_ant + conf.lum_ph1 + conf.lum_ph2
+                lum_in = conf.lum_ep + conf.lum_ph1 + conf.lum_ph2
                 axs[3,3].axhline(y=lum_in, lw=0.5)
 
                 axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_inj_ep'][-1], color='C0', marker='.')
@@ -893,30 +1078,27 @@ if __name__ == "__main__":
 
                 #--------------------------------------------------    
                 # extra prints
-                print("--------------------------------------------------")
-                print(' tau:  {:6.3f} min/max ({:6.3f}, {:6.3f}'.format(
-                    toolset.storage.data['tau'][-1],
-                    toolset.storage.data['tau_min'][-1],
-                    toolset.storage.data['tau_max'][-1])
-                      )
-                print(' lin/lout: {:5.1f} / {:5.1f} = {:6.3f}'.format(
-                    toolset.storage.data['ene_inj_ep'][-1] + 
-                    toolset.storage.data['ene_inj_ph'][-1] +
-                    conf.lum_ant,
-                    toolset.storage.data['ene_esc'][-1],
-                    toolset.storage.data['lum_rat'][-1],
-                      ))
-                print(' N/N_0: ph {:6.1f} e- {:6.1f} e+ {:6.1f}'.format(
-                    toolset.storage.data['lp_num_ph'][-1],
-                    toolset.storage.data['lp_num_e-'][-1],
-                    toolset.storage.data['lp_num_e+'][-1]
-                      ))
+                #print("--------------------------------------------------")
+                #print(' tau:  {:6.3f} min/max ({:6.3f}, {:6.3f}'.format(
+                #    toolset.storage.data['tau'][-1],
+                #    toolset.storage.data['tau_min'][-1],
+                #    toolset.storage.data['tau_max'][-1])
+                #      )
+                #print(' lin/lout: {:5.1f} / {:5.1f} = {:6.3f}'.format(
+                #    toolset.storage.data['ene_inj_ep'][-1] + 
+                #    toolset.storage.data['ene_inj_ph'][-1],
+                #    toolset.storage.data['ene_esc'][-1],
+                #    toolset.storage.data['lum_rat'][-1],
+                #      ))
+                #print(' N/N_0: ph {:6.1f} e- {:6.1f} e+ {:6.1f}'.format(
+                #    toolset.storage.data['lp_num_ph'][-1],
+                #    toolset.storage.data['lp_num_e-'][-1],
+                #    toolset.storage.data['lp_num_e+'][-1]
+                #      ))
 
             # erase histogram and start a new monitoring cycle
             if lap % conf.plot_interval == 0:
                 mc.clear_hist()
-
-
 
             timer.stop("io2")
             timer.stats("io2")

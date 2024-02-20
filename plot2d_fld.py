@@ -61,6 +61,7 @@ default_values = {
     'winsorize_max':0.005,
     'title':'',
     'derived':False,
+    'file': 'flds',
 }
 
 default_turbulence_values = {
@@ -72,13 +73,15 @@ default_turbulence_values = {
         'ex': {'title': r"$E_r$",
                'cmap': "PRGn",
                'vsymmetric':True,
+                'vmin':-1.0,
+                'vmax': 1.0,
                 },
         'epar': {'title': r"$E_\parallel$",
                'cmap': "PRGn",
                'vsymmetric':True,
                'derived':True,
-                'vmin':-0.01,
-                'vmax': 0.01,
+                'vmin':-0.1,
+                'vmax': 0.1,
                 },
         'bz': {'title': r"$B_z$",
                'cmap': "RdBu",
@@ -88,6 +91,11 @@ default_turbulence_values = {
                 'vmin': 000000.0,
                 'vmax': 4.0,
                 },
+        'densx':  {'title': r"$n_x/n_{x,0}$",
+                'vmin': 0.0,
+                'vmax': 4.0,
+                'file': 'moms',
+                },
         'je': {'title': r"$\mathbf{J} \cdot \mathbf{E}$",
                'cmap': "BrBG",
                'vmin': -5.00000,
@@ -96,6 +104,12 @@ default_turbulence_values = {
                'derived':True,
                 },
         'jz': {'title': r"$J_z$",
+               'cmap': "RdBu",
+               'vsymmetric':True,
+               'vmin': -2.0000,
+               'vmax':  2.0000,
+                },
+        'jy': {'title': r"$J_y$",
                'cmap': "RdBu",
                'vsymmetric':True,
                'vmin': -2.0000,
@@ -192,9 +206,15 @@ def plot2dpcap_single(
 
     print('--------------------------------------------------')
     print("             lap: {}".format(info['lap']))
-    print("reading {}".format(info['fields_file']))
 
-    f5F = h5.File(info['fields_file'],'r')
+    if args['file'] == 'flds':
+        print("reading {}".format(info['fields_file']))
+        f5F = h5.File(info['fields_file'],'r')
+
+    if args['file'] == 'moms':
+        print("reading {}".format(info['moms_file']))
+        f5F = h5.File(info['moms_file'],'r')
+
 
     # normal singular variables
     if not(args['derived']):
@@ -213,10 +233,13 @@ def plot2dpcap_single(
 
 
     #--------------------------------------------------
-    if do_fieldlines:
+    if do_fieldlines and args['file'] == 'flds':
         bx = read_var(f5F, "bx")
         by = read_var(f5F, "by")
-
+    elif do_fieldlines and not(args['file'] == 'flds'):
+        f5F1 = h5.File(info['fields_file'],'r')
+        bx = read_var(f5F1, "bx")
+        by = read_var(f5F1, "by")
 
     #--------------------------------------------------
     # get shape
@@ -233,10 +256,10 @@ def plot2dpcap_single(
     xmax = conf.Lx//2
     ymax = conf.Ly
 
-    xmin /= conf.Rpc
-    ymin /= conf.Rpc
-    xmax /= conf.Rpc
-    ymax /= conf.Rpc
+    xmin /= conf.rad_pcap
+    ymin /= conf.rad_pcap
+    xmax /= conf.rad_pcap
+    ymax /= conf.rad_pcap
 
 
     #if winsorize
@@ -278,7 +301,7 @@ def plot2dpcap_single(
     me_per_qe = np.abs(conf.me) / qe #for electrons = 1
     deltax = 1.0/conf.c_omp #\Delta x in units of skin depth
 
-    lenscale = conf.Rpc #conf.Nx*conf.NxMesh*deltax/conf.max_mode #(large-eddy size in units of skin depth)
+    lenscale = conf.rad_pcap #conf.Nx*conf.NxMesh*deltax/conf.max_mode #(large-eddy size in units of skin depth)
 
     if var in ['bx', 'by', 'bz']:
         norm = conf.binit #(me_per_qe*conf.cfl**2)/deltax
@@ -288,7 +311,7 @@ def plot2dpcap_single(
     if var == 'rho':
         #print(qe,conf.stride)
         norm = n0
-    if var == 'jz':
+    if var in ['jx', 'jy', 'jz']:
         norm = qe*n0*conf.cfl*conf.cfl
     if var == 'je':
         norm_E = (me_per_qe*conf.cfl**2)/deltax/lenscale
@@ -329,6 +352,7 @@ def plot2dpcap_single(
 
     #-------------------------------------------------- 
     if do_fieldlines:
+        nx, ny = np.shape(bx)
         xx = np.linspace(xmin,xmax, nx)
         yy = np.linspace(ymin,ymax, ny)
         X, Y = np.meshgrid(xx, yy, indexing='ij')
@@ -414,18 +438,18 @@ def plot2dpcap_single(
 
 #--------------------------------------------------
 
-def build_info(fdir, lap):
-    info = {}
-    info['lap'] = lap
-    info['fields_file']   = fdir + 'fields_'+str(lap)+'.h5'
-    info['analysis_file'] = fdir + 'analysis'+str(lap)+'.h5'
-    
-    return info
+#def build_info(fdir, lap):
+#    info = {}
+#    info['lap'] = lap
+#    info['fields_file']   = fdir + 'fields_'+str(lap)+'.h5'
+#    info['analysis_file'] = fdir + 'analysis'+str(lap)+'.h5'
+#    return info
     
 def quick_build_info(fdir, lap):
     info = {}
     info['lap'] = lap
     info['fields_file']   = fdir + 'flds_'+str(lap)+'.h5'
+    info['moms_file']     = fdir + 'moms_'+str(lap)+'.h5'
     info['analysis_file'] = fdir + 'analysis_'+str(lap)+'.h5'
     info['particle_file'] = fdir + 'test-prtcls'
     

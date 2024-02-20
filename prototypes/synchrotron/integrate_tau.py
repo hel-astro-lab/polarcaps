@@ -224,6 +224,49 @@ if __name__ == "__main__":
 
 
     #--------------------------------------------------
+    # compare to code 
+
+    import pyrunko
+
+    syn = pyrunko.qed.Synchrotron("e-")
+    syn.B_QED = 1.0
+
+
+    N = 256
+    d_runko = np.zeros(N)
+    chi_runko = np.zeros(N)
+
+    vals = np.logspace(-4, 3, N)
+
+    for i in range(N):
+
+        ux,uy,uz = 0.3, 0.3, 0.3
+        ex,ey,ez = 0.0, 0.0, 0.0
+        bx,by,bz = 0.0, 0.0, 1.0
+
+        RAMP = vals[i]  # vary B field (to get evolving chi)
+
+        tau = syn.comp_optical_depth(
+                "e-",
+                ux,uy,uz,
+                ex,ey,ez,
+                bx,by,RAMP*bz)
+
+        c = syn.comp_chi( ux,uy,uz, ex,ey,ez, bx,by,RAMP*bz)
+
+        d_runko[i] = tau
+        chi_runko[i] = c
+
+    
+    axs[0,0].plot(chi_runko, d_runko, color='C5', linestyle='dotted')
+    plot_error(d_runko, color='C5', linestyle='solid', lw=1)
+
+
+
+
+
+
+    #--------------------------------------------------
     axleft    = 0.15
     axbottom  = 0.15
     axright   = 0.97

@@ -163,9 +163,12 @@ class Configuration_Turbulence(Configuration):
 
         self.binit = self.binit_approx # NOTE: selecting this as our sigma definitions
 
+        self.omB = self.omp*sqrt(self.sigma) # nominal gyrofrequency
+
         if do_print:
             print("init: sigma:            ", self.sigma)
             print("init: mass term:        ", sqrt(mi+me))
+            print("init: q_e:              ", self.qe)
             #print("init: warm corr:: ", self.warm_corr)
             print("init: gamma_th:         ", self.gammath)
             print("init: B_guide (no corr):", self.binit_nc)
@@ -255,15 +258,69 @@ class Configuration_Turbulence(Configuration):
         # polar cap setup
 
         # 0.65 is exactly at the corner for 2d domain
-        self.Rpc = 0.6*self.Nx*self.NxMesh//2 # polar cap half radius R_pc
-        self.t0 = self.cfl/self.Rpc # time steps in units of light-crossing 
+        self.rad_pcap = 0.6*self.Nx*self.NxMesh//2 # polar cap half radius R_pc
+        self.rad_star = 10*self.rad_pcap
 
-        self.Rstar = 10*self.Rpc
+        self.t0 = self.cfl/self.rad_pcap # time steps in units of light-crossing across the polar cap
 
-        self.period = 2*pi*self.Rpc/(self.vrot*self.cfl)
+        self.period_star = 2*pi*self.rad_pcap/(self.vrot*self.cfl)
 
-        self.Ratmos = self.Rstar - np.sqrt(self.Rstar**2 - self.Rpc**2) # height of the curved atmosphere
-        self.Ratmos += 5 # add padding; this is the height of the atmosphere at r=Rpc
+        self.rad_atms = self.rad_star - np.sqrt(self.rad_star**2 - self.rad_pcap**2) # height of the curved atmosphere
+        self.rad_atms += 5 # add padding; this is the height of the atmosphere at r=Rpc
+
+        self.chi = 0 # magnetic obliquity angle
+
+        phase = 0.0 #global rotator phase
+        Om_star = 2.0*np.pi/self.period_star
+        self.rad_lcyl = self.cfl/Om_star # light cylinder distance in cells; not self consistent in PC setup
+
+
+        self.b_dipole_norm = self.binit*self.rad_star**3
+        bstar = 2*self.b_dipole_norm*self.rad_star**-3 # B_{*,r} = radial magnetic field component 
+                                                       # at the star's surface; 
+                                                       # factor of 2 comes from dipole coordinate system
+        vrot = Om_star*self.rad_pcap/cfl
+
+        #omB = sqrt(self.sigma)*self.omp
+        #dV_gap = omB*(self.rad_star/self.cfl)*(self.rad_star/self.rad_lcyl)**2 # DONE
+        #print('init: dV_gap:', dV_gap)
+
+        nGJ = Om_star*bstar/(cfl*abs(self.qe))
+        #nGJ = Om_star*bstar/(2*pi*self.cfl*abs(self.qe))
+
+        deGJ = self.c_omp*(nGJ/self.ppc)**(-0.5)
+
+        gam_gap  = vrot**2*(bstar*self.rad_pcap/(cfl**2))
+        #gam_gap2 = vrot**2*(bstar*self.rad_star/(cfl**2))
+        #gam_gap3 = (self.omB/Om_star)*(self.rad_star/self.rad_lcyl)**3
+
+        if do_print:
+            print(' pulsar initialization...')
+            print('init: P_*:   ', self.period_star)
+            print('init: Om_*:  ', Om_star)
+            print('init: R_*:   ', self.rad_star)
+            print('init: R_pc:  ', self.rad_pcap)
+            print('init: R_LC:  ', self.rad_lcyl, ' not consistent for PC setup')
+            print('init: chi:   ', np.rad2deg(self.chi))
+            print('init: B_*    ', bstar)
+            #print('init: B_LC   ', bstar*(self.rad_lcyl/self.rad_star)**(-3.0))
+            print('init: v_rot  ', vrot)
+            print('init: n_GJ   ', nGJ)
+            print('init: d_e GJ ', deGJ, 'dx')
+            print('init: gam_gap', gam_gap)
+
+
+            #sys.exit()
+
+
+        #-------------------------------------------------- 
+        # default normalization
+
+        self.e_norm = 1.0*self.binit 
+        self.b_norm = 1.0*self.binit
+        self.j_norm = abs(self.qe)*self.ppc*2*self.cfl**2
+        self.p_norm = nGJ # max(self.ppc*2,1)
+        self.x_norm = max(self.xpc,1)
 
 
         #-------------------------------------------------- 
@@ -339,6 +396,9 @@ class Configuration_Turbulence(Configuration):
             self.N_box = self.Nx*self.Ny*self.Nz
             self.N_qdt = self.qed_step     # QED reaction time steps to plasma time steps  
 
+            # normaliation of onebody interaction; reduced Compton wavelength
+            self.N_lamC = 10.0 #H/self.Rpc # TODO
+
             # NOTE: it then follows that unit of luminosity is N_wgt / N_time
 
             #self.N_inj = self.N_w*self.t_c/self.dt # unit of injection luminosity (per dt) DONE
@@ -377,13 +437,21 @@ class Configuration_Turbulence(Configuration):
 
             # required weight to get lum_ph
             if True:
-                self.Nph_inj1 = self.zeta_xinj1*self.wsum0 #self.Nref["ph"]
-                #self.wph_inj1 = self.lum_ph1/(self.Nph_inj1*self.enebb1*self.N_wgt/self.N_time*self.N_box)
-                self.wph_inj1 = self.lum_ph1/(self.Nph_inj1*self.enebb1*self.N_wgt/self.N_time)
+                if self.zeta_xinj1 > 0 and self.lum_ph1 > 0:
+                    self.Nph_inj1 = self.zeta_xinj1*self.wsum0 #self.Nref["ph"]
+                    #self.wph_inj1 = self.lum_ph1/(self.Nph_inj1*self.enebb1*self.N_wgt/self.N_time*self.N_box)
+                    self.wph_inj1 = self.lum_ph1/(self.Nph_inj1*self.enebb1*self.N_wgt/self.N_time)
+                else:
+                    self.Nph_inj1 = 0
+                    self.wph_inj1 = 1
 
-                self.Nph_inj2 = self.zeta_xinj2*self.wsum0 #self.Nref["ph"]
-                #self.wph_inj2 = self.lum_ph2/(self.Nph_inj2*self.enebb2*self.N_wgt/self.N_time*self.N_box)
-                self.wph_inj2 = self.lum_ph2/(self.Nph_inj2*self.enebb2*self.N_wgt/self.N_time)
+                if self.zeta_xinj2 > 0 and self.lum_ph2 > 0:
+                    self.Nph_inj2 = self.zeta_xinj2*self.wsum0 #self.Nref["ph"]
+                    #self.wph_inj2 = self.lum_ph2/(self.Nph_inj2*self.enebb2*self.N_wgt/self.N_time*self.N_box)
+                    self.wph_inj2 = self.lum_ph2/(self.Nph_inj2*self.enebb2*self.N_wgt/self.N_time)
+                else:
+                    self.Nph_inj2 = 0
+                    self.wph_inj2 = 1
 
                 # TODO increase weight 
                 self.wph_inj1 *= self.N_qdt 
@@ -477,14 +545,14 @@ class Configuration_Turbulence(Configuration):
             
             # injected compactness from B field is sigma * \tau/t_A 
             # tau = self.nz0*sigT*H
-            self.lum_ant  = self.sigma*self.nz0*sigT*H*self.drive_ampl*self.drive_freq
+            #self.lum_ant  = self.sigma*self.nz0*sigT*H*self.drive_ampl*self.drive_freq
             #self.lum_ant *= 4.0
-            Le_ant_ergs = self.lum_ant*me*c**3*H/sigT
+            #Le_ant_ergs = self.lum_ant*me*c**3*H/sigT
 
-            if do_print:
-                print("init:-------------------- ep ant ----------------------")
-                print("init: ell:      ", self.lum_ant)
-                print("init: Le:       ", np.log10(Le_ant_ergs + 1e-100), ' erg/s')
+            #if do_print:
+            #    print("init:-------------------- ep ant ----------------------")
+            #    print("init: ell:      ", self.lum_ant)
+            #    print("init: Le:       ", np.log10(Le_ant_ergs + 1e-100), ' erg/s')
 
         else:
 
