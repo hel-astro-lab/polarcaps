@@ -3,11 +3,11 @@
 from mpi4py import MPI
 import numpy as np
 import sys, os
+from numpy import log10, sin, cos, tan, exp
 
 # runko + auxiliary modules
 import pytools  # runko python tools
 import pyrunko
-
 
 # problem specific modules
 from init_problem import Configuration_Turbulence as Configuration
@@ -16,6 +16,7 @@ from init_problem import density_profile
 from init_problem import weigth_profile
 
 from qed_toolset import QEDToolset
+
 
 #--------------------------------------------------
 live_plot = True
@@ -151,12 +152,8 @@ if __name__ == "__main__":
             axs[i,j].set_title('photons')
             axs[i,j].set_xlabel(r'$\log x$')
             axs[i,j].set_ylabel(r'$x \ell_x \propto x d n_p/d \log x$') # lx
-            axs[i,j].set_ylim(toolset.xylims)
             axs[i,j].set_xlim(toolset.xxlims)
-
-        axs[0,0].set_ylim((1e-1, 1e5))
-        axs[4,0].set_ylim((1e-1, 1e5))
-
+            axs[i,j].set_ylim(toolset.xylims)
 
         axs[0,2].set_title('esc photons')
         axs[0,2].set_xlabel(r'$\log x$')
@@ -168,7 +165,7 @@ if __name__ == "__main__":
         for (i,j) in [ (0,1), (4,1),]:
             axs[i,j].set_xlabel(r'$\log p$')
             axs[i,j].set_ylabel(r'$p d\tau/d p$ $\propto f_e$')
-            axs[i,j].set_ylim(( 1e-1,   3e1 ))
+            axs[i,j].set_ylim(( 1e-5,   1 ))
             axs[i,j].set_xlim(toolset.pxlims)
             axs[i,j].set_title('pairs')
 
@@ -199,23 +196,23 @@ if __name__ == "__main__":
         axs[0,3].set_ylabel(r'$\tau$') 
         #axs[0,3].set_yscale('linear')
         axs[0,3].set_yscale('log')
-        axs[0,3].set_ylim((1.0, 100.0))
+        axs[0,3].set_ylim((1e-4, 1.0))
 
         axs[1,2].set_xlabel(r'$t$ ($H/c$)')
         axs[1,2].set_ylabel(r'$U_x/U_\pm$') 
-        axs[1,2].set_ylim((1e-2, 1e2))
+        axs[1,2].set_ylim((1e-2, 1e0))
 
         axs[1,3].set_xlabel(r'$t$ ($H/c$)')
         axs[1,3].set_ylabel(r'energy $\ell$') 
-        axs[1,3].set_ylim((1, 1e8))
+        axs[1,3].set_ylim((1e-2, 1e4))
 
         axs[2,2].set_xlabel(r'lap')
         axs[2,2].set_ylabel(r'$n_p/n_0$') 
-        axs[2,2].set_ylim((1e-1, 1e5))
+        axs[2,2].set_ylim((1e-3, 1e1))
 
         axs[2,3].set_xlabel(r'lap')
         axs[2,3].set_ylabel(r'$N_p/N_0$') 
-        axs[2,3].set_ylim((1e0, 1e4))
+        axs[2,3].set_ylim((1e-3, 1e1))
 
         # 2d histogram
         axs[3,0].set_xscale("linear")
@@ -398,7 +395,8 @@ if __name__ == "__main__":
     #sch.pusher = pypic.BorisPusher()
     #sch.pusher = pypic.VayPusher()
     #sch.pusher = pypic.HigueraCaryPusher()
-    sch.pusher  = pypic.rGCAPusher()
+    #sch.pusher  = pypic.rGCAPusher()
+    sch.pusher  = pypic.PulsarPusher()
 
     #if conf.gammarad > 0:
     #    sch.pusher   = pypic.BorisDragPusher()
@@ -541,31 +539,36 @@ if __name__ == "__main__":
     # --------------------------------------------------
     #star = pyfld.Conductor()
     star = pypic.Star()
-    star.radius    = conf.rad_star
-    star.radius_pc = conf.rad_pcap
-    star.period    = conf.period_star # NOTE should be period_star for normal runs 
+    for obj in [star, sch.pusher]:
+        obj.radius    = conf.rad_star
+        obj.radius_pc = conf.rad_pcap
+        obj.period    = conf.period_star # NOTE should be period_star for normal runs 
+
+        if conf.twoD:
+            obj.cenx   = conf.Lx//2 
+            obj.ceny   = -conf.rad_star + conf.rad_atms
+            obj.cenz   = 0 
+        elif conf.threeD:
+            obj.cenx   = conf.Lx//2 #- 0.5
+            obj.ceny   = 0
+            obj.cenz   = -conf.rad_star + conf.rad_atms
+            sys.exit() # TODO
+
+    #sch.pusher.grav_const = 0.0 # gravitational constant
+    vth = 0.2
+    rad_atms = 0.005*conf.rad_star
+    sch.pusher.grav_const = vth**2/(2*rad_atms)
 
     star.B0     = conf.b_dipole_norm    # TODO normalization here?
     star.chi    = np.deg2rad(conf.chi)  # magnetic inclination
     star.phase  = 0.0
-    star.delta  = 2 # in units of cells; smoothing function sharpness
+    star.delta  = 1  # in units of cells; radial smoothing function sharpness
 
     star.Nx = conf.Lx
     star.Ny = conf.Ly
     star.Nz = conf.Lz
     
-    # transverse polar cap smoothing (g(x) function)
-    star.delta_pc  = 2
-
-    if conf.twoD:
-        star.cenx   = conf.Lx//2 #- 0.5
-        star.ceny   = -conf.rad_star + conf.rad_atms
-        star.cenz   = 0 
-    elif conf.threeD:
-        star.cenx   = conf.Lx//2 #- 0.5
-        star.ceny   = 0
-        star.cenz   = -conf.rad_star + conf.rad_atms
-        sys.exit() # TODO
+    star.delta_pc  = 2 # transverse polar cap smoothing (g(x) function)
 
     sch.lwall = star # add to scheduler
 
@@ -583,7 +586,6 @@ if __name__ == "__main__":
 
     if sch.is_master: print('init: starting simulation...'); sys.stdout.flush()
 
-
     ##################################################
     # simulation time step loop
 
@@ -592,8 +594,9 @@ if __name__ == "__main__":
     for lap in range(lap, conf.Nt + 1):
 
         # ramp up plate smoothly
-        ramp_up_laps = 0.5*conf.rad_pcap/conf.cfl # duration of the ramp up in polar cap light crossing times
+        ramp_up_laps = 1.0*conf.rad_pcap/conf.cfl # duration of the ramp up in polar cap light crossing times
         pc_freq = min(max(1,lap)/ramp_up_laps, 1.0)*(1/conf.period_star) # polar cap rotation frequency
+        #pc_freq = 1e-5/conf.period_star # polar cap rotation frequency
         star.period = 1/pc_freq
 
         # --------------------------------------------------
@@ -699,24 +702,30 @@ if __name__ == "__main__":
         #sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', ) )
 
         # single-body QED interactions
-        if conf.qed_mode and lap % conf.qed_step == 0:
-            timer.start_comp("qed_onebody")
-            for tile in pytools.tiles_local(grid):
-                #print("calling onebody")
-                mc.solve_onebody(tile)
-            timer.stop_comp("qed_onebody")
+        #if conf.qed_mode and lap % conf.qed_step == 0:
+        #    timer.start_comp("qed_onebody")
+        #    for tile in pytools.tiles_local(grid):
+        #        #print("calling onebody")
+        #        mc.solve_onebody(tile)
+        #    timer.stop_comp("qed_onebody")
+
+
+        # TODO need to recalculate the interpolation step since new particles dont have Bpart and Epart; 
+        #      this is clearly a design error...
+        # DONE new PulsarPusher calculates the fields inside the prtcl loop so this is fixed
+        #      for every other pusher, need to uncomment this
+        #sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
 
         sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[0]) ) # e^-
         sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[1]) ) # e^+
         sch.operate( dict(name='push',      solver='pusherx',method='solve', nhood='local', args=[2]) ) # x
-
 
         # clear currents; need to call this before wall operations since they can deposit currents too 
         sch.operate( dict(name='clear_cur', solver='tile',   method='clear_current', nhood='all', ) )
 
         # apply moving/reflecting/injecting walls
         # TODO
-        #if lap*conf.cfl > 1.5*conf.Rpc: # apply after a fraction of the disk light crossing time 
+        #if lap*conf.cfl > 1.0*conf.rad_pcap: # apply after a fraction of the disk light crossing time 
         sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
 
 
@@ -849,14 +858,12 @@ if __name__ == "__main__":
 
                 tplt.col_mode = False
                 tplt.plot_panels( (2,3),
-                    dict(axs=(0,0), data=fld_writer.get_slice( 0)/conf.e_norm, name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(0,1), data=fld_writer.get_slice( 1)/conf.e_norm, name='ey', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    #dict(axs=(0,2), data=fld_writer.get_slice( 2)/conf.e_norm, name='ez', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(0,2), data=fld_writer.get_slice( 9)/conf.p_norm, name='ne', cmap='viridis',vmin= 0, vmax=4),
-                    dict(axs=(1,0), data=fld_writer.get_slice( 3)/conf.b_norm, name='bx', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(1,1), data=fld_writer.get_slice( 4)/conf.b_norm, name='by', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    #dict(axs=(1,2), data=fld_writer.get_slice( 5)/conf.b_norm, name='bz', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(1,2), data=mom_writer.get_slice(14)/conf.x_norm, name='ph', cmap='viridis',vmin= 0, vmax=4),
+                    dict(axs=(0,0), data=      fld_writer.get_slice( 0)/conf.e_norm ,   name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(0,1), data=      fld_writer.get_slice( 1)/conf.e_norm ,   name='ey', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(0,2), data=      fld_writer.get_slice( 9)/conf.p_norm   , name='ne', cmap='viridis',vmin= 0, vmax=4),
+                    dict(axs=(1,0), data=      fld_writer.get_slice( 3)/conf.b_norm ,   name='bx', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(1,1), data=      fld_writer.get_slice( 4)/conf.b_norm ,   name='by', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(1,2), data=      mom_writer.get_slice(14)/conf.x_norm   , name='ph', cmap='viridis',vmin= 0, vmax=4),
                     )
 
             #--------------------------------------------------

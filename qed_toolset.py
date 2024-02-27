@@ -18,9 +18,9 @@ class QEDToolset:
         self.nz = conf.Nz*conf.NzMesh
 
         # limits for various histograms
-        self.xxlims = (-2, 4) # photon xlim
-        self.xylims = (1e-3, 1e2) # photon ylim (1e-4, 1e2)
-        self.pxlims = (-2, 4) # pair xlim
+        self.xxlims = (-2, 5) # photon xlim
+        self.xylims = (1e-3, 1e3) # photon ylim (1e-4, 1e2)
+        self.pxlims = (-2, 5) # pair xlim
         self.wxlims = (-1, 5) # pair xlim
 
         self.Nhist = 128

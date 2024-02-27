@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import SymLogNorm, LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import h5py as h5
 import sys, os
@@ -29,25 +30,24 @@ def draw_label(ax, xloc, yloc, tt, conf):
 
 # trick to make nice colorbars
 # see http://joseph-long.com/writing/colorbars/
-def colorbar(mappable, 
-        loc="right", 
-        orientation="vertical", 
-        size="1%", 
-        #pad=0.05, 
-        pad=0.1, 
-        ticklocation='right'):
-        #loc="top", 
-        #orientation="horizontal", 
-        #size="8%", 
-        #pad=0.03, 
-        #ticklocation='top'):
-
-    ax = mappable.axes
-    fig = ax.figure
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes(loc, size=size, pad=pad)
-    return cax, fig.colorbar(mappable, cax=cax, orientation=orientation, ticklocation=ticklocation)
-
+#def colorbar(mappable, 
+#        loc="right", 
+#        orientation="vertical", 
+#        size="1%", 
+#        #pad=0.05, 
+#        pad=0.1, 
+#        ticklocation='right'):
+#        #loc="top", 
+#        #orientation="horizontal", 
+#        #size="8%", 
+#        #pad=0.03, 
+#        #ticklocation='top'):
+#
+#    ax = mappable.axes
+#    fig = ax.figure
+#    divider = make_axes_locatable(ax)
+#    cax = divider.append_axes(loc, size=size, pad=pad)
+#    return cax, fig.colorbar(mappable, cax=cax, orientation=orientation, ticklocation=ticklocation)
 
 
 default_values = {
@@ -62,6 +62,8 @@ default_values = {
     'title':'',
     'derived':False,
     'file': 'flds',
+    'log': False,
+    'norm': None,
 }
 
 default_turbulence_values = {
@@ -73,28 +75,56 @@ default_turbulence_values = {
         'ex': {'title': r"$E_r$",
                'cmap': "PRGn",
                'vsymmetric':True,
-                'vmin':-1.0,
-                'vmax': 1.0,
+                'vmin':-0.1,
+                'vmax': 0.1,
+                'norm': SymLogNorm(1e-2, vmin=-1.0, vmax=1.0, base=10),
+                },
+        'ey': {'title': r"$E_y$",
+               'cmap': "PRGn",
+               'vsymmetric':True,
+                'vmin':-0.1,
+                'vmax': 0.1,
                 },
         'epar': {'title': r"$E_\parallel$",
-               'cmap': "PRGn",
+               'cmap': "RdBu", #"PRGn",
                'vsymmetric':True,
                'derived':True,
                 'vmin':-0.1,
                 'vmax': 0.1,
+                'norm': SymLogNorm(1e-2, vmin=-1.0, vmax=1.0, base=10),
                 },
         'bz': {'title': r"$B_z$",
                'cmap': "RdBu",
                'vsymmetric':True,
                 },
-        'rho': {'title': r"$n/n_0$",
+        'bx': {'title': r"$B_x$",
+               'cmap': "RdBu",
+               'vsymmetric':True,
+                'vmin':-1.0,
+                'vmax': 1.0,
+                },
+        'rho': {'title': r"$n/n_\mathrm{GJ}$",
                 'vmin': 000000.0,
                 'vmax': 4.0,
+                },
+        'logrho': {'title': r"$\log_{10}(n/n_\mathrm{GJ})$",
+                'vmin':-3.0,
+                'vmax': 1.0,
+                'derived':True,
+                'log':True,
                 },
         'densx':  {'title': r"$n_x/n_{x,0}$",
                 'vmin': 0.0,
                 'vmax': 4.0,
                 'file': 'moms',
+                },
+        'lognx':  {'title': r"$\log_{10}(n_x/n_{x,0})$",
+                'vmin':-2.0,
+                'vmax': 3.0,
+                'file': 'moms',
+                'derived':True,
+                'cmap':'inferno',
+                'log':True,
                 },
         'je': {'title': r"$\mathbf{J} \cdot \mathbf{E}$",
                'cmap': "BrBG",
@@ -114,6 +144,21 @@ default_turbulence_values = {
                'vsymmetric':True,
                'vmin': -2.0000,
                'vmax':  2.0000,
+                },
+        'S':  {'title': r"$\log_{10}(S)$",
+                'vmin':-4.0,
+                'vmax': 0.0,
+                'derived':True,
+                'cmap':'inferno',
+                'log':True,
+                },
+        'logS':  {'title': r"$(S_z - \langle S \rangle_z)/S_0 $",
+                'vmin':  -1,
+                'vmax':  +1,
+                'derived':True,
+                'cmap':'RdBu',
+                'norm': SymLogNorm(1e-4, vmin=-1.0, vmax=1.0, base=10),
+                #'norm': LogNorm(vmin=-4, vmax=1.0),
                 },
 }
 
@@ -166,6 +211,72 @@ def build_epar(f5F):
 
     return epar
 
+# Poynting flux
+def build_S(f5F):
+
+    ex = read_var(f5F, "ex")
+    ey = read_var(f5F, "ey")
+    ez = read_var(f5F, "ez")
+
+    bx = read_var(f5F, "bx")
+    by = read_var(f5F, "by")
+    bz = read_var(f5F, "bz")
+
+    e  = np.sqrt(ex**2 + ey**2 + ez**2)
+    b  = np.sqrt(bx**2 + by**2 + bz**2)
+
+    # remove y slice averages
+    #Sy[:, 50] = 10.0
+    #bx0 = np.mean(bx, axis=0)
+
+    #ex -= np.mean(ex, axis=0)
+    #ey -= np.mean(ey, axis=0)
+    #ez -= np.mean(ez, axis=0)
+
+    #bx -= np.mean(bx, axis=0)
+    #by -= np.mean(by, axis=0)
+    #bz -= np.mean(bz, axis=0)
+
+    # determinant
+    #x  y  z
+    #ex ey ez
+    #bx by bz
+
+    # cross product E x B
+    Sx =  (ey*bz - ez*by)
+    Sy = -(ex*bz - ez*bx)
+    Sz =  (ex*by - ey*bx)
+
+    #Sy -= np.mean(Sy, axis=0)
+
+    #--------------------------------------------------
+    def gaussian( x , s):
+        return 1./np.sqrt( 2. * np.pi * s**2 ) * np.exp( -x**2 / ( 2. * s**2 ) )
+
+    sig = 5.0
+    w = int(3*sig)
+    kernel = np.fromiter( (gaussian( x , sig ) for x in range( -w, w+1, 1 ) ), float )
+    #print('kernel', kernel)
+    #--------------------------------------------------
+
+    S0 = np.zeros_like(ex) # convolved Poynting flux
+
+    # 1D smearing along the height direction
+    for i in range(np.shape(ex)[1]): 
+        S0[:,i] = np.convolve( Sy[:,i], kernel, mode='same' )
+
+    # and then in x (does not seem to give good results)
+    #for j in range(np.shape(ex)[0]): 
+    #    #S0[j,:] = np.convolve( Sy[j,:], kernel, mode='same' )
+    #    S0[j,:] = np.convolve( S0[j,:], kernel, mode='same' )
+
+    Sr = Sy - S0
+
+    #ind = np.where(Sr < 0)
+    #ind = np.where(Sr < 0)
+    #Sr[ ind ] = 0.0
+
+    return Sr
 
 
 def plot2dpcap_single(
@@ -227,19 +338,30 @@ def plot2dpcap_single(
     else:
         print("building composite variable")
 
-        if var == "je":     val = build_je(f5F)
-        elif var == "ve":   val, vex, vey, vez = build_ve(f5F)
-        elif var == "epar": val = build_epar(f5F)
+        if var == "je":      val = build_je(f5F)
+        elif var == "ve":    val, vex, vey, vez = build_ve(f5F)
+        elif var == "epar":  val = build_epar(f5F)
+        elif var == 'logrho':val = np.log10( read_var(f5F, 'rho') )
+        elif var == 'lognx': val = np.log10( read_var(f5F, 'densx') )
+        elif var == 'S':     val = np.log10(abs(build_S(f5F)))
+        elif var == 'logS':  val = build_S(f5F) 
 
 
     #--------------------------------------------------
     if do_fieldlines and args['file'] == 'flds':
         bx = read_var(f5F, "bx")
         by = read_var(f5F, "by")
+
+        ex = read_var(f5F, "ex")
+        ey = read_var(f5F, "ey")
+
     elif do_fieldlines and not(args['file'] == 'flds'):
         f5F1 = h5.File(info['fields_file'],'r')
         bx = read_var(f5F1, "bx")
         by = read_var(f5F1, "by")
+
+        ex = read_var(f5F1, "ex")
+        ey = read_var(f5F1, "ey")
 
     #--------------------------------------------------
     # get shape
@@ -283,7 +405,6 @@ def plot2dpcap_single(
         args['vmin'] = -vminmax
         args['vmax'] =  vminmax
 
-
     # finally, re-check that user did not give vmin/vmax
     args['vmin'] = vmin if not(vmin == None) else args['vmin']
     args['vmax'] = vmax if not(vmax == None) else args['vmax']
@@ -291,6 +412,16 @@ def plot2dpcap_single(
     #nor the project default
     args['vmin'] = default_turbulence_values[var]['vmin'] if not(vmin == None) else args['vmin']
     args['vmax'] = default_turbulence_values[var]['vmax'] if not(vmax == None) else args['vmax']
+
+
+    #--------------------------------------------------
+    # mask bad values
+    if args['log']:
+        inds = np.where(val < args['vmin'])
+        val[inds] = args['vmin']
+
+        inds = np.isnan(val)
+        val[inds] = args['vmin']
 
 
     #--------------------------------------------------
@@ -306,11 +437,12 @@ def plot2dpcap_single(
     if var in ['bx', 'by', 'bz']:
         norm = conf.binit #(me_per_qe*conf.cfl**2)/deltax
     if var in ['ex','ey','ez', 'epar']:
-        norm = conf.binit #(me_per_qe*conf.cfl**2)/deltax
-
-    if var == 'rho':
+        #norm = conf.binit #(me_per_qe*conf.cfl**2)/deltax
+        norm = qe*conf.nGJ*conf.rad_pcap
+    if var in ['rho', 'logrho']:
         #print(qe,conf.stride)
-        norm = n0
+        #norm = n0
+        norm = conf.nGJ
     if var in ['jx', 'jy', 'jz']:
         norm = qe*n0*conf.cfl*conf.cfl
     if var == 'je':
@@ -321,8 +453,13 @@ def plot2dpcap_single(
         #correct for stride size in e/b fields
         norm /= conf.stride**2
         norm /= 1.0e3
+    if var == 'logS':
+        norm = conf.cfl*(qe*conf.nGJ*conf.rad_pcap)**2
 
-    val = val / norm
+    if not(args['log']):
+        val = val / norm
+    else:
+        val = val - np.log10( norm )
 
     print("norm factor: {}".format( norm ))
     print("value at the corner {} / mean val {}".format( val[0,0], np.mean(val)) )
@@ -347,6 +484,7 @@ def plot2dpcap_single(
            vmax = args['vmax'],
            clip = args['clip'],
            aspect=args['aspect'],
+           norm = args['norm'],
            )
 
 
@@ -358,7 +496,14 @@ def plot2dpcap_single(
         X, Y = np.meshgrid(xx, yy, indexing='ij')
 
         val2 = np.sqrt(bx**2 + by**2)
-        lw = 1 #1.5*val2/val2.max()
+
+        norm_epar = abs(conf.qe)*conf.nGJ*conf.rad_pcap
+        epar = (ex*bx + ey*by)/np.sqrt(bx**2 + by**2)/norm_epar
+
+        print("epar", np.min(epar), np.max(epar) )
+
+        #lw = 1 #1.5*val2/val2.max()
+        lw = np.maximum( 1.0*np.ones_like(epar), 20.0*abs(epar))
 
         #print("streamlines")
         #print(np.shape(X), np.shape(Y))
@@ -373,14 +518,45 @@ def plot2dpcap_single(
                 #X,Y,
                 xx, yy,
                 bx, by,
-                density = 1.0,
-                color = 'r',
+                density = 2.0,
+                color = 'w',
                 linewidth= lw,
                 arrowsize=0.3
                 )
 
-        splt.lines.set_alpha(0.3)
-        splt.arrows.set_alpha(0.3)
+        splt.lines.set_alpha(0.2)
+        splt.arrows.set_alpha(0.2)
+
+
+    #--------------------------------------------------
+    # draw surface 
+
+    if conf.twoD:
+        cenx   = conf.Lx//2 #- 0.5
+        ceny   = -conf.rad_star + conf.rad_atms
+        cenz   = 0 
+
+    xx = np.linspace(0, conf.Nx*conf.NxMesh, 100) - cenx
+    #xx**2 + yy**2 = rad**2
+    yy = np.sqrt( conf.rad_star**2 - xx**2 ) + ceny
+    ax.plot(xx/conf.rad_pcap, yy/conf.rad_pcap, "w-")
+
+    yy2 = np.sqrt( (conf.rad_star + conf.rad_atms)**2 - xx**2 ) + ceny
+    ax.plot(xx/conf.rad_pcap, yy2/conf.rad_pcap, "w-", alpha=0.3)
+
+    # draw polar cap limits
+    sint = conf.rad_pcap/conf.rad_star
+    Rbc = conf.rad_star/sint/sint
+
+    #eta = sint*sint # require this to hold
+    #rad/Rbc = s**2
+    #rad     = Rbc*s**2
+    #sqrt(x^2 + y^2 +) + Rbc*s^2
+    #x^2 + y^2 = (Rbc*s^2)^2
+    #yy3 = np.sqrt( (Rbc*sint*sint)**2 - xx**2 )
+    #print(yy3)
+    #ax.plot(xx/conf.rad_pcap, yy3/conf.rad_pcap, "w-", alpha=0.3)
+
 
     #--------------------------------------------------
     if do_dark:
@@ -411,9 +587,13 @@ def plot2dpcap_single(
 
     cax = plt.fig.add_axes([axright+pad, axbottom+wskip, 0.01, axtop-axbottom-2*wskip])
 
-    cb = plt.fig.colorbar(im, cax=cax, 
+    cb = plt.fig.colorbar(
+            im, 
+            cax=cax, 
             orientation='vertical',
-            ticklocation='right')
+            ticklocation='right',
+            norm=args['norm'],
+            )
     #cb.set_label(args['title']) 
     cax.text(1.0, 1.09, args['title'], transform=cax.transAxes)
 

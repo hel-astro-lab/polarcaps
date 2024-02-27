@@ -43,7 +43,7 @@ class Configuration_Turbulence(Configuration):
 
             #--------------------------------------------------
             # sigma
-            str_sig = simplify_string(self.sigma)
+            str_sig = simplify_large_num(self.sigma)
             str_delg = simplify_string(self.delgam)
             self.outdir += "s" + str_sig + "d" + str_delg + "_"
 
@@ -285,10 +285,10 @@ class Configuration_Turbulence(Configuration):
         #dV_gap = omB*(self.rad_star/self.cfl)*(self.rad_star/self.rad_lcyl)**2 # DONE
         #print('init: dV_gap:', dV_gap)
 
-        nGJ = Om_star*bstar/(cfl*abs(self.qe))
+        self.nGJ = Om_star*bstar/(cfl*abs(self.qe))
         #nGJ = Om_star*bstar/(2*pi*self.cfl*abs(self.qe))
 
-        deGJ = self.c_omp*(nGJ/self.ppc)**(-0.5)
+        deGJ = self.c_omp*(self.nGJ/self.ppc)**(-0.5)
 
         gam_gap  = vrot**2*(bstar*self.rad_pcap/(cfl**2))
         #gam_gap2 = vrot**2*(bstar*self.rad_star/(cfl**2))
@@ -305,7 +305,7 @@ class Configuration_Turbulence(Configuration):
             print('init: B_*    ', bstar)
             #print('init: B_LC   ', bstar*(self.rad_lcyl/self.rad_star)**(-3.0))
             print('init: v_rot  ', vrot)
-            print('init: n_GJ   ', nGJ)
+            print('init: n_GJ   ', self.nGJ)
             print('init: d_e GJ ', deGJ, 'dx')
             print('init: gam_gap', gam_gap)
 
@@ -319,7 +319,7 @@ class Configuration_Turbulence(Configuration):
         self.e_norm = 1.0*self.binit 
         self.b_norm = 1.0*self.binit
         self.j_norm = abs(self.qe)*self.ppc*2*self.cfl**2
-        self.p_norm = nGJ # max(self.ppc*2,1)
+        self.p_norm = self.nGJ # max(self.ppc*2,1)
         self.x_norm = max(self.xpc,1)
 
 
@@ -397,7 +397,11 @@ class Configuration_Turbulence(Configuration):
             self.N_qdt = self.qed_step     # QED reaction time steps to plasma time steps  
 
             # normaliation of onebody interaction; reduced Compton wavelength
-            self.N_lamC = 10.0 #H/self.Rpc # TODO
+
+            # this is inverse of tau_C = lamC/c = alpha_f r_e /c = e^2/mc^2 = e/c^2
+            #self.N_lamC = 1.0e3 #H/self.Rpc # TODO
+            self.N_lamC = 134*self.cfl**2/abs(self.qe)
+            #self.N_lamC2= 134*self.c_omp**2*self.ppc/self.cfl
 
             # NOTE: it then follows that unit of luminosity is N_wgt / N_time
 
@@ -425,6 +429,8 @@ class Configuration_Turbulence(Configuration):
                 print('init: N_ep   :', self.Nref['e-'])
                 print('init: N_wgt  :', self.N_wgt)
                 print('init: N_time :', self.N_time)
+                print('init: N_lamC :', self.N_lamC)
+                #print('init: N_lamC2:', self.N_lamC2)
                 #print('init: N_Q    :', self.N_Q)
                 #print('init: N_inj  :', self.N_inj)
                 print('init: wsum0  :', self.wsum0)
