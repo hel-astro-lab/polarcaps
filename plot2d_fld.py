@@ -89,6 +89,12 @@ default_turbulence_values = {
                 'vmin':-0.1,
                 'vmax': 0.1,
                 },
+        'ez': {'title': r"$E_z$",
+               'cmap': "PRGn",
+               'vsymmetric':True,
+                'vmin':-0.1,
+                'vmax': 0.1,
+                },
         'epar': {'title': r"$E_\parallel$",
                'cmap': "RdBu", #"PRGn",
                'vsymmetric':True,
@@ -205,15 +211,15 @@ def build_bgradb(f5F):
     # Compute the divergence
     return np.sqrt(bgradbx*bgradbx + bgradby*bgradby + bgradbz*bgradbz)/(bx*bx + by*by + bz*bz)
 
-def build_epar(f5F):
+def build_epar(f5F, conf):
 
-    ex = read_var(f5F, "ex")
-    ey = read_var(f5F, "ey")
-    ez = read_var(f5F, "ez")
+    ex = pytools.read_h5_array(f5F, "ex", stride=conf.stride)
+    ey = pytools.read_h5_array(f5F, "ey", stride=conf.stride)
+    ez = pytools.read_h5_array(f5F, "ez", stride=conf.stride)
 
-    bx = read_var(f5F, "bx")
-    by = read_var(f5F, "by")
-    bz = read_var(f5F, "bz")
+    bx = pytools.read_h5_array(f5F, "bx", stride=conf.stride)
+    by = pytools.read_h5_array(f5F, "by", stride=conf.stride)
+    bz = pytools.read_h5_array(f5F, "bz", stride=conf.stride)
     b  = np.sqrt(bx**2 + by**2 + bz**2)
 
     epar = (ex*bx + ey*by + ez*bz)/b
@@ -222,10 +228,10 @@ def build_epar(f5F):
 
 
 # Poynting flux
-def build_exy(f5F):
+def build_exy(f5F, conf):
 
-    ex = read_var(f5F, "ex")
-    ey = read_var(f5F, "ey")
+    ex = pytools.read_h5_array(f5F, "ex", stride=conf.stride)
+    ey = pytools.read_h5_array(f5F, "ey", stride=conf.stride)
     #ez = read_var(f5F, "ez")
 
     return np.sqrt(ex*ex + ey*ey)
@@ -351,7 +357,6 @@ def plot2dpcap_single(
 
     # normal singular variables
     if not(args['derived']):
-        #val = read_var(f5F, var)
         val = pytools.read_h5_array(f5F, var, stride=conf.stride)
 
         #val /= 0.2056 #TODO automatize #n_0
@@ -362,13 +367,13 @@ def plot2dpcap_single(
         print("building composite variable")
 
         if var == "je":      val = build_je(f5F)
-        elif var == "ve":    val, vex, vey, vez = build_ve(f5F)
-        elif var == "epar":  val = build_epar(f5F)
-        elif var == 'logrho':val = np.log10( read_var(f5F, 'rho') )
-        elif var == 'lognx': val = np.log10( read_var(f5F, 'densx') )
+        #elif var == "ve":    val, vex, vey, vez = build_ve(f5F)
+        elif var == "epar":  val = build_epar(f5F, conf)
+        elif var == 'logrho':val = np.log10( pytools.read_h5_array(f5F, 'rho', stride=conf.stride) )
+        elif var == 'lognx': val = np.log10( pytools.read_h5_array(f5F, 'densx', stride=conf.stride) )
         elif var == 'S':     val = np.log10(abs(build_S(f5F)))
         elif var == 'logS':  val = build_S(f5F) 
-        elif var == 'exy':   val = build_exy(f5F) 
+        elif var == 'exy':   val = build_exy(f5F, conf) 
 
 
     #--------------------------------------------------
@@ -413,14 +418,16 @@ def plot2dpcap_single(
     print("nx={} ny={}".format(nx, ny))
 
     # strip out the 3rd dimension
-    if conf.twoD:
-        val = val[:,:,0]
+    val = val[:,:,0]
 
+
+    # typical image extent
     #xmin = 0.0
     #ymin = 0.0
     #xmax = nx/info['skindepth']
     #ymax = ny/info['skindepth']
 
+    # star coordinates
     if conf.twoD:
         xmin = -conf.Lx//2
         ymin = 0
@@ -566,21 +573,17 @@ def plot2dpcap_single(
         ey = ey[:,:,0].T
         ez = ez[:,:,0].T
 
+        # 2D setup
+        bperp = bx
+        bpara = by
 
-        if args_cli.view == 'side' and conf.threeD:
-
-            # flipping x and y roles to match with the array ordering
-            #bxT = 1.0*bx
-            #byT = 1.0*by
-            #exT = 1.0*ex
-            #eyT = 1.0*ey
-            #ex = eyT
-            #ey = exT
-            #bx = byT
-            #by = bxT
-
-            sys.exit()
-
+        # 3D options
+        if args_cli.view == 'side' and conf.threeD: # on side view we plot bx and bz
+            bperp = bx
+            bpara = bz
+        if args_cli.view == 'top' and conf.threeD: # on top view we plot bx and by
+            bperp = bx
+            bpara = by
 
         norm_epar = abs(conf.qe)*conf.nGJ*conf.rad_pcap
         epar = (ex*bx + ey*by + ez*bz)/np.sqrt(bx**2 + by**2 + bz**2)/norm_epar
@@ -600,7 +603,7 @@ def plot2dpcap_single(
 
         splt = ax.streamplot(
                 xx, yy,
-                bx, by,
+                bperp, bpara,
                 density = 2.0,
                 color = 'w',
                 linewidth= lw,
@@ -616,14 +619,13 @@ def plot2dpcap_single(
     # draw surface 
 
     if conf.twoD:
-        cenx   = conf.Lx//2 #- 0.5
-        ceny   = -conf.rad_star + conf.rad_atms
+        cenx   = conf.Lx//2 + 0.5
+        ceny   = -conf.rad_star + conf.rad_curv_shift
         cenz   = 0 
-    if conf.threeD:
-        cenx   = conf.Lx//2 
-        #ceny   = conf.Ly//2 
-        ceny   = -conf.rad_star + conf.rad_atms
-
+    elif conf.threeD:
+        cenx   = conf.Lx//2 + 0.5
+        #ceny   = conf.Ly//2 + 0.5
+        ceny   = -conf.rad_star + conf.rad_curv_shift
 
     #--------------------------------------------------
     if args_cli.view == 'side':
@@ -631,11 +633,10 @@ def plot2dpcap_single(
         xx = np.linspace(0, conf.Nx*conf.NxMesh, 100) - cenx
         #xx**2 + yy**2 = rad**2
         yy = np.sqrt( conf.rad_star**2 - xx**2 ) + ceny
-        ax.plot(xx/conf.rad_pcap, yy/conf.rad_pcap, "w-")
+        ax.plot(xx/conf.rad_pcap, yy/conf.rad_pcap, "k-", lw=0.8)
 
-        yy2 = np.sqrt( (conf.rad_star + conf.rad_atms)**2 - xx**2 ) + ceny
-        ax.plot(xx/conf.rad_pcap, yy2/conf.rad_pcap, "w-", alpha=0.3)
-
+        yy2 = np.sqrt( (conf.rad_star + conf.height_atms)**2 - xx**2 ) + ceny
+        ax.plot(xx/conf.rad_pcap, yy2/conf.rad_pcap, "k-", alpha=1.0, lw=0.8)
 
         # draw polar cap limits
         sint = conf.rad_pcap/conf.rad_star
