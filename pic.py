@@ -526,15 +526,18 @@ if __name__ == "__main__":
 
     # 3D box peripherals
     if conf.threeD:
+        st = 1 # stride
         slice_xy_writer = pyfld.FieldSliceWriter( conf.outdir, 
-                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, 1, 
-                0, 1)
+                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, st, 0, 1)
         slice_xz_writer = pyfld.FieldSliceWriter( conf.outdir, 
-                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, 1, 
-                1, 1)
+                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, st, 1, 1)
         slice_yz_writer = pyfld.FieldSliceWriter( conf.outdir, 
-                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, 1, 
-                2, 1)
+                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, st, 2, 1)
+
+        slice_xy_writer.ind = int(0.2*conf.Lz) # bottom slice 
+        slice_xz_writer.ind = int(0.5*conf.Ly) # mid slice 
+        slice_yz_writer.ind = 5 #int(0.5*conf.Lx) # mid slice 
+
 
     # --------------------------------------------------
     #star = pyfld.Conductor()
@@ -545,30 +548,36 @@ if __name__ == "__main__":
         obj.period    = conf.period_star # NOTE should be period_star for normal runs 
 
         if conf.twoD:
-            obj.cenx   = conf.Lx//2 
-            obj.ceny   = -conf.rad_star + conf.rad_atms
+            obj.cenx   = conf.Lx//2 + 0.5
+            obj.ceny   = -conf.rad_star + conf.rad_curv_shift
             obj.cenz   = 0 
         elif conf.threeD:
-            obj.cenx   = conf.Lx//2 #- 0.5
-            obj.ceny   = 0
-            obj.cenz   = -conf.rad_star + conf.rad_atms
-            sys.exit() # TODO
+            obj.cenx   = conf.Lx//2 + 0.5
+            obj.ceny   = conf.Ly//2 + 0.5
+            obj.cenz   = -conf.rad_star + conf.rad_curv_shift
+
 
     #sch.pusher.grav_const = 0.0 # gravitational constant
-    vth = 0.2
-    rad_atms = 0.005*conf.rad_star
-    sch.pusher.grav_const = vth**2/(2*rad_atms)
+    height_atms = conf.height_atms #0.005*conf.rad_star
+    sch.pusher.grav_const = conf.delgam**2/(2*height_atms)
 
     star.B0     = conf.b_dipole_norm    # TODO normalization here?
-    star.chi    = np.deg2rad(conf.chi)  # magnetic inclination
+    star.chi_om = np.deg2rad(conf.chi)  # rotation axis inclination
     star.phase  = 0.0
-    star.delta  = 1  # in units of cells; radial smoothing function sharpness
+    star.delta  = 0.5*conf.height_atms #4.0 #1  # in units of cells; radial smoothing function sharpness; 2x delta = about tanh limit
 
     star.Nx = conf.Lx
     star.Ny = conf.Ly
     star.Nz = conf.Lz
     
     star.delta_pc  = 2 # transverse polar cap smoothing (g(x) function)
+
+    star.temp_pairs = conf.delgam
+    star.temp_phots = conf.delgam_x
+    star.ninj_pairs = 0 #0.05
+    star.ninj_phots = 0.0
+    star.ninj_min_pairs = 0.10
+    star.ninj_min_phots = 0.0
 
     sch.lwall = star # add to scheduler
 
@@ -594,10 +603,10 @@ if __name__ == "__main__":
     for lap in range(lap, conf.Nt + 1):
 
         # ramp up plate smoothly
-        ramp_up_laps = 1.0*conf.rad_pcap/conf.cfl # duration of the ramp up in polar cap light crossing times
-        pc_freq = min(max(1,lap)/ramp_up_laps, 1.0)*(1/conf.period_star) # polar cap rotation frequency
+        #ramp_up_laps = 1.0*conf.rad_pcap/conf.cfl # duration of the ramp up in polar cap light crossing times
+        #pc_freq = min(max(1,lap)/ramp_up_laps, 1.0)*(1/conf.period_star) # polar cap rotation frequency
         #pc_freq = 1e-5/conf.period_star # polar cap rotation frequency
-        star.period = 1/pc_freq
+        #star.period = 1/pc_freq
 
         # --------------------------------------------------
         # QED interaction loop
@@ -702,12 +711,12 @@ if __name__ == "__main__":
         #sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', ) )
 
         # single-body QED interactions
-        #if conf.qed_mode and lap % conf.qed_step == 0:
-        #    timer.start_comp("qed_onebody")
-        #    for tile in pytools.tiles_local(grid):
-        #        #print("calling onebody")
-        #        mc.solve_onebody(tile)
-        #    timer.stop_comp("qed_onebody")
+        if conf.qed_mode and lap % conf.qed_step == 0:
+            timer.start_comp("qed_onebody")
+            for tile in pytools.tiles_local(grid):
+                #print("calling onebody")
+                mc.solve_onebody(tile)
+            timer.stop_comp("qed_onebody")
 
 
         # TODO need to recalculate the interpolation step since new particles dont have Bpart and Epart; 
@@ -738,7 +747,6 @@ if __name__ == "__main__":
         sch.operate( dict(name='mpi_b2', solver='mpi', method='b',                 ) )
         sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid, [2,] ], nhood='local',) )
 
-
         # --------------------------------------------------
         # push E
         sch.operate( dict(name='push_e',    solver='fldpropE', method='push_e',  nhood='local', ) )
@@ -768,10 +776,10 @@ if __name__ == "__main__":
         # --------------------------------------------------
         # current calculation; charge conserving current deposition
         # clear virtual current arrays for boundary addition after mpi, send currents, and exchange between tiles
-        sch.operate( dict(name='comp_curr', solver='currint', method='solve', nhood='local', ) )
-        sch.operate( dict(name='clear_vir_cur', solver='tile',method='clear_current',     nhood='virtual', ) )
-        sch.operate( dict(name='mpi_cur',       solver='mpi', method='j',                 nhood='all', ) )
-        sch.operate( dict(name='cur_exchange',  solver='tile',method='exchange_currents', nhood='local', args=[grid,], ) )
+        sch.operate( dict(name='comp_curr',     solver='currint', method='solve',             nhood='local', ) )
+        sch.operate( dict(name='clear_vir_cur', solver='tile',    method='clear_current',     nhood='virtual', ) )
+        sch.operate( dict(name='mpi_cur',       solver='mpi',     method='j',                 nhood='all', ) )
+        sch.operate( dict(name='cur_exchange',  solver='tile',    method='exchange_currents', nhood='local', args=[grid,], ) )
 
 
         # --------------------------------------------------
@@ -857,13 +865,24 @@ if __name__ == "__main__":
                 #tplt.plot(np.abs(d)/d_norm)
 
                 tplt.col_mode = False
-                tplt.plot_panels( (2,3),
-                    dict(axs=(0,0), data=      fld_writer.get_slice( 0)/conf.e_norm ,   name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(0,1), data=      fld_writer.get_slice( 1)/conf.e_norm ,   name='ey', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(0,2), data=      fld_writer.get_slice( 9)/conf.p_norm   , name='ne', cmap='viridis',vmin= 0, vmax=4),
-                    dict(axs=(1,0), data=      fld_writer.get_slice( 3)/conf.b_norm ,   name='bx', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(1,1), data=      fld_writer.get_slice( 4)/conf.b_norm ,   name='by', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(1,2), data=      mom_writer.get_slice(14)/conf.x_norm   , name='ph', cmap='viridis',vmin= 0, vmax=4),
+
+                if conf.twoD:
+                    tplt.plot_panels( (2,3),
+                    dict(axs=(0,0), data=fld_writer.get_slice( 0)/conf.e_norm ,   name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(0,1), data=fld_writer.get_slice( 1)/conf.e_norm ,   name='ey', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(0,2), data=fld_writer.get_slice( 9)/conf.p_norm   , name='ne', cmap='viridis',vmin= 0, vmax=4),
+                    dict(axs=(1,0), data=fld_writer.get_slice( 3)/conf.b_norm ,   name='bx', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(1,1), data=fld_writer.get_slice( 4)/conf.b_norm ,   name='by', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(1,2), data=mom_writer.get_slice(14)/conf.x_norm   , name='ph', cmap='viridis',vmin= 0, vmax=4),
+                    )
+                if conf.threeD:
+                    tplt.plot_panels( (2,3),
+                    dict(axs=(0,0), data=slice_xz_writer.get_slice( 0)/conf.e_norm ,   name='ex (xz)', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(0,1), data=slice_xz_writer.get_slice( 2)/conf.e_norm ,   name='ez (xz)', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(0,2), data=slice_xz_writer.get_slice( 9)/conf.p_norm   , name='ne (xz)', cmap='viridis',vmin= 0, vmax=1),
+                    dict(axs=(1,0), data=slice_xz_writer.get_slice( 3)/conf.b_norm ,   name='bx (xz)', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(1,1), data=slice_xy_writer.get_slice( 2)/conf.e_norm   , name='ez (top)',cmap='RdBu',   vmin=-1, vmax=1),
+                    dict(axs=(1,2), data=slice_xy_writer.get_slice( 9)/conf.p_norm ,   name='ne (top)',cmap='viridis',vmin=-0, vmax=1),
                     )
 
             #--------------------------------------------------
