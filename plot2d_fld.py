@@ -68,16 +68,20 @@ default_values = {
 
 default_turbulence_values = {
         # DONE
-        'by': {'title': r"$B_z$",
-               'cmap': "RdBu",
-               'vsymmetric':True,
-                },
         'ex': {'title': r"$E_r$",
                'cmap': "PRGn",
                'vsymmetric':True,
                 'vmin':-0.1,
                 'vmax': 0.1,
                 'norm': SymLogNorm(1e-2, vmin=-1.0, vmax=1.0, base=10),
+                },
+        'exy': {'title': r"$E_{xy}$",
+               'cmap': "Blues",
+               'vsymmetric':True,
+                'vmin':-0.1,
+                'vmax': 0.1,
+                'norm': LogNorm(vmin=1e-4, vmax=10.0),
+               'derived':True,
                 },
         'ey': {'title': r"$E_y$",
                'cmap': "PRGn",
@@ -93,15 +97,23 @@ default_turbulence_values = {
                 'vmax': 0.1,
                 'norm': SymLogNorm(1e-2, vmin=-1.0, vmax=1.0, base=10),
                 },
-        'bz': {'title': r"$B_z$",
-               'cmap': "RdBu",
-               'vsymmetric':True,
-                },
         'bx': {'title': r"$B_x$",
                'cmap': "RdBu",
                'vsymmetric':True,
-                'vmin':-1.0,
-                'vmax': 1.0,
+                'vmin':-0.1,
+                'vmax': 0.1,
+                },
+        'by': {'title': r"$B_z$",
+               'cmap': "RdBu",
+               'vsymmetric':True,
+                'vmin':-0.1,
+                'vmax': 0.1,
+                },
+        'bz': {'title': r"$B_z$",
+               'cmap': "RdBu",
+               'vsymmetric':True,
+                'vmin':-1.2,
+                'vmax': 1.2,
                 },
         'rho': {'title': r"$n/n_\mathrm{GJ}$",
                 'vmin': 000000.0,
@@ -163,21 +175,18 @@ default_turbulence_values = {
 }
 
 
-
-def read_var(f5F, var):
-    try:
-        val = f5F[var][:,:,0]
-    except:
-        nx = f5F['Nx'][()]
-        ny = f5F['Ny'][()]
-        nz = f5F['Nz'][()]
-        #print("reshaping 1D array into multiD with {} {} {}".format(nx,ny,nz))
-
-        val = f5F[var][:]
-        val = np.reshape(val, (nx, ny, nz))
-        val = val[:,:,0]
-
-    return val
+#def read_var(f5F, var):
+#    try:
+#        val = f5F[var][:,:,0]
+#    except:
+#        nx = f5F['Nx'][()]
+#        ny = f5F['Ny'][()]
+#        nz = f5F['Nz'][()]
+#        #print("reshaping 1D array into multiD with {} {} {}".format(nx,ny,nz))
+#        val = f5F[var][:]
+#        val = np.reshape(val, (nx, ny, nz))
+#        val = val[:,:,0]
+#    return val
 
 
 def build_bgradb(f5F):
@@ -210,6 +219,18 @@ def build_epar(f5F):
     epar = (ex*bx + ey*by + ez*bz)/b
 
     return epar
+
+
+# Poynting flux
+def build_exy(f5F):
+
+    ex = read_var(f5F, "ex")
+    ey = read_var(f5F, "ey")
+    #ez = read_var(f5F, "ez")
+
+    return np.sqrt(ex*ex + ey*ey)
+
+
 
 # Poynting flux
 def build_S(f5F):
@@ -283,6 +304,7 @@ def plot2dpcap_single(
         ax, 
         var,
         info, 
+        args_cli,
         title= None,
         vmin = None,
         vmax = None,
@@ -329,7 +351,8 @@ def plot2dpcap_single(
 
     # normal singular variables
     if not(args['derived']):
-        val = read_var(f5F, var)
+        #val = read_var(f5F, var)
+        val = pytools.read_h5_array(f5F, var, stride=conf.stride)
 
         #val /= 0.2056 #TODO automatize #n_0
         #val /= 0.2056*0.2056 #TODO automatize #curr
@@ -345,38 +368,75 @@ def plot2dpcap_single(
         elif var == 'lognx': val = np.log10( read_var(f5F, 'densx') )
         elif var == 'S':     val = np.log10(abs(build_S(f5F)))
         elif var == 'logS':  val = build_S(f5F) 
+        elif var == 'exy':   val = build_exy(f5F) 
 
 
     #--------------------------------------------------
     if do_fieldlines and args['file'] == 'flds':
-        bx = read_var(f5F, "bx")
-        by = read_var(f5F, "by")
+        bx = pytools.read_h5_array(f5F, "bx", stride=conf.stride)
+        by = pytools.read_h5_array(f5F, "by", stride=conf.stride)
+        bz = pytools.read_h5_array(f5F, "bz", stride=conf.stride)
 
-        ex = read_var(f5F, "ex")
-        ey = read_var(f5F, "ey")
+        ex = pytools.read_h5_array(f5F, "ex", stride=conf.stride)
+        ey = pytools.read_h5_array(f5F, "ey", stride=conf.stride)
+        ez = pytools.read_h5_array(f5F, "ez", stride=conf.stride)
+
+        if conf.twoD:
+            bz[:] = 0
+            ez[:] = 0
+            
 
     elif do_fieldlines and not(args['file'] == 'flds'):
         f5F1 = h5.File(info['fields_file'],'r')
-        bx = read_var(f5F1, "bx")
-        by = read_var(f5F1, "by")
 
-        ex = read_var(f5F1, "ex")
-        ey = read_var(f5F1, "ey")
+        sys.exit() # TODO
+
+        if conf.twoD:
+            bx = read_var(f5F1, "bx")
+            by = read_var(f5F1, "by")
+            bz = 0
+            ex = read_var(f5F1, "ex")
+            ey = read_var(f5F1, "ey")
+            bz = 0
+        if conf.threeD:
+            bx = read_var(f5F1, "bx")
+            by = read_var(f5F1, "by")
+            bz = read_var(f5F1, "bz")
+            ex = read_var(f5F1, "ex")
+            ey = read_var(f5F1, "ey")
+            ez = read_var(f5F1, "ez")
+
 
     #--------------------------------------------------
     # get shape
-    nx, ny = np.shape(val)
+    nx, ny, nz = np.shape(val)
     print("nx={} ny={}".format(nx, ny))
+
+    # strip out the 3rd dimension
+    if conf.twoD:
+        val = val[:,:,0]
 
     #xmin = 0.0
     #ymin = 0.0
     #xmax = nx/info['skindepth']
     #ymax = ny/info['skindepth']
 
-    xmin = -conf.Lx//2
-    ymin = 0
-    xmax = conf.Lx//2
-    ymax = conf.Ly
+    if conf.twoD:
+        xmin = -conf.Lx//2
+        ymin = 0
+        xmax = conf.Lx//2
+        ymax = conf.Ly
+    if conf.threeD and args_cli.view == 'side':
+        xmin = -conf.Lx//2
+        ymin = 0
+        xmax = conf.Lx//2
+        ymax = conf.Lz
+    if conf.threeD and args_cli.view == 'top':
+        xmin = -conf.Lx//2
+        xmax = +conf.Lx//2
+
+        ymin = -conf.Ly//2
+        ymax = +conf.Ly//2
 
     xmin /= conf.rad_pcap
     ymin /= conf.rad_pcap
@@ -436,7 +496,7 @@ def plot2dpcap_single(
 
     if var in ['bx', 'by', 'bz']:
         norm = conf.binit #(me_per_qe*conf.cfl**2)/deltax
-    if var in ['ex','ey','ez', 'epar']:
+    if var in ['ex','ey','ez', 'epar', 'exy']:
         #norm = conf.binit #(me_per_qe*conf.cfl**2)/deltax
         norm = qe*conf.nGJ*conf.rad_pcap
     if var in ['rho', 'logrho']:
@@ -474,10 +534,12 @@ def plot2dpcap_single(
             print(" setting {}: {}".format(key, args[key]))
 
     #--------------------------------------------------
+    #if conf.threeD:
+    #    val = val.T #  TODO transpose of transpose to neutralize the flips; done only when slice files are used
 
     im = pytools.visualize.imshow(
            ax, 
-           np.transpose(val), 
+           val,
            xmin, xmax, ymin, ymax,
            cmap = args['cmap'],
            vmin = args['vmin'],
@@ -490,38 +552,60 @@ def plot2dpcap_single(
 
     #-------------------------------------------------- 
     if do_fieldlines:
-        nx, ny = np.shape(bx)
+
+        nx, ny, nz = np.shape(bx)
         xx = np.linspace(xmin,xmax, nx)
         yy = np.linspace(ymin,ymax, ny)
-        X, Y = np.meshgrid(xx, yy, indexing='ij')
+        #X,Y = np.meshgrid(xx, yy, indexing='ij')
 
-        val2 = np.sqrt(bx**2 + by**2)
+        bx = bx[:,:,0].T
+        by = by[:,:,0].T
+        bz = bz[:,:,0].T
+
+        ex = ex[:,:,0].T
+        ey = ey[:,:,0].T
+        ez = ez[:,:,0].T
+
+
+        if args_cli.view == 'side' and conf.threeD:
+
+            # flipping x and y roles to match with the array ordering
+            #bxT = 1.0*bx
+            #byT = 1.0*by
+            #exT = 1.0*ex
+            #eyT = 1.0*ey
+            #ex = eyT
+            #ey = exT
+            #bx = byT
+            #by = bxT
+
+            sys.exit()
+
 
         norm_epar = abs(conf.qe)*conf.nGJ*conf.rad_pcap
-        epar = (ex*bx + ey*by)/np.sqrt(bx**2 + by**2)/norm_epar
+        epar = (ex*bx + ey*by + ez*bz)/np.sqrt(bx**2 + by**2 + bz**2)/norm_epar
 
         print("epar", np.min(epar), np.max(epar) )
 
-        #lw = 1 #1.5*val2/val2.max()
         lw = np.maximum( 1.0*np.ones_like(epar), 20.0*abs(epar))
 
         #print("streamlines")
         #print(np.shape(X), np.shape(Y))
         #print(np.shape(xx), np.shape(yy))
         #print(np.shape(bx), np.shape(by))
-        #print(np.shape(val2))
+        #print(np.shape(lw))
 
         #print(bx)#
         #print(by)
 
         splt = ax.streamplot(
-                #X,Y,
                 xx, yy,
                 bx, by,
                 density = 2.0,
                 color = 'w',
                 linewidth= lw,
-                arrowsize=0.3
+                arrowsize=0.3,
+                #broken_streamlines=False,
                 )
 
         splt.lines.set_alpha(0.2)
@@ -535,27 +619,36 @@ def plot2dpcap_single(
         cenx   = conf.Lx//2 #- 0.5
         ceny   = -conf.rad_star + conf.rad_atms
         cenz   = 0 
+    if conf.threeD:
+        cenx   = conf.Lx//2 
+        #ceny   = conf.Ly//2 
+        ceny   = -conf.rad_star + conf.rad_atms
 
-    xx = np.linspace(0, conf.Nx*conf.NxMesh, 100) - cenx
-    #xx**2 + yy**2 = rad**2
-    yy = np.sqrt( conf.rad_star**2 - xx**2 ) + ceny
-    ax.plot(xx/conf.rad_pcap, yy/conf.rad_pcap, "w-")
 
-    yy2 = np.sqrt( (conf.rad_star + conf.rad_atms)**2 - xx**2 ) + ceny
-    ax.plot(xx/conf.rad_pcap, yy2/conf.rad_pcap, "w-", alpha=0.3)
+    #--------------------------------------------------
+    if args_cli.view == 'side':
 
-    # draw polar cap limits
-    sint = conf.rad_pcap/conf.rad_star
-    Rbc = conf.rad_star/sint/sint
+        xx = np.linspace(0, conf.Nx*conf.NxMesh, 100) - cenx
+        #xx**2 + yy**2 = rad**2
+        yy = np.sqrt( conf.rad_star**2 - xx**2 ) + ceny
+        ax.plot(xx/conf.rad_pcap, yy/conf.rad_pcap, "w-")
 
-    #eta = sint*sint # require this to hold
-    #rad/Rbc = s**2
-    #rad     = Rbc*s**2
-    #sqrt(x^2 + y^2 +) + Rbc*s^2
-    #x^2 + y^2 = (Rbc*s^2)^2
-    #yy3 = np.sqrt( (Rbc*sint*sint)**2 - xx**2 )
-    #print(yy3)
-    #ax.plot(xx/conf.rad_pcap, yy3/conf.rad_pcap, "w-", alpha=0.3)
+        yy2 = np.sqrt( (conf.rad_star + conf.rad_atms)**2 - xx**2 ) + ceny
+        ax.plot(xx/conf.rad_pcap, yy2/conf.rad_pcap, "w-", alpha=0.3)
+
+
+        # draw polar cap limits
+        sint = conf.rad_pcap/conf.rad_star
+        Rbc = conf.rad_star/sint/sint
+
+        #eta = sint*sint # require this to hold
+        #rad/Rbc = s**2
+        #rad     = Rbc*s**2
+        #sqrt(x^2 + y^2 +) + Rbc*s^2
+        #x^2 + y^2 = (Rbc*s^2)^2
+        #yy3 = np.sqrt( (Rbc*sint*sint)**2 - xx**2 )
+        #print(yy3)
+        #ax.plot(xx/conf.rad_pcap, yy3/conf.rad_pcap, "w-", alpha=0.3)
 
 
     #--------------------------------------------------
@@ -608,30 +701,35 @@ def plot2dpcap_single(
 
     slap = str(info['lap']).rjust(5, '0')
     if do_dark:
-        fname = fdir + var +'_{}.png'.format(slap)
+        if args_cli.view == 'side':
+            fname = fdir + var +'_{}.png'.format(slap)
+        elif args_cli.view == 'top':
+            fname = fdir + var +'_top_{}.png'.format(slap)
         plt.savefig(fname)
     else:
-        fname = fdir + var +'_{}.pdf'.format(slap)
+        if args_cli.view == 'side':
+            fname = fdir + var +'_{}.pdf'.format(slap)
+        elif args_cli.view == 'top':
+            fname = fdir + var +'_top_{}.pdf'.format(slap)
         plt.savefig(fname)
     cb.remove()
 
 
 #--------------------------------------------------
-
-#def build_info(fdir, lap):
-#    info = {}
-#    info['lap'] = lap
-#    info['fields_file']   = fdir + 'fields_'+str(lap)+'.h5'
-#    info['analysis_file'] = fdir + 'analysis'+str(lap)+'.h5'
-#    return info
     
-def quick_build_info(fdir, lap):
+def build_info(fdir, lap, conf, args):
+
     info = {}
     info['lap'] = lap
     info['fields_file']   = fdir + 'flds_'+str(lap)+'.h5'
     info['moms_file']     = fdir + 'moms_'+str(lap)+'.h5'
     info['analysis_file'] = fdir + 'analysis_'+str(lap)+'.h5'
     info['particle_file'] = fdir + 'test-prtcls'
+     
+    if conf.threeD and args.view == 'side':
+        info['fields_file'] = fdir + 'slices-xz_' + str(lap) + '.h5' 
+    if conf.threeD and args.view == 'top':
+        info['fields_file'] = fdir + 'slices-xy_' + str(lap) + '.h5'
     
     return info
 
@@ -686,10 +784,10 @@ if __name__ == "__main__":
     if not(args.lap == None):
 
         #info = build_info(fdir, args.lap)
-        info = quick_build_info(fdir, args.lap)
+        info = build_info(fdir, args.lap, conf, args)
         info['skindepth'] = conf.c_omp/conf.stride
 
-        plot2dpcap_single(axs[0], args.var, info,)
+        plot2dpcap_single(axs[0], args.var, info, args)
 
     # else plot every file that there is
     # FIXME
@@ -700,9 +798,9 @@ if __name__ == "__main__":
         #for lap, f in enumerate(files_F):
         for lap in range(0, conf.Nt + 1, conf.interval):
 
-            info = quick_build_info(fdir, lap)
+            info = build_info(fdir, lap, conf, args)
             info['skindepth'] = conf.c_omp/conf.stride
-            plot2dpcap_single(axs[0], args.var, info,)
+            plot2dpcap_single(axs[0], args.var, info, args)
 
 
     #varp = args.var + '_p'
