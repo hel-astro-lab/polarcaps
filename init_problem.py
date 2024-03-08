@@ -257,23 +257,36 @@ class Configuration_Turbulence(Configuration):
         #-------------------------------------------------- 
         # polar cap setup
 
-        # 0.65 is exactly at the corner for 2d domain
-        self.rad_pcap = 0.6*self.Nx*self.NxMesh//2 # polar cap half radius R_pc
-        self.rad_star = 10*self.rad_pcap
+        if False: # radio pulsar setup
+            self.rad_pcap = 0.6*self.Lx//2 #0.65 is exactly at the corner for 2d domain when R_* = 10 R_pc
+            self.rad_star = 10*self.rad_pcap
+
+        else: # millisecond pulsar setup
+            self.rad_pcap = 0.3*self.Lx//2 #0.65 is exactly at the corner for 2d domain when R_* = 10 R_pc
+            self.rad_star = 4*self.rad_pcap
+
+
+
+        # v1 based on polar cap size we get the star's spin 
+        #self.rad_lcyl = self.rad_star*(self.rad_star/self.rad_pcap)**2
+        #Om_star = self.cfl/self.rad_lcyl # \Omega_*
+        #self.period_star = 2*np.pi/Om_star # P_*
+        #self.vrot  = Om_star*self.rad_pcap/self.cfl # v_\phi of the polar cap edge
+
+        # v2 based on given vrot infer other parameters
+        self.period_star = 2*pi*self.rad_pcap/(self.vrot*self.cfl)
+        Om_star = 2.0*np.pi/self.period_star
+        self.rad_lcyl = self.cfl/Om_star # light cylinder distance in cells; not self consistent in PC setup
+
 
         self.t0 = self.cfl/self.rad_pcap # time steps in units of light-crossing across the polar cap
 
-        self.period_star = 2*pi*self.rad_pcap/(self.vrot*self.cfl)
-
         self.rad_atms = self.rad_star - np.sqrt(self.rad_star**2 - self.rad_pcap**2) # height of the curved atmosphere
-        self.rad_atms += 5 # add padding; this is the height of the atmosphere at r=Rpc
+        self.rad_atms += 3 # add padding; this is the height of the atmosphere at r=Rpc
 
         self.chi = 0 # magnetic obliquity angle
 
         phase = 0.0 #global rotator phase
-        Om_star = 2.0*np.pi/self.period_star
-        self.rad_lcyl = self.cfl/Om_star # light cylinder distance in cells; not self consistent in PC setup
-
 
         self.b_dipole_norm = self.binit*self.rad_star**3
         bstar = 2*self.b_dipole_norm*self.rad_star**-3 # B_{*,r} = radial magnetic field component 
@@ -297,7 +310,7 @@ class Configuration_Turbulence(Configuration):
         if do_print:
             print(' pulsar initialization...')
             print('init: P_*:   ', self.period_star)
-            print('init: Om_*:  ', Om_star)
+            print('init: Om_*:  ', Om_star, " f_*:",Om_star/(2*pi) )
             print('init: R_*:   ', self.rad_star)
             print('init: R_pc:  ', self.rad_pcap)
             print('init: R_LC:  ', self.rad_lcyl, ' not consistent for PC setup')
