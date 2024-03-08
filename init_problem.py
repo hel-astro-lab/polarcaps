@@ -262,7 +262,7 @@ class Configuration_Turbulence(Configuration):
             self.rad_star = 10*self.rad_pcap
 
         else: # millisecond pulsar setup
-            self.rad_pcap = 0.3*self.Lx//2 #0.65 is exactly at the corner for 2d domain when R_* = 10 R_pc
+            self.rad_pcap = 0.4*self.Lx//2 #0.65 is exactly at the corner for 2d domain when R_* = 10 R_pc
             self.rad_star = 4*self.rad_pcap
 
 
@@ -281,8 +281,10 @@ class Configuration_Turbulence(Configuration):
 
         self.t0 = self.cfl/self.rad_pcap # time steps in units of light-crossing across the polar cap
 
-        self.rad_atms = self.rad_star - np.sqrt(self.rad_star**2 - self.rad_pcap**2) # height of the curved atmosphere
-        self.rad_atms += 3 # add padding; this is the height of the atmosphere at r=Rpc
+        self.rad_curv_shift = self.rad_star - np.sqrt(self.rad_star**2 - self.rad_pcap**2) # height of the curved atmosphere
+        self.rad_curv_shift += 6 # pad with some cells to avoid boundary effects close to grid limit
+
+        self.height_atms = 3 # add padding; this is the height of the atmosphere at r=Rpc in units of cells
 
         self.chi = 0 # magnetic obliquity angle
 
