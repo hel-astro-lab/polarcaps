@@ -561,10 +561,11 @@ if __name__ == "__main__":
     height_atms = conf.height_atms #0.005*conf.rad_star
     sch.pusher.grav_const = conf.delgam**2/(2*height_atms)
 
-    star.B0     = conf.b_dipole_norm    # TODO normalization here?
-    star.chi_om = np.deg2rad(conf.chi)  # rotation axis inclination
-    star.phase  = 0.0
-    star.delta  = 0.5*conf.height_atms #4.0 #1  # in units of cells; radial smoothing function sharpness; 2x delta = about tanh limit
+    star.B0       = conf.b_dipole_norm    # TODO normalization here?
+    star.chi_om   = np.deg2rad(conf.chi)  # rotation axis inclination
+    star.phase_mu = 0.0
+    star.phase_om = 0.0
+    star.delta    = 0.5*conf.height_atms #4.0 #1  # in units of cells; radial smoothing function sharpness; 2x delta = about tanh limit
 
     star.Nx = conf.Lx
     star.Ny = conf.Ly
@@ -607,6 +608,9 @@ if __name__ == "__main__":
         #pc_freq = min(max(1,lap)/ramp_up_laps, 1.0)*(1/conf.period_star) # polar cap rotation frequency
         #pc_freq = 1e-5/conf.period_star # polar cap rotation frequency
         #star.period = 1/pc_freq
+
+        # rotate star's Omega vector with the period
+        sch.lwall.phase_om += conf.Om_star
 
         # --------------------------------------------------
         # QED interaction loop
