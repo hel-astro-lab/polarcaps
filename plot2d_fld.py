@@ -585,6 +585,11 @@ def plot2dpcap_single(
             bperp = bx
             bpara = by
 
+        if var == 'exy': # overwrite and use electric field to see the rotation
+            bperp = ex
+            bpara = ey
+
+
         norm_epar = abs(conf.qe)*conf.nGJ*conf.rad_pcap
         epar = (ex*bx + ey*by + ez*bz)/np.sqrt(bx**2 + by**2 + bz**2)/norm_epar
 
@@ -606,7 +611,7 @@ def plot2dpcap_single(
                 bperp, bpara,
                 density = 2.0,
                 color = 'w',
-                linewidth= lw,
+                linewidth= 1.0, #lw,
                 arrowsize=0.3,
                 #broken_streamlines=False,
                 )
@@ -669,7 +674,7 @@ def plot2dpcap_single(
         draw_label(ax, 850, 970, "a)", conf)
 
 
-    wskip = 0.2
+    wskip = 0.05
     pad = 0.01
     pos = ax.get_position()
     #print(pos)
@@ -702,16 +707,10 @@ def plot2dpcap_single(
 
     slap = str(info['lap']).rjust(5, '0')
     if do_dark:
-        if args_cli.view == 'side':
-            fname = fdir + var +'_{}.png'.format(slap)
-        elif args_cli.view == 'top':
-            fname = fdir + var +'_top_{}.png'.format(slap)
+        fname = fdir + var +'_' + str(args_cli.view) + '_{}.png'.format(slap)
         plt.savefig(fname)
     else:
-        if args_cli.view == 'side':
-            fname = fdir + var +'_{}.pdf'.format(slap)
-        elif args_cli.view == 'top':
-            fname = fdir + var +'_top_{}.pdf'.format(slap)
+        fname = fdir + var +'_' + str(args_cli.view) + '_{}.pdf'.format(slap)
         plt.savefig(fname)
     cb.remove()
 
