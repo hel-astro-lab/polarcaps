@@ -269,14 +269,14 @@ class Configuration_Turbulence(Configuration):
 
         # v1 based on polar cap size we get the star's spin 
         #self.rad_lcyl = self.rad_star*(self.rad_star/self.rad_pcap)**2
-        #Om_star = self.cfl/self.rad_lcyl # \Omega_*
-        #self.period_star = 2*np.pi/Om_star # P_*
-        #self.vrot  = Om_star*self.rad_pcap/self.cfl # v_\phi of the polar cap edge
+        #self.Om_star = self.cfl/self.rad_lcyl # \Omega_*
+        #self.period_star = 2*np.pi/self.Om_star # P_*
+        #self.vrot  = self.Om_star*self.rad_pcap/self.cfl # v_\phi of the polar cap edge
 
         # v2 based on given vrot infer other parameters
         self.period_star = 2*pi*self.rad_pcap/(self.vrot*self.cfl)
-        Om_star = 2.0*np.pi/self.period_star
-        self.rad_lcyl = self.cfl/Om_star # light cylinder distance in cells; not self consistent in PC setup
+        self.Om_star = 2.0*np.pi/self.period_star
+        self.rad_lcyl = self.cfl/self.Om_star # light cylinder distance in cells; not self consistent in PC setup
 
 
         self.t0 = self.cfl/self.rad_pcap # time steps in units of light-crossing across the polar cap
@@ -286,7 +286,7 @@ class Configuration_Turbulence(Configuration):
 
         self.height_atms = 3 # add padding; this is the height of the atmosphere at r=Rpc in units of cells
 
-        self.chi = 0 # magnetic obliquity angle
+        self.chi = 10 # magnetic obliquity angle
 
         phase = 0.0 #global rotator phase
 
@@ -294,29 +294,29 @@ class Configuration_Turbulence(Configuration):
         bstar = 2*self.b_dipole_norm*self.rad_star**-3 # B_{*,r} = radial magnetic field component 
                                                        # at the star's surface; 
                                                        # factor of 2 comes from dipole coordinate system
-        vrot = Om_star*self.rad_pcap/cfl
+        vrot = self.Om_star*self.rad_pcap/cfl
 
         #omB = sqrt(self.sigma)*self.omp
         #dV_gap = omB*(self.rad_star/self.cfl)*(self.rad_star/self.rad_lcyl)**2 # DONE
         #print('init: dV_gap:', dV_gap)
 
-        self.nGJ = Om_star*bstar/(cfl*abs(self.qe))
-        #nGJ = Om_star*bstar/(2*pi*self.cfl*abs(self.qe))
+        self.nGJ = self.Om_star*bstar/(cfl*abs(self.qe))
+        #nGJ = self.Om_star*bstar/(2*pi*self.cfl*abs(self.qe))
 
         deGJ = self.c_omp*(self.nGJ/self.ppc)**(-0.5)
 
         gam_gap  = vrot**2*(bstar*self.rad_pcap/(cfl**2))
         #gam_gap2 = vrot**2*(bstar*self.rad_star/(cfl**2))
-        #gam_gap3 = (self.omB/Om_star)*(self.rad_star/self.rad_lcyl)**3
+        #gam_gap3 = (self.omB/self.Om_star)*(self.rad_star/self.rad_lcyl)**3
 
         if do_print:
             print(' pulsar initialization...')
             print('init: P_*:   ', self.period_star)
-            print('init: Om_*:  ', Om_star, " f_*:",Om_star/(2*pi) )
+            print('init: Om_*:  ', self.Om_star, " f_*:",self.Om_star/(2*pi) )
             print('init: R_*:   ', self.rad_star)
             print('init: R_pc:  ', self.rad_pcap)
             print('init: R_LC:  ', self.rad_lcyl, ' not consistent for PC setup')
-            print('init: chi:   ', np.rad2deg(self.chi))
+            print('init: chi:   ', np.deg2rad(self.chi))
             print('init: B_*    ', bstar)
             #print('init: B_LC   ', bstar*(self.rad_lcyl/self.rad_star)**(-3.0))
             print('init: v_rot  ', vrot)
