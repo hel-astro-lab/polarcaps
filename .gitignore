@@ -1,5 +1,7 @@
 
 test_*
 *.png
+*.pdf
 *.h5
 *.gif
+
