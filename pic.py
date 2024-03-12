@@ -155,19 +155,22 @@ if __name__ == "__main__":
             axs[i,j].set_xlim(toolset.xxlims)
             axs[i,j].set_ylim(toolset.xylims)
 
-        axs[0,2].set_title('esc photons')
-        axs[0,2].set_xlabel(r'$\log x$')
-        axs[0,2].set_ylabel(r'$x \ell_x \propto x d n_p/d \log x$') # lx
-        axs[0,2].set_xlim(toolset.xxlims)
-        axs[0,2].set_ylim(toolset.xylims)
+        #axs[0,2].set_title('esc photons')
+        #axs[0,2].set_xlabel(r'$\log x$')
+        #axs[0,2].set_ylabel(r'$x \ell_x \propto x d n_p/d \log x$') # lx
+        #axs[0,2].set_xlim(toolset.xxlims)
+        #axs[0,2].set_ylim(toolset.xylims)
 
         # pair spectra
-        for (i,j) in [ (0,1), (4,1),]:
+        for (i,j) in [ (0,1), (0,2), (4,1),]:
             axs[i,j].set_xlabel(r'$\log p$')
             axs[i,j].set_ylabel(r'$p d\tau/d p$ $\propto f_e$')
             axs[i,j].set_ylim(( 1e-5,   1 ))
             axs[i,j].set_xlim(toolset.pxlims)
             axs[i,j].set_title('pairs')
+
+        axs[0,1].set_title('e-')
+        axs[0,2].set_title('e+')
 
         # photon LP distribution
         #axs[1,0].set_title('photon weights')
@@ -534,7 +537,7 @@ if __name__ == "__main__":
         slice_yz_writer = pyfld.FieldSliceWriter( conf.outdir, 
                 conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, st, 2, 1)
 
-        slice_xy_writer.ind = int(0.2*conf.Lz) # bottom slice 
+        slice_xy_writer.ind = int(0.8*conf.Lz) # bottom slice 
         slice_xz_writer.ind = int(0.5*conf.Ly) # mid slice 
         slice_yz_writer.ind = 5 #int(0.5*conf.Lx) # mid slice 
 
@@ -577,7 +580,7 @@ if __name__ == "__main__":
     star.temp_phots = conf.delgam_x
     star.ninj_pairs = 0 #0.05
     star.ninj_phots = 0.0
-    star.ninj_min_pairs = 0.10
+    star.ninj_min_pairs = 0.1
     star.ninj_min_phots = 0.0
 
     sch.lwall = star # add to scheduler
@@ -968,14 +971,14 @@ if __name__ == "__main__":
                                     linestyle=ls,
                                     )
 
-                if lap > 1: # ignore first time step
-                    axs[0,2].plot(toolset.lnxs, toolset.h1_enes['esc'], 
-                                    drawstyle='steps-pre',
-                                    color=col,
-                                    alpha=1.0,
-                                    lw = lw,
-                                    linestyle=ls,
-                                    )
+                #if lap > 1: # ignore first time step
+                #    axs[0,2].plot(toolset.lnxs, toolset.h1_enes['esc'], 
+                #                    drawstyle='steps-pre',
+                #                    color=col,
+                #                    alpha=1.0,
+                #                    lw = lw,
+                #                    linestyle=ls,
+                #                    )
 
                 zs = toolset.zs
                 axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e-']*zs, 
@@ -986,7 +989,7 @@ if __name__ == "__main__":
                                     linestyle=ls,
                                     )
 
-                axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, 
+                axs[0,2].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, 
                                     drawstyle='steps-pre',
                                     color=col,
                                     alpha=1.0,
