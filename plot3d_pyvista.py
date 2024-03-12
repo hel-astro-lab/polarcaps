@@ -7,6 +7,8 @@ import matplotlib.ticker as ticker
 from matplotlib import cm
 import argparse
 
+import scipy
+
 # 3D
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -725,6 +727,97 @@ if __name__ == "__main__":
         #        show_scalar_bar=False)
 
 
+    if False: # isocontours for Poynting flux
+        mesh = pv.ImageData(
+            dimensions=(nx, ny, nz), 
+            spacing=(dx, dx, dx), 
+            origin=origin)
+
+        #--------------------------------------------------
+        # \delta S_z
+
+        #e  = np.sqrt(ex**2 + ey**2 + ez**2)
+        #b  = np.sqrt(bx**2 + by**2 + bz**2)
+
+        # cross product E x B
+        Sx =  (ey*bz - ez*by)
+        Sy = -(ex*bz - ez*bx)
+        Sz =  (ex*by - ey*bx)
+
+
+        norm = conf.cfl*(abs(conf.qe)*conf.nGJ*conf.rad_pcap)**2
+        Sx /= norm
+        Sy /= norm
+        Sz /= norm
+        print('Poynting flux norm', norm)
+
+        Spara = Sz
+
+        sig = 1.0
+        w = int(4*sig)
+
+        # butterworth filter; order, 
+        #b, a = scipy.signal.butter(3, 0.5)
+        b, a = scipy.signal.butter(1, 0.8)
+
+        #z, p, k = scipy.signal.tf2zpk(b, a)
+        #r = np.max(np.abs(p))
+        #approx_impulse_len = int(np.ceil(np.log(1e-9) / np.log(r)))
+        #print('approx_impulse_len', approx_impulse_len)
+        approx_impulse_len = 31
+
+        S0 = np.zeros_like(ex) # convolved Poynting flux
+        nx,ny,nz=np.shape(ex)
+
+        print('shape S', nx,ny,nz)
+
+        for i in range(nx):
+            for j in range(ny):
+                S0[i,j,:] = scipy.signal.filtfilt(b, a, Spara[i,j,:], method='pad')
+        dSz = Spara - S0 # remove background component
+
+
+        #ind = np.where(dSz < 0)
+        ind = np.where(dSz > 0)
+        dSz[ind] = 0 # null negative Poynting flux
+        dSz = np.abs(dSz)
+
+        mesh['scalar'] = np.ravel(np.log10(dSz))
+
+
+        if False:
+            p.add_volume(mesh,
+                     scalars='scalar',
+                     opacity='geom',
+                     clim=(-4, 1),
+                     show_scalar_bar=False,
+                     cmap='RdBu',
+                     shade=False,
+                    )
+
+        if True:
+            #mesh = mesh.gaussian_smooth(std_dev=0.8)
+            #p.add_mesh( mesh.outline_corners(), color="k")
+
+            contours = mesh.contour(np.linspace(-7, -4, 8))
+            #contours = mesh.contour([1e-4, 1e-3, 1e-2])
+            #contours = contours.smooth_taubin(50)
+
+            p.add_mesh(contours,
+                        opacity=0.9,
+                        clim=(-8, 8),
+                        show_scalar_bar=False,
+                        cmap='RdBu',
+                        )
+
+            #hc  = mesh.contour([1.0])
+            ##hc = hc.smooth_taubin(10, pass_band=10.0)
+
+            #p.add_mesh(hc, 
+            #           opacity=1.0,
+            #           clim=(0.3,2.0),
+            #           show_scalar_bar=False,
+            #           )
 
 
     #cpos = [(380, 380, 380),

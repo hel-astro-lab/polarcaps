@@ -4,6 +4,7 @@ from matplotlib.colors import SymLogNorm, LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import h5py as h5
 import sys, os
+import scipy
 
 import pytools
 from init_problem import Configuration_Turbulence as Configuration
@@ -163,14 +164,14 @@ default_turbulence_values = {
                'vmin': -2.0000,
                'vmax':  2.0000,
                 },
-        'S':  {'title': r"$\log_{10}(S)$",
-                'vmin':-4.0,
-                'vmax': 0.0,
-                'derived':True,
-                'cmap':'inferno',
-                'log':True,
-                },
-        'logS':  {'title': r"$(S_z - \langle S \rangle_z)/S_0 $",
+        #'S':  {'title': r"$\log_{10}(S)$",
+        #        'vmin':-4.0,
+        #        'vmax': 0.0,
+        #        'derived':True,
+        #        'cmap':'inferno',
+        #        'log':True,
+        #        },
+        'Sz': {'title': r"$(S_z - \langle S \rangle_z)/S_0 $",
                 'vmin':  -1,
                 'vmax':  +1,
                 'derived':True,
@@ -213,13 +214,13 @@ def build_bgradb(f5F):
 
 def build_epar(f5F, conf):
 
-    ex = pytools.read_h5_array(f5F, "ex", stride=conf.stride)
-    ey = pytools.read_h5_array(f5F, "ey", stride=conf.stride)
-    ez = pytools.read_h5_array(f5F, "ez", stride=conf.stride)
+    ex = pytools.read_h5_array(f5F, "ex", stride=1) #conf.stride)
+    ey = pytools.read_h5_array(f5F, "ey", stride=1) #conf.stride)
+    ez = pytools.read_h5_array(f5F, "ez", stride=1) #conf.stride)
 
-    bx = pytools.read_h5_array(f5F, "bx", stride=conf.stride)
-    by = pytools.read_h5_array(f5F, "by", stride=conf.stride)
-    bz = pytools.read_h5_array(f5F, "bz", stride=conf.stride)
+    bx = pytools.read_h5_array(f5F, "bx", stride=1) #conf.stride)
+    by = pytools.read_h5_array(f5F, "by", stride=1) #conf.stride)
+    bz = pytools.read_h5_array(f5F, "bz", stride=1) #conf.stride)
     b  = np.sqrt(bx**2 + by**2 + bz**2)
 
     epar = (ex*bx + ey*by + ez*bz)/b
@@ -230,8 +231,8 @@ def build_epar(f5F, conf):
 # Poynting flux
 def build_exy(f5F, conf):
 
-    ex = pytools.read_h5_array(f5F, "ex", stride=conf.stride)
-    ey = pytools.read_h5_array(f5F, "ey", stride=conf.stride)
+    ex = pytools.read_h5_array(f5F, "ex", stride=1) #conf.stride)
+    ey = pytools.read_h5_array(f5F, "ey", stride=1) #conf.stride)
     #ez = read_var(f5F, "ez")
 
     return np.sqrt(ex*ex + ey*ey)
@@ -241,13 +242,12 @@ def build_exy(f5F, conf):
 # Poynting flux
 def build_S(f5F):
 
-    ex = read_var(f5F, "ex")
-    ey = read_var(f5F, "ey")
-    ez = read_var(f5F, "ez")
-
-    bx = read_var(f5F, "bx")
-    by = read_var(f5F, "by")
-    bz = read_var(f5F, "bz")
+    ex = pytools.read_h5_array(f5F, "ex", stride=1) #conf.stride)
+    ey = pytools.read_h5_array(f5F, "ey", stride=1) #conf.stride)
+    ez = pytools.read_h5_array(f5F, "ez", stride=1) #conf.stride)
+    bx = pytools.read_h5_array(f5F, "bx", stride=1) #conf.stride)
+    by = pytools.read_h5_array(f5F, "by", stride=1) #conf.stride)
+    bz = pytools.read_h5_array(f5F, "bz", stride=1) #conf.stride)
 
     e  = np.sqrt(ex**2 + ey**2 + ez**2)
     b  = np.sqrt(bx**2 + by**2 + bz**2)
@@ -274,36 +274,87 @@ def build_S(f5F):
     Sy = -(ex*bz - ez*bx)
     Sz =  (ex*by - ey*bx)
 
+    if conf.twoD:
+        #Sperp = Sx
+        Spara = Sy
+
+        sig = 5.0
+        w = int(3*sig)
+
+    elif conf.threeD:
+        #Sperp = Sx
+        Spara = Sz
+
+        sig = 1.0
+        w = int(4*sig)
+
     #Sy -= np.mean(Sy, axis=0)
 
     #--------------------------------------------------
     def gaussian( x , s):
         return 1./np.sqrt( 2. * np.pi * s**2 ) * np.exp( -x**2 / ( 2. * s**2 ) )
 
-    sig = 5.0
-    w = int(3*sig)
     kernel = np.fromiter( (gaussian( x , sig ) for x in range( -w, w+1, 1 ) ), float )
     #print('kernel', kernel)
+
+    # define normalized 2D gaussian
+    def gaus2d(x=0, y=0, mx=0, my=0, sx=1, sy=1):
+        return 1. / (2. * np.pi * sx * sy) * np.exp(-((x - mx)**2. / (2. * sx**2.) + (y - my)**2. / (2. * sy**2.)))
+
+    x = np.linspace(-w, w)
+    y = np.linspace(-w, w)
+    x, y = np.meshgrid(x, y) # get 2D variables instead of 1D
+    kernel2d = gaus2d(x, y, mx=0, my=0, sx=sig, sy=sig*0.1)
+
+    #normalize
+    kernel2d /= np.sum(kernel2d)
+
     #--------------------------------------------------
 
-    S0 = np.zeros_like(ex) # convolved Poynting flux
+    # butterworth filter; order, 
+    #b, a = scipy.signal.butter(3, 0.5)
+    b, a = scipy.signal.butter(1, 0.8)
+
+    z, p, k = scipy.signal.tf2zpk(b, a)
+    r = np.max(np.abs(p))
+    approx_impulse_len = int(np.ceil(np.log(1e-9) / np.log(r)))
+    print('approx_impulse_len', approx_impulse_len)
+
+
 
     # 1D smearing along the height direction
-    for i in range(np.shape(ex)[1]): 
-        S0[:,i] = np.convolve( Sy[:,i], kernel, mode='same' )
+    if True: # 1D
+        S0 = np.zeros_like(ex) # convolved Poynting flux
+        nx,ny,nz=np.shape(ex)
+
+        for i in range(nx):
+            #S0[i,:,0] = np.convolve( Spara[i,:,0], kernel, mode='same' )
+            #S0[i,:,0] = scipy.signal.filtfilt(b, a, Spara[i,:,0], method='gust', irlen=approx_impulse_len)
+            S0[i,:,0] = scipy.signal.filtfilt(b, a, Spara[i,:,0], method='pad')
+
+        #return S0
+        #return Spara
+        return Spara - S0
+
+    else: # 2D
+        S0 = scipy.signal.convolve2d(Spara[:,:,0], kernel2d, mode='same', boundary='wrap')
+
+        #return S0[:,:,np.newaxis]
+        return Spara - S0[:,:,np.newaxis]
+
 
     # and then in x (does not seem to give good results)
     #for j in range(np.shape(ex)[0]): 
     #    #S0[j,:] = np.convolve( Sy[j,:], kernel, mode='same' )
     #    S0[j,:] = np.convolve( S0[j,:], kernel, mode='same' )
 
-    Sr = Sy - S0
+    #Sr = Spara - S0[:,:,np.newaxis]
 
     #ind = np.where(Sr < 0)
     #ind = np.where(Sr < 0)
     #Sr[ ind ] = 0.0
 
-    return Sr
+    #return Sr
 
 
 def plot2dpcap_single(
@@ -371,8 +422,9 @@ def plot2dpcap_single(
         elif var == "epar":  val = build_epar(f5F, conf)
         elif var == 'logrho':val = np.log10( pytools.read_h5_array(f5F, 'rho', stride=conf.stride) )
         elif var == 'lognx': val = np.log10( pytools.read_h5_array(f5F, 'densx', stride=conf.stride) )
-        elif var == 'S':     val = np.log10(abs(build_S(f5F)))
-        elif var == 'logS':  val = build_S(f5F) 
+        #elif var == 'S':     val = np.log10(abs(build_S(f5F)))
+        #elif var == 'logS':  val = build_S(f5F) 
+        elif var == 'Sz':    val = build_S(f5F) 
         elif var == 'exy':   val = build_exy(f5F, conf) 
 
 
@@ -520,7 +572,7 @@ def plot2dpcap_single(
         #correct for stride size in e/b fields
         norm /= conf.stride**2
         norm /= 1.0e3
-    if var == 'logS':
+    if var == 'Sz':
         norm = conf.cfl*(qe*conf.nGJ*conf.rad_pcap)**2
 
     if not(args['log']):
