@@ -165,7 +165,7 @@ if __name__ == "__main__":
         for (i,j) in [ (0,1), (0,2), (4,1),]:
             axs[i,j].set_xlabel(r'$\log p$')
             axs[i,j].set_ylabel(r'$p d\tau/d p$ $\propto f_e$')
-            axs[i,j].set_ylim(( 1e-5,   1 ))
+            axs[i,j].set_ylim(toolset.pylims)
             axs[i,j].set_xlim(toolset.pxlims)
             axs[i,j].set_title('pairs')
 
@@ -235,9 +235,70 @@ if __name__ == "__main__":
                          vmax=6,
                          )
 
-        axs[3,3].set_xlabel(r'lap')
-        axs[3,3].set_ylabel(r'$\ell_\mathrm{inj}$, $\ell_\mathrm{esc}$') 
-        axs[3,3].set_ylim((1e0, 1e3))
+
+        # height vs ene; photons
+        axs[3,1].set_title("ph height")
+        axs[3,1].set_xscale("linear")
+        axs[3,1].set_yscale("linear")
+        axs[3,1].set_xlabel("height")
+        axs[3,1].set_ylabel("log x")
+        axs[3,1].set_xlim(toolset.hhlims)
+        #axs[3,1].set_ylim(toolset.xxlims) # TODO
+        axs[3,1].set_ylim((-toolset.Nhist, toolset.Nhist))
+        im31 = axs[3,1].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
+                         extent=[toolset.hhlims[0], toolset.hhlims[1], 
+                                 -toolset.Nhist, toolset.Nhist], # TODO
+                               #toolset.xxlims[0], toolset.xxlims[1]],
+                         origin='lower',
+                         cmap='turbo',
+                         aspect='auto',
+                         interpolation='nearest',
+                         vmin=np.log10( toolset.xylims[0]),
+                         vmax=np.log10( toolset.xylims[1]),)
+
+        # height vs ene; photons
+        axs[3,2].set_title("e- height")
+        axs[3,2].set_xscale("linear")
+        axs[3,2].set_yscale("linear")
+        axs[3,2].set_xlabel("height")
+        axs[3,2].set_ylabel("log p")
+        axs[3,2].set_xlim(toolset.hhlims)
+        #axs[3,2].set_ylim(toolset.pxlims) # TODO
+        axs[3,2].set_ylim((-toolset.Nhist, toolset.Nhist))
+        im32 = axs[3,2].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
+                         extent=[toolset.hhlims[0], toolset.hhlims[1], 
+                                 -toolset.Nhist, toolset.Nhist], # TODO
+                               #toolset.pxlims[0], toolset.pxlims[1]],
+                         origin='lower',
+                         cmap='turbo',
+                         aspect='auto',
+                         interpolation='nearest',
+                         vmin=np.log10(toolset.pylims[0]),
+                         vmax=np.log10(toolset.pylims[1]),)
+
+        axs[3,3].set_title("e+ height")
+        axs[3,3].set_xscale("linear")
+        axs[3,3].set_yscale("linear")
+        axs[3,3].set_xlabel("height")
+        axs[3,3].set_ylabel("log p")
+        axs[3,3].set_xlim(toolset.hhlims)
+        axs[3,3].set_ylim((-toolset.Nhist, toolset.Nhist))
+        #axs[3,3].set_ylim(toolset.pxlims) # TODO
+        im33 = axs[3,3].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
+                         extent=[toolset.hhlims[0], toolset.hhlims[1], 
+                                 -toolset.Nhist, toolset.Nhist], # TODO
+                                 #toolset.pxlims[0], toolset.pxlims[1]],
+                         origin='lower',
+                         cmap='turbo',
+                         aspect='auto',
+                         interpolation='nearest',
+                         vmin=np.log10(toolset.pylims[0]),
+                         vmax=np.log10(toolset.pylims[1]),)
+
+
+        #axs[3,3].set_xlabel(r'lap')
+        #axs[3,3].set_ylabel(r'$\ell_\mathrm{inj}$, $\ell_\mathrm{esc}$') 
+        #axs[3,3].set_ylim((1e0, 1e3))
 
         axs[4,3].set_xlabel(r'lap')
         axs[4,3].set_ylabel(r'$\ell_\mathrm{inj}/\ell_\mathrm{out}$') 
@@ -580,7 +641,7 @@ if __name__ == "__main__":
     star.temp_phots = conf.delgam_x
     star.ninj_pairs = 0 #0.05
     star.ninj_phots = 0.0
-    star.ninj_min_pairs = 0.1
+    star.ninj_min_pairs = 0.01
     star.ninj_min_phots = 0.0
 
     sch.lwall = star # add to scheduler
@@ -1049,7 +1110,12 @@ if __name__ == "__main__":
                                     linestyle=ls,
                                     )
 
-                im30.set_data(np.log10(toolset.h2_nums.T))
+                im30.set_data(np.log10(toolset.h2_nums.T)) # 2d weight - ene histogram
+
+                im31.set_data(np.log10(toolset.h2_enes['ph'].T)) # 2d spatial histogram
+                im32.set_data(np.log10(toolset.h2_enes['e-'].T)) # 2d spatial histogram
+                im33.set_data(np.log10(toolset.h2_enes['e+'].T)) # 2d spatial histogram
+
 
                 #--------------------------------------------------
                 # line plots
@@ -1084,11 +1150,10 @@ if __name__ == "__main__":
                 axs[2,3].plot(laps_sparse[-1], toolset.storage.data['lp_num_esc'][-1], color='C3', marker='.')
 
                 lum_in = conf.lum_ep + conf.lum_ph1 + conf.lum_ph2
-                axs[3,3].axhline(y=lum_in, lw=0.5)
-
-                axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_inj_ep'][-1], color='C0', marker='.')
-                axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_inj_ph'][-1], color='C2', marker='.')
-                axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_esc'][-1],    color='C3', marker='.')
+                #axs[3,3].axhline(y=lum_in, lw=0.5)
+                #axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_inj_ep'][-1], color='C0', marker='.')
+                #axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_inj_ph'][-1], color='C2', marker='.')
+                #axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_esc'][-1],    color='C3', marker='.')
 
                 axs[4,3].plot(laps_sparse[-1], toolset.storage.data['lum_rat'][-1], color='C0', marker='.')
                 axs[4,3].axhline(y=1.0, lw=0.5)
@@ -1189,11 +1254,10 @@ if __name__ == "__main__":
 
 
         lum_in = conf.lum_ep + conf.lum_ph1 + conf.lum_ph2
-        axs[3,3].axhline(y=lum_in, lw=0.5)
-
-        axs[3,3].plot(laps_sparse, toolset.storage.data['ene_inj_ep'], color='C0', ls='solid')
-        axs[3,3].plot(laps_sparse, toolset.storage.data['ene_inj_ph'], color='C2', ls='solid')
-        axs[3,3].plot(laps_sparse, toolset.storage.data['ene_esc'],    color='C3', ls='dashed')
+        #axs[3,3].axhline(y=lum_in, lw=0.5)
+        #axs[3,3].plot(laps_sparse, toolset.storage.data['ene_inj_ep'], color='C0', ls='solid')
+        #axs[3,3].plot(laps_sparse, toolset.storage.data['ene_inj_ph'], color='C2', ls='solid')
+        #axs[3,3].plot(laps_sparse, toolset.storage.data['ene_esc'],    color='C3', ls='dashed')
 
         axs[4,3].plot(laps_sparse, toolset.storage.data['lum_rat'], color='C0', ls='solid')
         axs[4,3].axhline(y=1.0, lw=0.5)

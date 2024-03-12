@@ -17,22 +17,33 @@ class QEDToolset:
         self.ny = conf.Ny*conf.NyMesh
         self.nz = conf.Nz*conf.NzMesh
 
+        if conf.twoD:
+            self.nh = self.ny
+        elif conf.threeD:
+            self.nh = self.nz
+
         # limits for various histograms
         self.xxlims = (-2, 5) # photon xlim
         self.xylims = (1e-3, 1e3) # photon ylim (1e-4, 1e2)
+
         self.pxlims = (-2, 5) # pair xlim
-        self.wxlims = (-1, 5) # pair xlim
+        self.pylims = (1e-5, 1e-2) # pair ylim
+
+        self.wxlims = (-1, 5) # pair wlim
+        self.hhlims = (0, self.nh) # spatial box height limits
 
         self.Nhist = 128
 
         self.zs = np.logspace(self.pxlims[0], self.pxlims[1], self.Nhist, endpoint=False) # momenta
         self.xs = np.logspace(self.xxlims[0], self.xxlims[1], self.Nhist, endpoint=False) # energy
         self.ws = np.logspace(self.wxlims[0], self.wxlims[1], self.Nhist, endpoint=False) # weight
+        self.hs = np.linspace(self.hhlims[0], self.hhlims[1], self.Nhist, endpoint=False) # height
 
         # histogram bins have +1 elemenets
         self.zs_bin = np.append(self.zs, 10.0**self.pxlims[1] ) # momenta
         self.xs_bin = np.append(self.xs, 10.0**self.xxlims[1] ) # energy
         self.ws_bin = np.append(self.ws, 10.0**self.wxlims[1] ) # weight
+        self.hs_bin = np.append(self.hs,       self.hhlims[1] ) # height
 
         self.lnzs = np.log10(self.zs)
         self.lnxs = np.log10(self.xs)
@@ -257,22 +268,31 @@ class QEDToolset:
         self.h2_nums = np.zeros((self.Nhist, self.Nhist), dtype='d')
 
         #--------------------------------------------------
+        # height dependent momentum histogram
+
+        self.h2_enes = {}
+        for t in ['e-', 'e+']:
+            self.h2_enes[t] = np.zeros( (len(self.hs), 2*len(self.lnzs)), dtype='d')
+
+        for t in ['ph']:
+            self.h2_enes[t] = np.zeros( (len(self.hs), 2*len(self.lnxs)), dtype='d')
+
+        #--------------------------------------------------
         # local arrays for MPI
         # NOTE danger zone: dont mix self.arr and arr
         h1_enes = {}
         h1_nums = {}
         h1_ws   = {}
-        for t in ['e-', 'e+']:
-            h1_enes[t] = np.zeros(len(self.lnzs), dtype='d')
-            h1_nums[t] = np.zeros(len(self.lnzs), dtype='d')
-            h1_ws[  t] = np.zeros(len(self.lnzs), dtype='d')
-
-        for t in ['ph']:
-            h1_enes[t] = np.zeros(len(self.lnxs), dtype='d')
-            h1_nums[t] = np.zeros(len(self.lnxs), dtype='d')
-            h1_ws[  t] = np.zeros(len(self.lnxs), dtype='d')
+        for t in ['e-', 'e+', 'ph']:
+            h1_enes[t] = np.zeros_like( self.h1_enes[t] ) #(len(self.lnzs), dtype='d')
+            h1_nums[t] = np.zeros_like( self.h1_nums[t] ) #(len(self.lnzs), dtype='d')
+            h1_ws[  t] = np.zeros_like( self.h1_ws[t]   ) #(len(self.lnzs), dtype='d')
 
         h2_nums = np.zeros((self.Nhist, self.Nhist), dtype='d')
+
+        h2_enes = {}
+        for t in ['e-', 'e+', 'ph']:
+            h2_enes[t] = np.zeros_like(self.h2_enes[t])
 
         #--------------------------------------------------
         # analyze tiles
@@ -289,6 +309,13 @@ class QEDToolset:
                     bins = self.xs_bin
 
                 bins_w = self.ws_bin
+
+                if conf.twoD:
+                    h  = np.array( container.loc(1) ) # y
+                    hv = np.array( container.vel(1) ) # vy
+                elif conf.threeD:
+                    h = np.array( container.loc(2) ) # z
+                    hv= np.array( container.vel(2) ) # vz
 
                 # compute energy
                 ux = np.array( container.vel(0) )
@@ -324,6 +351,28 @@ class QEDToolset:
                             )
                     h2_nums[:,:] += h2[:,:]
 
+                #--------------------------------------------------
+                # 2D histograms with spatial + energy info
+
+                n_mid_h2_enes = len(bins) - 1
+
+                # particles going up
+                ind = np.where(hv > 0)
+                h2, edges_h, edges_e = np.histogram2d(
+                            h[ind], mom[ind], 
+                            bins=(self.hs_bin, bins),
+                            weights=w[ind],)
+                h2_enes[t][:, n_mid_h2_enes:] += h2[:,:] # upper half
+
+                # particles going down
+                ind = np.where(hv < 0)
+                h2, edges_h, edges_e = np.histogram2d(
+                            h[ind], mom[ind], 
+                            bins=(self.hs_bin, bins),
+                            weights=w[ind],)
+                h2_enes[t][:, :n_mid_h2_enes] += np.fliplr(h2[:,:]) # lower half
+
+
 
         #--------------------------------------------------
         # MPI
@@ -351,12 +400,21 @@ class QEDToolset:
                 op = MPI.SUM,
                 root = 0,)
 
+            ncnts = 2*self.Nhist*self.Nhist
+            MPI.COMM_WORLD.Reduce(
+                [     h2_enes[t], ncnts, MPI.DOUBLE],
+                [self.h2_enes[t], ncnts, MPI.DOUBLE],
+                op = MPI.SUM,
+                root = 0,)
+
+
         ncnts = self.Nhist*self.Nhist
         MPI.COMM_WORLD.Reduce(
                 [     h2_nums[:], ncnts, MPI.DOUBLE],
                 [self.h2_nums[:], ncnts, MPI.DOUBLE],
                 op = MPI.SUM,
                 root = 0,)
+
 
         #--------------------------------------------------
         if self.root:
@@ -365,9 +423,21 @@ class QEDToolset:
             self.h1_enes['e-'][:] *= self.N_wgt/dz/self.N_box
             self.h1_enes['e+'][:] *= self.N_wgt/dz/self.N_box
 
+            # multiply both halfs of the spatial array with the same unit conversion factor
+            dz2 = np.array( [np.flip(dz), dz ] ).flatten()
+            self.h2_enes['e+'][:,:] *= self.N_wgt/dz2/self.N_box
+            self.h2_enes['e-'][:,:] *= self.N_wgt/dz2/self.N_box
+
             # make into units of compactness; x d(x n_x) / dx from original d(n_x)/dlnx
             dx = self.dlnx*self.xs
             self.h1_enes['ph'][:] *= (self.N_wgt/self.N_time)*self.xs**2/dx/self.N_box
+
+            # multiply both halfs of the spatial array with unit conversion factor
+            # TODO make into same units as regular h1_enes array
+            #      this needs a bit of thinking since array needs to be flipped in middle
+            #dx2 = self.dlnx[1]
+            dx2 = np.array( [np.flip(dx), dx ] ).flatten()
+            self.h2_enes['ph'][:,:] *= (self.N_wgt/self.N_time)/dx2/self.N_box
 
             # make into units of reference particle number
             ppc_tot = conf.npc_ref*conf.Nx*conf.Ny*conf.Nz
@@ -397,19 +467,22 @@ class QEDToolset:
             #print(fname)
             f5 = h5.File(fname,'w')
 
-            dset0 = f5.create_dataset('h1_ene_e-', data=self.h1_enes['e-' ][:] )
-            dset0 = f5.create_dataset('h1_ene_e+', data=self.h1_enes['e+' ][:] )
-            dset0 = f5.create_dataset('h1_ene_ph', data=self.h1_enes['ph' ][:] )
-            dset0 = f5.create_dataset('h1_ene_esc',data=self.h1_enes['esc'][:] )
+            f5.create_dataset('h1_ene_e-', data=self.h1_enes['e-' ][:] )
+            f5.create_dataset('h1_ene_e+', data=self.h1_enes['e+' ][:] )
+            f5.create_dataset('h1_ene_ph', data=self.h1_enes['ph' ][:] )
+            f5.create_dataset('h1_ene_esc',data=self.h1_enes['esc'][:] )
 
-            dset0 = f5.create_dataset('h1_nums_e-', data=self.h1_nums['e-' ][:] )
-            dset0 = f5.create_dataset('h1_nums_e+', data=self.h1_nums['e+' ][:] )
-            dset0 = f5.create_dataset('h1_nums_ph', data=self.h1_nums['ph' ][:] )
+            f5.create_dataset('h1_nums_e-', data=self.h1_nums['e-' ][:] )
+            f5.create_dataset('h1_nums_e+', data=self.h1_nums['e+' ][:] )
+            f5.create_dataset('h1_nums_ph', data=self.h1_nums['ph' ][:] )
 
-            dset0 = f5.create_dataset('h1_ws_e-', data=self.h1_ws['e-' ][:] )
-            dset0 = f5.create_dataset('h1_ws_e+', data=self.h1_ws['e+' ][:] )
-            dset0 = f5.create_dataset('h1_ws_ph', data=self.h1_ws['ph' ][:] )
+            f5.create_dataset('h1_ws_e-', data=self.h1_ws['e-' ][:] )
+            f5.create_dataset('h1_ws_e+', data=self.h1_ws['e+' ][:] )
+            f5.create_dataset('h1_ws_ph', data=self.h1_ws['ph' ][:] )
 
+            f5.create_dataset('h2_ene_e-', data=self.h2_enes['e-' ][:,:] )
+            f5.create_dataset('h2_ene_e+', data=self.h2_enes['e+' ][:,:] )
+            f5.create_dataset('h2_ene_ph', data=self.h2_enes['ph' ][:,:] )
 
             #--------------------------------------------------
             for key in ['lap_sparse',
@@ -434,7 +507,7 @@ class QEDToolset:
                         'ene_e+',
                         'ene_ph',
                         ]:
-                dset0 = f5.create_dataset(key, data=self.storage.data[key][:] )
+                f5.create_dataset(key, data=self.storage.data[key][:] )
             #--------------------------------------------------
 
             f5.close()
