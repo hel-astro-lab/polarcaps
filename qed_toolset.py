@@ -423,8 +423,9 @@ class QEDToolset:
             self.h1_enes['e-'][:] *= self.N_wgt/dz/self.N_box
             self.h1_enes['e+'][:] *= self.N_wgt/dz/self.N_box
 
+            # make into units of p d\tau/\dp
             # multiply both halfs of the spatial array with the same unit conversion factor
-            dz2 = np.array( [np.flip(dz), dz ] ).flatten()
+            dz2 = np.array( [np.flip(self.zs*dz), self.zs*dz ] ).flatten()
             self.h2_enes['e+'][:,:] *= self.N_wgt/dz2/self.N_box
             self.h2_enes['e-'][:,:] *= self.N_wgt/dz2/self.N_box
 
@@ -432,11 +433,12 @@ class QEDToolset:
             dx = self.dlnx*self.xs
             self.h1_enes['ph'][:] *= (self.N_wgt/self.N_time)*self.xs**2/dx/self.N_box
 
+            # make into units of compactness as well; note that x^2 is multiplied in a different place
             # multiply both halfs of the spatial array with unit conversion factor
             # TODO make into same units as regular h1_enes array
             #      this needs a bit of thinking since array needs to be flipped in middle
             #dx2 = self.dlnx[1]
-            dx2 = np.array( [np.flip(dx), dx ] ).flatten()
+            dx2 = np.array( [np.flip(dx*self.xs**2), dx*self.xs**2 ] ).flatten()
             self.h2_enes['ph'][:,:] *= (self.N_wgt/self.N_time)/dx2/self.N_box
 
             # make into units of reference particle number
