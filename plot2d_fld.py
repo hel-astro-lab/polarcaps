@@ -313,14 +313,15 @@ def build_S(f5F):
 
     # butterworth filter; order, 
     #b, a = scipy.signal.butter(3, 0.5)
-    b, a = scipy.signal.butter(1, 0.8)
+    if conf.threeD:
+        b, a = scipy.signal.butter(1, 0.8)
+    if conf.twoD:
+        b, a = scipy.signal.butter(1, 0.2)
 
     z, p, k = scipy.signal.tf2zpk(b, a)
     r = np.max(np.abs(p))
     approx_impulse_len = int(np.ceil(np.log(1e-9) / np.log(r)))
     print('approx_impulse_len', approx_impulse_len)
-
-
 
     # 1D smearing along the height direction
     if True: # 1D

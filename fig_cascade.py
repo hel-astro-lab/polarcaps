@@ -98,8 +98,8 @@ if __name__ == "__main__":
         axs[0,0].set_yscale('log')
         axs[0,1].set_yscale('log')
 
-        axs[0,0].set_ylim((1e-8, 1e-3))
-        axs[0,1].set_ylim((1e-8, 1e-3))
+        axs[0,0].set_ylim((1e-4, 1e0))
+        axs[0,1].set_ylim((1e-4, 1e0))
 
         axs[0,0].set_ylabel(r"$p\, \mathrm{d} \tau/\mathrm{d}p$")
         axs[0,1].set_ylabel(r"$p\, \mathrm{d} \tau/\mathrm{d}p$")
@@ -247,8 +247,8 @@ if __name__ == "__main__":
                           )
 
 
-        xs1 = int(0.25*toolset.Nhist)
-        xs2 = int(0.48*toolset.Nhist)
+        xs1 = int(0.2*toolset.Nhist)
+        xs2 = int(0.65*toolset.Nhist)
 
         #hem[xs1, :] = 10
         #hem[xs2, :] = 10

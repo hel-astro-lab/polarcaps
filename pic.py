@@ -639,10 +639,10 @@ if __name__ == "__main__":
 
     star.temp_pairs = conf.delgam
     star.temp_phots = conf.delgam_x
-    star.ninj_pairs = 0 #0.05
-    star.ninj_phots = 0.0
-    star.ninj_min_pairs = 0.01
-    star.ninj_min_phots = 0.0
+    star.ninj_pairs = conf.ninj_pairs #0 #0.05
+    star.ninj_phots = conf.ninj_phots #0.0
+    star.ninj_min_pairs = conf.ninj_min_pairs #0.1
+    star.ninj_min_phots = conf.ninj_min_phots #0.0
 
     sch.lwall = star # add to scheduler
 

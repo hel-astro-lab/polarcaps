@@ -266,7 +266,6 @@ class Configuration_Turbulence(Configuration):
             self.rad_star = 4*self.rad_pcap
 
 
-
         # v1 based on polar cap size we get the star's spin 
         #self.rad_lcyl = self.rad_star*(self.rad_star/self.rad_pcap)**2
         #self.Om_star = self.cfl/self.rad_lcyl # \Omega_*
@@ -286,8 +285,7 @@ class Configuration_Turbulence(Configuration):
 
         self.height_atms = 3 # add padding; this is the height of the atmosphere at r=Rpc in units of cells
 
-        self.chi = 10 # magnetic obliquity angle
-
+        #self.chi = 10 # magnetic obliquity angle
         phase = 0.0 #global rotator phase
 
         self.b_dipole_norm = self.binit*self.rad_star**3
