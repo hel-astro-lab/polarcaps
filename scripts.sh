@@ -1,8 +1,8 @@
 # #!/bin/zsh
 
 declare -a conf_arr=(
-"test.ini"
-#"test3d.ini"
+#"test.ini"
+"test3d.ini"
 )
 
 
@@ -16,8 +16,9 @@ declare -a single_scripts_arr=(
 
 declare -a lap_scripts_arr=(
 #"plot3d_pyvista.py --var bvec --view side" 
-"fig_cascade.py "
+#"fig_cascade.py "
 #"plot3d_pyvista.py --var bvec --view top" 
+"plot_pulsar_lc.py "
 )
 
 
