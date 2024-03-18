@@ -513,10 +513,10 @@ if __name__ == "__main__":
     #mc.add_interaction(a) # ON                      # phot-ann
     #mc.add_interaction(b) # ON                      # pair-ann
     #mc.add_interaction(c) # off for double counting # pair-ann
-    #mc.add_interaction(d) # ON
-    #mc.add_interaction(e) # ON
-    #mc.add_interaction(f) # off for double counting
-    #mc.add_interaction(g) # off for double counting
+    mc.add_interaction(d) # ON
+    mc.add_interaction(e) # ON
+    mc.add_interaction(f) # off for double counting
+    mc.add_interaction(g) # off for double counting
 
 
     #--------------------------------------------------
@@ -531,10 +531,10 @@ if __name__ == "__main__":
 
     # set critical magnetic field 
     for intr in [a0, a1, b]:
-        intr.B_QED = 1e1*conf.binit
+        intr.B_QED = conf.binit/conf.B_QED
 
-    mc.add_interaction(a0) 
-    mc.add_interaction(a1) 
+    #mc.add_interaction(a0) 
+    #mc.add_interaction(a1) 
     mc.add_interaction(b ) # 
 
 
@@ -697,11 +697,11 @@ if __name__ == "__main__":
             #timer.stop_comp("ep_inj")
 
             #--------------------------------------------------
-            #timer.start_comp("qed")
-            #for tile in pytools.tiles_local(grid):
-            #    i,j,k = pytools.get_index(tile, conf)
-            #    mc.solve_mc(tile)
-            #timer.stop_comp("qed")
+            timer.start_comp("qed")
+            for tile in pytools.tiles_local(grid):
+                i,j,k = pytools.get_index(tile, conf)
+                mc.solve_mc(tile)
+            timer.stop_comp("qed")
 
             #--------------------------------------------------
             timer.start_comp("ph_esc")
