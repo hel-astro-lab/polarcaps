@@ -513,10 +513,10 @@ if __name__ == "__main__":
     #mc.add_interaction(a) # ON                      # phot-ann
     #mc.add_interaction(b) # ON                      # pair-ann
     #mc.add_interaction(c) # off for double counting # pair-ann
-    mc.add_interaction(d) # ON
-    mc.add_interaction(e) # ON
-    mc.add_interaction(f) # off for double counting
-    mc.add_interaction(g) # off for double counting
+    #mc.add_interaction(d) # ON
+    #mc.add_interaction(e) # ON
+    #mc.add_interaction(f) # off for double counting
+    #mc.add_interaction(g) # off for double counting
 
 
     #--------------------------------------------------
@@ -533,8 +533,8 @@ if __name__ == "__main__":
     for intr in [a0, a1, b]:
         intr.B_QED = conf.binit/conf.B_QED
 
-    #mc.add_interaction(a0) 
-    #mc.add_interaction(a1) 
+    mc.add_interaction(a0) 
+    mc.add_interaction(a1) 
     mc.add_interaction(b ) # 
 
 
@@ -697,11 +697,11 @@ if __name__ == "__main__":
             #timer.stop_comp("ep_inj")
 
             #--------------------------------------------------
-            timer.start_comp("qed")
-            for tile in pytools.tiles_local(grid):
-                i,j,k = pytools.get_index(tile, conf)
-                mc.solve_mc(tile)
-            timer.stop_comp("qed")
+            #timer.start_comp("qed")
+            #for tile in pytools.tiles_local(grid):
+            #    i,j,k = pytools.get_index(tile, conf)
+            #    mc.solve_mc(tile)
+            #timer.stop_comp("qed")
 
             #--------------------------------------------------
             timer.start_comp("ph_esc")
@@ -1024,94 +1024,27 @@ if __name__ == "__main__":
                 lw = 0.8
                 ls = 'solid'
 
-                axs[0,0].plot(toolset.lnxs, toolset.h1_enes['ph'], 
-                                    drawstyle='steps-pre',
-                                    color=col,
-                                    alpha=1.0,
-                                    lw = lw,
-                                    linestyle=ls,
-                                    )
+                axs[0,0].plot(toolset.lnxs, toolset.h1_enes['ph'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
 
                 #if lap > 1: # ignore first time step
-                #    axs[0,2].plot(toolset.lnxs, toolset.h1_enes['esc'], 
-                #                    drawstyle='steps-pre',
-                #                    color=col,
-                #                    alpha=1.0,
-                #                    lw = lw,
-                #                    linestyle=ls,
-                #                    )
+                #    axs[0,2].plot(toolset.lnxs, toolset.h1_enes['esc'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
 
                 zs = toolset.zs
-                axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e-']*zs, 
-                                    drawstyle='steps-pre',
-                                    color=col,
-                                    alpha=1.0,
-                                    lw = lw,
-                                    linestyle=ls,
-                                    )
-
-                axs[0,2].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, 
-                                    drawstyle='steps-pre',
-                                    color=col,
-                                    alpha=1.0,
-                                    lw = lw,
-                                    linestyle=ls,
-                                    )
+                axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e-']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+                axs[0,2].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
 
                 # LP weight spectrum
-
-                axs[1,0].plot(toolset.lnxs, toolset.h1_ws['ph'], 
-                                    drawstyle='steps-pre',
-                                    color=col,
-                                    alpha=1.0,
-                                    lw = lw,
-                                    linestyle=ls,
-                                    )
-
-                axs[1,1].plot(toolset.lnzs, toolset.h1_ws['e-']*zs, 
-                                    drawstyle='steps-pre',
-                                    color=col,
-                                    alpha=1.0,
-                                    lw = lw,
-                                    linestyle=ls,
-                                    )
-
-                axs[1,1].plot(toolset.lnzs, toolset.h1_ws['e+']*zs, 
-                                    drawstyle='steps-pre',
-                                    color=col,
-                                    alpha=1.0,
-                                    lw = lw,
-                                    linestyle=ls,
-                                    )
+                axs[1,0].plot(toolset.lnxs, toolset.h1_ws['ph'],    drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+                axs[1,1].plot(toolset.lnzs, toolset.h1_ws['e-']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+                axs[1,1].plot(toolset.lnzs, toolset.h1_ws['e+']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
 
                 #--------------------------------------------------
                 # LP w spectrum
-                axs[2,0].plot(toolset.lnws, toolset.h1_nums['ph'], 
-                                    drawstyle='steps-pre',
-                                    color=col,
-                                    alpha=1.0,
-                                    lw = lw,
-                                    linestyle=ls,
-                                    )
-
-                axs[2,1].plot(toolset.lnws, toolset.h1_nums['e-'], 
-                                    drawstyle='steps-pre',
-                                    color=col,
-                                    alpha=1.0,
-                                    lw = lw,
-                                    linestyle=ls,
-                                    )
-
-                axs[2,1].plot(toolset.lnws, toolset.h1_nums['e+'], 
-                                    drawstyle='steps-pre',
-                                    color=col,
-                                    alpha=1.0,
-                                    lw = lw,
-                                    linestyle=ls,
-                                    )
+                axs[2,0].plot(toolset.lnws, toolset.h1_nums['ph'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+                axs[2,1].plot(toolset.lnws, toolset.h1_nums['e-'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+                axs[2,1].plot(toolset.lnws, toolset.h1_nums['e+'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
 
                 im30.set_data(np.log10(toolset.h2_nums.T)) # 2d weight - ene histogram
-
                 im31.set_data(np.log10(toolset.h2_enes['ph'].T)) # 2d spatial histogram
                 im32.set_data(np.log10(toolset.h2_enes['e-'].T)) # 2d spatial histogram
                 im33.set_data(np.log10(toolset.h2_enes['e+'].T)) # 2d spatial histogram
@@ -1271,38 +1204,10 @@ if __name__ == "__main__":
         # plot the final spectrum
 
         col = 'C0'
-        axs[4,0].plot(toolset.lnxs, toolset.h1_enes['ph'], 
-                            drawstyle='steps-pre',
-                            color=col,
-                            alpha=1.0,
-                            lw = lw,
-                            linestyle=ls,
-                            )
-
-
-        axs[4,2].plot(toolset.lnxs, toolset.h1_enes['esc'], 
-                            drawstyle='steps-pre',
-                            color=col,
-                            alpha=1.0,
-                            lw = lw,
-                            linestyle=ls,
-                            )
-
-        axs[4,1].plot(toolset.lnzs, toolset.h1_enes['e-'], 
-                            drawstyle='steps-pre',
-                            color=col,
-                            alpha=1.0,
-                            lw = lw,
-                            linestyle=ls,
-                            )
-
-        axs[4,1].plot(toolset.lnzs, toolset.h1_enes['e+'], 
-                            drawstyle='steps-pre',
-                            color=col,
-                            alpha=1.0,
-                            lw = lw,
-                            linestyle=ls,
-                            )
+        axs[4,0].plot(toolset.lnxs, toolset.h1_enes['ph'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+        axs[4,2].plot(toolset.lnxs, toolset.h1_enes['esc'],drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+        axs[4,1].plot(toolset.lnzs, toolset.h1_enes['e-'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+        axs[4,1].plot(toolset.lnzs, toolset.h1_enes['e+'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
 
         #--------------------------------------------------    
         # close and save fig
