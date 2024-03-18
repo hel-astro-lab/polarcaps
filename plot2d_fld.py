@@ -137,13 +137,14 @@ default_turbulence_values = {
                 'vmax': 4.0,
                 'file': 'moms',
                 },
-        'lognx':  {'title': r"$\log_{10}(n_x/n_{x,0})$",
+        'nx':  {'title': r"$\log_{10}(n_x/n_{x,0})$",
                 'vmin':-2.0,
                 'vmax': 3.0,
                 'file': 'moms',
                 'derived':True,
                 'cmap':'inferno',
                 'log':True,
+                #'norm': LogNorm(vmin=-2.0, vmax=3.0),
                 },
         'je': {'title': r"$\mathbf{J} \cdot \mathbf{E}$",
                'cmap': "BrBG",
@@ -422,7 +423,7 @@ def plot2dpcap_single(
         #elif var == "ve":    val, vex, vey, vez = build_ve(f5F)
         elif var == "epar":  val = build_epar(f5F, conf)
         elif var == 'logrho':val = np.log10( pytools.read_h5_array(f5F, 'rho', stride=conf.stride) )
-        elif var == 'lognx': val = np.log10( pytools.read_h5_array(f5F, 'densx', stride=conf.stride) )
+        elif var == 'nx':    val = np.log10( pytools.read_h5_array(f5F, 'densx', stride=1 ) )
         #elif var == 'S':     val = np.log10(abs(build_S(f5F)))
         #elif var == 'logS':  val = build_S(f5F) 
         elif var == 'Sz':    val = build_S(f5F) 
@@ -447,22 +448,17 @@ def plot2dpcap_single(
     elif do_fieldlines and not(args['file'] == 'flds'):
         f5F1 = h5.File(info['fields_file'],'r')
 
-        sys.exit() # TODO
+        bx = pytools.read_h5_array(f5F1, "bx", stride=conf.stride)
+        by = pytools.read_h5_array(f5F1, "by", stride=conf.stride)
+        bz = pytools.read_h5_array(f5F1, "bz", stride=conf.stride)
+
+        ex = pytools.read_h5_array(f5F1, "ex", stride=conf.stride)
+        ey = pytools.read_h5_array(f5F1, "ey", stride=conf.stride)
+        ez = pytools.read_h5_array(f5F1, "ez", stride=conf.stride)
 
         if conf.twoD:
-            bx = read_var(f5F1, "bx")
-            by = read_var(f5F1, "by")
-            bz = 0
-            ex = read_var(f5F1, "ex")
-            ey = read_var(f5F1, "ey")
-            bz = 0
-        if conf.threeD:
-            bx = read_var(f5F1, "bx")
-            by = read_var(f5F1, "by")
-            bz = read_var(f5F1, "bz")
-            ex = read_var(f5F1, "ex")
-            ey = read_var(f5F1, "ey")
-            ez = read_var(f5F1, "ez")
+            bz[:] = 0
+            ez[:] = 0
 
 
     #--------------------------------------------------
@@ -575,6 +571,11 @@ def plot2dpcap_single(
         norm /= 1.0e3
     if var == 'Sz':
         norm = conf.cfl*(qe*conf.nGJ*conf.rad_pcap)**2
+
+    if var == 'nx':
+        norm = 1.0
+
+        print("\n WARNING: no normalization set for nx \n")
 
     if not(args['log']):
         val = val / norm
