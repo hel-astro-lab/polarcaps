@@ -226,7 +226,9 @@ if __name__ == "__main__":
     #y = mesh.points[:, 1]
     #z = mesh.points[:, 2]
 
-    pv.global_theme.background = 'black'
+    #pv.global_theme.background = 'black'
+    pv.global_theme.background = 'white'
+    #pv.global_theme.background = 'gainsboro'
 
     pv.global_theme.allow_empty_mesh=True
 
@@ -249,18 +251,22 @@ if __name__ == "__main__":
         sphere = pv.Sphere(
                 radius=conf.rad_star,
                 center=(cenx, ceny, cenz),
-                theta_resolution=100,
-                phi_resolution=100,
+                theta_resolution=200,
+                phi_resolution=200,
                 )
 
         p.add_mesh(sphere, 
-                   color='lightblue', 
+                   #color='lightblue', 
+                   #color='darkslategray',
+                   color='lightslategray',
+                   #color='gainsboro',
+                   #color='pv',
                    #color='grey', 
                    #show_edges=True,
                    )
 
 
-    if False: # jpar slices / projections
+    if False: # j/e field slices / projections
 
         mesh = pv.ImageData(
             dimensions=(nx, ny, nz), 
@@ -271,13 +277,23 @@ if __name__ == "__main__":
         # j scalar field
         #jabs = np.sqrt(jx**2 + jy**2 + jz**2)
         #jabs = np.sqrt(jz**2)
-        var = jz
+        #var = jz
+        var = ez
 
         mesh['scalar'] = np.ravel(var)
 
         single_slice = mesh.slice(
                 normal=[0, 0, 1],
-                origin=[0, 0, 0.2*conf.Lz],
+                origin=[0, 0, 0.15*conf.Lz],
+                )
+
+        surface = pv.Cylinder(
+                center=(Lx//2,Ly//2, 0.0*Lz), 
+                direction=(0,0,1),
+                radius=1.1*conf.rad_pcap, 
+                height=20,
+                #r_res=5,
+                #c_res=30,
                 )
 
         #surface = pv.Disc(
@@ -288,16 +304,19 @@ if __name__ == "__main__":
         #        c_res=30,
         #        normal=(0,0,1),
         #        )
+
         #mesh.compute_implicit_distance(surface, inplace=True)
         #inner = mesh.threshold(0.0, scalars="implicit_distance", invert=True)
+
+        #inner = mesh.boolean_difference(surface)
 
         p.add_mesh(
                 single_slice, 
                 #inner,
                 show_scalar_bar=False,
                 cmap='RdBu',
-                clim=(-1.0, 1.0),
-                opacity=0.9,
+                clim=(-0.2, 0.2),
+                opacity=1.0,
                    )
 
         #for z in np.linspace(0.1, 0.9, 10):
@@ -312,7 +331,42 @@ if __name__ == "__main__":
         #           )
 
 
+    if True: # debug slices
+        mesh = pv.ImageData(
+            dimensions=(nx, ny, nz), 
+            spacing=(dx, dx, dx), 
+            origin=origin)
 
+        var = ez
+        mesh['var'] = np.ravel(var)
+
+        print('points', np.shape(mesh.points), mesh.points)
+        #mesh['dist'] = np.linalg.norm(mesh.points, axis=1)
+        mesh['dist'] = mesh.points[:,1]
+        clipped = mesh.clip_scalar('dist', value=Ly//2)
+        #print('dist', mesh['dist'])
+
+        #for zcut in np.linspace(0.0, 1.0, 5):
+        for zcut in [
+                #1, 
+                0.1*Lz,
+                0.90*Lz]:
+
+            #single_slice = mesh.slice(
+            single_slice = clipped.slice(
+                normal=[0, 0, 1],
+                origin=[0, 0, zcut],
+                )
+
+            p.add_mesh(
+                single_slice, 
+                scalars="var",
+                #inner,
+                show_scalar_bar=False,
+                cmap='RdBu',
+                clim=(-0.2, 0.2),
+                opacity=1.0,
+                   )
 
     #--------------------------------------------------
     # b field
@@ -391,13 +445,13 @@ if __name__ == "__main__":
                 stream.tube(
                     radius=0.1,
                     scalars="scalar",
-                    radius_factor=10.0,
+                    radius_factor=5.0,
                     ),
                 show_scalar_bar=False,
                 cmap='reds',
                 #cmap='inferno',
                 ambient=0.5,
-                opacity=0.2,
+                opacity=1.0,
                 clim=(0.0, 2.0),
                    )
 
@@ -487,27 +541,34 @@ if __name__ == "__main__":
 
         #--------------------------------------------------
         # j scalar field
-        clim = (-4, 0.3)
+
+        #rho[:30,:,:] = 0.0 # cut off values close to surface TODO
 
         #ind = np.where(rho < 2.0)
         #rho[ind] = 0.0
 
         print('rho min/max', np.min(rho), np.max(rho), ' mean', np.mean(rho))
 
-        mesh['rho'] = np.log10( np.ravel(rho) )
-        #p.add_mesh( mesh.outline_corners(), color="k" )
+        #mesh['rho'] = np.ravel(rho) 
+        #clim = (0, 100.0)
 
-        #mesh = mesh.gaussian_smooth(std_dev=0.5)
+        mesh['rho'] = np.log10( np.ravel(rho) )
+        clim = (-3, 1.0)
+
+        #mesh = mesh.gaussian_smooth(std_dev=0.7)
+
+        #mesh['dist'] = Ly - mesh.points[:,1]
+        #mesh = mesh.clip_scalar('dist', value=Ly//2)
 
         ops = np.zeros(256)
-        ops[0:192] = 2.0
+        ops[0:192] = 0.0
         ops[192:]  = np.linspace(2, 128, 64)
         #ops[64:]  = np.linspace(0.0, 256, 192)
 
         p.add_volume(mesh,
                      scalars='rho',
-                     #opacity=ops, #'geom',
-                     opacity='geom',
+                     opacity=ops, #'geom',
+                     #opacity='geom',
                      clim=clim,
                      show_scalar_bar=False,
                      cmap='inferno',
@@ -576,18 +637,18 @@ if __name__ == "__main__":
         #contours = mesh.contour(np.logspace(-2, 1.0, 3))
         #contours = contours.smooth_taubin(50)
 
-        p.add_mesh(contours,
-                    opacity=0.1,
-                    clim=(-4, 2),
-                    show_scalar_bar=False,
-                     cmap='inferno',
-                    )
+        #p.add_mesh(contours,
+        #            opacity=0.1,
+        #            clim=(-4, 2),
+        #            show_scalar_bar=False,
+        #             cmap='inferno',
+        #            )
 
-        hc  = mesh.contour([1.0])
+        hc  = mesh.contour([-0.5])
         ##hc = hc.smooth_taubin(10, pass_band=10.0)
         p.add_mesh(hc, 
                    opacity=0.8,
-                   clim=(-4, 2),
+                   clim=(-4, 0.5),
                    show_scalar_bar=False,
                    cmap='inferno',
                    )
@@ -795,7 +856,7 @@ if __name__ == "__main__":
                      shade=False,
                     )
 
-        if True:
+        if False:
             #mesh = mesh.gaussian_smooth(std_dev=0.8)
             #p.add_mesh( mesh.outline_corners(), color="k")
 
@@ -826,9 +887,15 @@ if __name__ == "__main__":
 
 
     if args_cli.view == 'side': 
-        cpos = [(400, 400, 278),
-                (360, 360, 250),
-               (-0.3, -0.3, 0.9)]
+        #cpos = [(400, 400, 278),
+        #        (360, 360, 250),
+        #       (-0.3, -0.3, 0.9)]
+
+        if conf.Nz*conf.NzMesh == 8*15:
+            cpos = [(32, 716, 333), (60, 541, 248), (0.0072, -0.4375, 0.8991)]
+        if conf.Nz*conf.NzMesh == 8*10:
+            #cpos = [(-2.88, 603, 274), (7.91, 535., 242), (0.05, -0.42, 0.90)]
+            cpos = [(-99.68831908266294, 678.4868274427592, 282.12774469714975), (-58.86228207427652, 532.8834421628167, 221.95913229321027), (0.07143556397896247, -0.36376265956013953, 0.928748452331815)]
 
     if args_cli.view == 'topside': 
         cpos = [(250, 243, 444),
@@ -840,12 +907,17 @@ if __name__ == "__main__":
             (120, 90, 440),
             (-0.704, -0.704, 0.092)]
 
+    if args_cli.view == 'tilt': # top
+        cpos = [(705, 253, 516),
+             (429, 195, 309),
+             (-0.411, -0.570, 0.710)]
+
 
     p.camera_position = cpos
 
-    p.enable_depth_peeling(100)
+    #p.enable_depth_peeling(100)
     #p.enable_anti_aliasing('msaa')
-    p.enable_ssao(kernel_size=32)
+    #p.enable_ssao(kernel_size=32)
 
     #p.save_graphic("3d_jz_b.png", title="", raster=True, painter=True)
 
