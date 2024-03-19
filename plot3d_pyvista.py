@@ -244,12 +244,12 @@ if __name__ == "__main__":
 
     #--------------------------------------------------
     if True:
-        cenx = conf.Lx//2 + 0.5
-        ceny = conf.Ly//2 + 0.5
+        cenx = conf.Lx//2 #+ 0.5
+        ceny = conf.Ly//2 #+ 0.5
         cenz = -conf.rad_star + conf.rad_curv_shift
 
         sphere = pv.Sphere(
-                radius=conf.rad_star,
+                radius=conf.rad_star, # + 5,
                 center=(cenx, ceny, cenz),
                 theta_resolution=200,
                 phi_resolution=200,
@@ -331,7 +331,17 @@ if __name__ == "__main__":
         #           )
 
 
-    if True: # debug slices
+    def cut_wedge(mesh):
+        return mesh # TODO turned off
+
+        rcyl = np.sqrt( (mesh.points[:,0]-cenx)**2 + (mesh.points[:,1]-ceny)**2) # cylindrical radius
+        mesh['rcyl']  = rcyl
+        mesh['phi'] = np.arctan2( -(mesh.points[:,0]-cenx)/rcyl, -(mesh.points[:,1]-ceny)/rcyl ) + np.pi 
+        clipped = mesh.clip_scalar('phi', value=np.pi*1.5)
+        return clipped
+
+
+    if False: # debug slices
         mesh = pv.ImageData(
             dimensions=(nx, ny, nz), 
             spacing=(dx, dx, dx), 
@@ -340,16 +350,25 @@ if __name__ == "__main__":
         var = ez
         mesh['var'] = np.ravel(var)
 
-        print('points', np.shape(mesh.points), mesh.points)
+
+        #print('points', np.shape(mesh.points), mesh.points)
         #mesh['dist'] = np.linalg.norm(mesh.points, axis=1)
-        mesh['dist'] = mesh.points[:,1]
-        clipped = mesh.clip_scalar('dist', value=Ly//2)
+        #mesh['dist'] = mesh.points[:,1]
+
+        #rcyl = np.sqrt( (mesh.points[:,0]-cenx)**2 + (mesh.points[:,1]-ceny)**2) # cylindrical radius
+        #mesh['rcyl']  = rcyl
+        #mesh['phi'] = np.arctan2( -(mesh.points[:,0]-cenx)/rcyl, -(mesh.points[:,1]-ceny)/rcyl ) + np.pi 
+
+        #clipped = mesh.clip_scalar('dist', value=Ly//2)
+        #clipped = mesh.clip_scalar('phi', value=np.pi*1.5)
         #print('dist', mesh['dist'])
+
+        clipped = cut_wedge(mesh)
 
         #for zcut in np.linspace(0.0, 1.0, 5):
         for zcut in [
                 #1, 
-                0.1*Lz,
+                0.10*Lz,
                 0.90*Lz]:
 
             #single_slice = mesh.slice(
@@ -367,6 +386,56 @@ if __name__ == "__main__":
                 clim=(-0.2, 0.2),
                 opacity=1.0,
                    )
+
+
+    if True: # cone slices
+        mesh = pv.ImageData(
+            dimensions=(nx, ny, nz), 
+            spacing=(dx, dx, dx), 
+            origin=origin)
+
+        var = ez
+        mesh['var'] = np.ravel(var)
+
+        #print('points', np.shape(mesh.points), mesh.points)
+        #mesh['dist'] = np.sqrt( (mesh.points[:,0]-cenx)**2 + (mesh.points[:,1]-ceny)**2) # cylindrical radius
+        #print('dist', mesh['dist'])
+
+        mesh = cut_wedge(mesh) # TODO
+
+        opacity = np.array([1.0, 0.5, 0.1, 0.0, 0.1, 0.5, 1.0])*255.
+        tf = pv.opacity_transfer_function(opacity, 256).astype(float) / 255.0
+
+        #for zcut in [
+        #        #1, 
+        #        0.12*Lz,
+        #        0.40*Lz,
+        #        0.60*Lz,
+        #        0.90*Lz]:
+        for zcut in np.linspace(0.0, Lz, 41):
+
+            mag = 1.0*(zcut/Lz) + 1.05
+
+            #clipped = mesh.clip_scalar('dist', value=conf.rad_pcap*mag)
+
+            #single_slice = clipped.slice(
+            single_slice = mesh.slice(
+                normal=[0, 0, 1],
+                origin=[0, 0, zcut],
+                )
+
+            p.add_mesh(
+                single_slice, 
+                scalars="var",
+                #inner,
+                show_scalar_bar=False,
+                cmap='RdBu',
+                clim=(-0.2, 0.2),
+                #opacity='sigmoid', #0.8,
+                #opacity=tf,
+                opacity=opacity,
+                   )
+
 
     #--------------------------------------------------
     # b field
@@ -396,6 +465,8 @@ if __name__ == "__main__":
         print('bvec min/max', np.min(b2), np.max(b2), np.mean(b2))
         m1['scalar'] = 0.1*np.ravel(b2)
         #m1['scalar'] = 1.0*np.ones_like(b2).ravel() 
+
+        m1 = cut_wedge(m1) # TODO
 
 
         midx = Lx//2
@@ -553,7 +624,9 @@ if __name__ == "__main__":
         #clim = (0, 100.0)
 
         mesh['rho'] = np.log10( np.ravel(rho) )
-        clim = (-3, 1.0)
+        clim = (-3, 2.0)
+
+        mesh = cut_wedge(mesh) # TODO
 
         #mesh = mesh.gaussian_smooth(std_dev=0.7)
 
@@ -567,11 +640,13 @@ if __name__ == "__main__":
 
         p.add_volume(mesh,
                      scalars='rho',
-                     opacity=ops, #'geom',
+                     #opacity=ops, #'geom',
                      #opacity='geom',
+                     opacity='linear',
                      clim=clim,
                      show_scalar_bar=False,
-                     cmap='inferno',
+                     #cmap='inferno',
+                     cmap='viridis',
                      shade=False,
                     )
 
@@ -895,7 +970,8 @@ if __name__ == "__main__":
             cpos = [(32, 716, 333), (60, 541, 248), (0.0072, -0.4375, 0.8991)]
         if conf.Nz*conf.NzMesh == 8*10:
             #cpos = [(-2.88, 603, 274), (7.91, 535., 242), (0.05, -0.42, 0.90)]
-            cpos = [(-99.68831908266294, 678.4868274427592, 282.12774469714975), (-58.86228207427652, 532.8834421628167, 221.95913229321027), (0.07143556397896247, -0.36376265956013953, 0.928748452331815)]
+            #cpos = [(-99.68831908266294, 678.4868274427592, 282.12774469714975), (-58.86228207427652, 532.8834421628167, 221.95913229321027), (0.07143556397896247, -0.36376265956013953, 0.928748452331815)]
+            cpos = [(-228.29936513149536, 444.5554228160977, 242.55718393317022), (-228.27269124987322, 444.523726219084, 242.54000187076107), (0.2133900321461455, -0.32067591550923413, 0.9228389086904505)]
 
     if args_cli.view == 'topside': 
         cpos = [(250, 243, 444),
