@@ -3,11 +3,11 @@
 from mpi4py import MPI
 import numpy as np
 import sys, os
-from numpy import log10, sin, cos, tan, exp
 
 # runko + auxiliary modules
 import pytools  # runko python tools
 import pyrunko
+
 
 # problem specific modules
 from init_problem import Configuration_Turbulence as Configuration
@@ -17,16 +17,12 @@ from init_problem import weigth_profile
 
 from qed_toolset import QEDToolset
 
-
 #--------------------------------------------------
 live_plot = True
+
+#--------------------------------------------------
 rnd_seed_default = 1
 np.random.seed(rnd_seed_default)  # global simulation seed
-
-import warnings
-#warnings.filterwarnings("once") # suppress warnings after reporting them once
-warnings.filterwarnings('ignore')
-
 
 #--------------------------------------------------
 # Field initialization (guide field)
@@ -56,7 +52,7 @@ def insert_em_fields(grid, conf, do_initialization=True):
 
                             g.bx[l,m,n] = 0.0
                             g.by[l,m,n] = 0.0 
-                            g.bz[l,m,n] = 0.0 #conf.binit
+                            g.bz[l,m,n] = conf.binit
 
                         elif conf.use_maxwell_split: # static component
                             1
@@ -67,7 +63,6 @@ def insert_em_fields(grid, conf, do_initialization=True):
 #-------------------------------------------------- 
 #-------------------------------------------------- 
 if __name__ == "__main__":
-
 
     # --------------------------------------------------
     # initialize auxiliary tools
@@ -152,25 +147,26 @@ if __name__ == "__main__":
             axs[i,j].set_title('photons')
             axs[i,j].set_xlabel(r'$\log x$')
             axs[i,j].set_ylabel(r'$x \ell_x \propto x d n_p/d \log x$') # lx
-            axs[i,j].set_xlim(toolset.xxlims)
             axs[i,j].set_ylim(toolset.xylims)
+            axs[i,j].set_xlim(toolset.xxlims)
 
-        #axs[0,2].set_title('esc photons')
-        #axs[0,2].set_xlabel(r'$\log x$')
-        #axs[0,2].set_ylabel(r'$x \ell_x \propto x d n_p/d \log x$') # lx
-        #axs[0,2].set_xlim(toolset.xxlims)
-        #axs[0,2].set_ylim(toolset.xylims)
+        axs[0,0].set_ylim((1e-1, 1e5))
+        axs[4,0].set_ylim((1e-1, 1e5))
+
+
+        axs[0,2].set_title('esc photons')
+        axs[0,2].set_xlabel(r'$\log x$')
+        axs[0,2].set_ylabel(r'$x \ell_x \propto x d n_p/d \log x$') # lx
+        axs[0,2].set_xlim(toolset.xxlims)
+        axs[0,2].set_ylim(toolset.xylims)
 
         # pair spectra
-        for (i,j) in [ (0,1), (0,2), (4,1),]:
+        for (i,j) in [ (0,1), (4,1),]:
             axs[i,j].set_xlabel(r'$\log p$')
             axs[i,j].set_ylabel(r'$p d\tau/d p$ $\propto f_e$')
-            axs[i,j].set_ylim(toolset.pylims)
+            axs[i,j].set_ylim(( 1e-1,   3e1 ))
             axs[i,j].set_xlim(toolset.pxlims)
             axs[i,j].set_title('pairs')
-
-        axs[0,1].set_title('e-')
-        axs[0,2].set_title('e+')
 
         # photon LP distribution
         #axs[1,0].set_title('photon weights')
@@ -199,23 +195,23 @@ if __name__ == "__main__":
         axs[0,3].set_ylabel(r'$\tau$') 
         #axs[0,3].set_yscale('linear')
         axs[0,3].set_yscale('log')
-        axs[0,3].set_ylim((1e-4, 1.0))
+        axs[0,3].set_ylim((1.0, 100.0))
 
         axs[1,2].set_xlabel(r'$t$ ($H/c$)')
         axs[1,2].set_ylabel(r'$U_x/U_\pm$') 
-        axs[1,2].set_ylim((1e-2, 1e0))
+        axs[1,2].set_ylim((1e-2, 1e2))
 
         axs[1,3].set_xlabel(r'$t$ ($H/c$)')
         axs[1,3].set_ylabel(r'energy $\ell$') 
-        axs[1,3].set_ylim((1e-2, 1e4))
+        axs[1,3].set_ylim((1, 1e8))
 
         axs[2,2].set_xlabel(r'lap')
         axs[2,2].set_ylabel(r'$n_p/n_0$') 
-        axs[2,2].set_ylim((1e-3, 1e1))
+        axs[2,2].set_ylim((1e-1, 1e5))
 
         axs[2,3].set_xlabel(r'lap')
         axs[2,3].set_ylabel(r'$N_p/N_0$') 
-        axs[2,3].set_ylim((1e-3, 1e1))
+        axs[2,3].set_ylim((1e0, 1e4))
 
         # 2d histogram
         axs[3,0].set_xscale("linear")
@@ -235,70 +231,9 @@ if __name__ == "__main__":
                          vmax=6,
                          )
 
-
-        # height vs ene; photons
-        axs[3,1].set_title("ph height")
-        axs[3,1].set_xscale("linear")
-        axs[3,1].set_yscale("linear")
-        axs[3,1].set_xlabel("height")
-        axs[3,1].set_ylabel("log x")
-        axs[3,1].set_xlim(toolset.hhlims)
-        #axs[3,1].set_ylim(toolset.xxlims) # TODO
-        axs[3,1].set_ylim((-toolset.Nhist, toolset.Nhist))
-        im31 = axs[3,1].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
-                         extent=[toolset.hhlims[0], toolset.hhlims[1], 
-                                 -toolset.Nhist, toolset.Nhist], # TODO
-                               #toolset.xxlims[0], toolset.xxlims[1]],
-                         origin='lower',
-                         cmap='turbo',
-                         aspect='auto',
-                         interpolation='nearest',
-                         vmin=np.log10( toolset.xylims[0]),
-                         vmax=np.log10( toolset.xylims[1]),)
-
-        # height vs ene; photons
-        axs[3,2].set_title("e- height")
-        axs[3,2].set_xscale("linear")
-        axs[3,2].set_yscale("linear")
-        axs[3,2].set_xlabel("height")
-        axs[3,2].set_ylabel("log p")
-        axs[3,2].set_xlim(toolset.hhlims)
-        #axs[3,2].set_ylim(toolset.pxlims) # TODO
-        axs[3,2].set_ylim((-toolset.Nhist, toolset.Nhist))
-        im32 = axs[3,2].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
-                         extent=[toolset.hhlims[0], toolset.hhlims[1], 
-                                 -toolset.Nhist, toolset.Nhist], # TODO
-                               #toolset.pxlims[0], toolset.pxlims[1]],
-                         origin='lower',
-                         cmap='turbo',
-                         aspect='auto',
-                         interpolation='nearest',
-                         vmin=np.log10(toolset.pylims[0]),
-                         vmax=np.log10(toolset.pylims[1]),)
-
-        axs[3,3].set_title("e+ height")
-        axs[3,3].set_xscale("linear")
-        axs[3,3].set_yscale("linear")
-        axs[3,3].set_xlabel("height")
-        axs[3,3].set_ylabel("log p")
-        axs[3,3].set_xlim(toolset.hhlims)
-        axs[3,3].set_ylim((-toolset.Nhist, toolset.Nhist))
-        #axs[3,3].set_ylim(toolset.pxlims) # TODO
-        im33 = axs[3,3].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
-                         extent=[toolset.hhlims[0], toolset.hhlims[1], 
-                                 -toolset.Nhist, toolset.Nhist], # TODO
-                                 #toolset.pxlims[0], toolset.pxlims[1]],
-                         origin='lower',
-                         cmap='turbo',
-                         aspect='auto',
-                         interpolation='nearest',
-                         vmin=np.log10(toolset.pylims[0]),
-                         vmax=np.log10(toolset.pylims[1]),)
-
-
-        #axs[3,3].set_xlabel(r'lap')
-        #axs[3,3].set_ylabel(r'$\ell_\mathrm{inj}$, $\ell_\mathrm{esc}$') 
-        #axs[3,3].set_ylim((1e0, 1e3))
+        axs[3,3].set_xlabel(r'lap')
+        axs[3,3].set_ylabel(r'$\ell_\mathrm{inj}$, $\ell_\mathrm{esc}$') 
+        axs[3,3].set_ylim((1e0, 1e3))
 
         axs[4,3].set_xlabel(r'lap')
         axs[4,3].set_ylabel(r'$\ell_\mathrm{inj}/\ell_\mathrm{out}$') 
@@ -321,11 +256,10 @@ if __name__ == "__main__":
         import pyrunko.qed.threeD as pyqed    # qed c++ bindings
     elif conf.twoD:
         # 2D modules
-        import pycorgi.twoD as pycorgi       # corgi ++ bindings
-        import pyrunko.pic.twoD as pypic     # runko pic c++ bindings
-        import pyrunko.emf.twoD as pyfld  # runko fld c++ bindings
-        import pyrunko.qed.twoD as pyqed     # qed c++ bindings
-
+        import pycorgi.twoD as pycorgi        # corgi ++ bindings
+        import pyrunko.pic.twoD as pypic      # runko pic c++ bindings
+        import pyrunko.emf.twoD as pyfld   # runko fld c++ bindings
+        import pyrunko.qed.twoD as pyqed    # qed c++ bindings
 
 
     # --------------------------------------------------
@@ -357,6 +291,13 @@ if __name__ == "__main__":
     # get current restart file status
     io_stat = pytools.check_for_restart(conf)
 
+    # TODO temporary addition to inject something
+    def density_profile2(xloc, ispcs, conf):
+        if ispcs in [0,1]:
+            return conf.ppc
+            #return 0
+        elif ispcs == 2:
+            return conf.xpc
 
     # no restart file; initialize simulation
     if io_stat["do_initialization"]:
@@ -369,7 +310,7 @@ if __name__ == "__main__":
         # injecting plasma particles
         # NOTE: we still need to call injector to set the container types; density_profile ensure = 0
         if not(conf.use_injector): 
-            prtcl_stat = pytools.pic.inject(grid, velocity_profile, density_profile, conf)
+            prtcl_stat = pytools.pic.inject(grid, velocity_profile, density_profile2, conf)
             if sch.is_example_worker: 
                 print("injected:")
                 print("     e- prtcls: {}".format(prtcl_stat[0]))
@@ -458,9 +399,8 @@ if __name__ == "__main__":
     # --------------------------------------------------
     #sch.pusher = pypic.BorisPusher()
     #sch.pusher = pypic.VayPusher()
-    #sch.pusher = pypic.HigueraCaryPusher()
+    sch.pusher = pypic.HigueraCaryPusher()
     #sch.pusher  = pypic.rGCAPusher()
-    sch.pusher  = pypic.PulsarPusher()
 
     #if conf.gammarad > 0:
     #    sch.pusher   = pypic.BorisDragPusher()
@@ -510,6 +450,7 @@ if __name__ == "__main__":
     f = pyrunko.qed.Compton("e-", "ph")
     g = pyrunko.qed.Compton("e+", "ph")
 
+    # TODO debug
     #mc.add_interaction(a) # ON                      # phot-ann
     #mc.add_interaction(b) # ON                      # pair-ann
     #mc.add_interaction(c) # off for double counting # pair-ann
@@ -520,7 +461,7 @@ if __name__ == "__main__":
 
 
     #--------------------------------------------------
-    mc.prob_norm_onebody = 1.0/(conf.N_lamC*conf.N_qdt) # units of [TODO]
+    mc.prob_norm_onebody = 1/(conf.N_lamC*conf.N_qdt) # units of [TODO]
 
     a0 = pyrunko.qed.Synchrotron("e-")
     a1 = pyrunko.qed.Synchrotron("e+")
@@ -531,12 +472,11 @@ if __name__ == "__main__":
 
     # set critical magnetic field 
     for intr in [a0, a1, b]:
-        intr.B_QED = conf.binit/conf.B_QED
+        intr.B_QED = 1e1*conf.binit
 
     mc.add_interaction(a0) 
     mc.add_interaction(a1) 
-    mc.add_interaction(b ) # 
-
+    #mc.add_interaction(b ) # 
 
 
     # --------------------------------------------------
@@ -590,66 +530,68 @@ if __name__ == "__main__":
 
     # 3D box peripherals
     if conf.threeD:
-        st = 1 # stride
         slice_xy_writer = pyfld.FieldSliceWriter( conf.outdir, 
-                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, st, 0, 1)
+                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, 1, 
+                0, 1)
         slice_xz_writer = pyfld.FieldSliceWriter( conf.outdir, 
-                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, st, 1, 1)
+                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, 1, 
+                1, 1)
         slice_yz_writer = pyfld.FieldSliceWriter( conf.outdir, 
-                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, st, 2, 1)
-
-        slice_xy_writer.ind = int(0.8*conf.Lz) # bottom slice; z = 8 slice through atmosphere
-        slice_xz_writer.ind = int(0.5*conf.Ly) # mid slice 
-        slice_yz_writer.ind = int(0.5*conf.Lx) # mid slice 
-
+                conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, 1, 
+                2, 1)
 
     # --------------------------------------------------
-    #star = pyfld.Conductor()
-    star = pypic.Star()
-    for obj in [star, sch.pusher]:
-        obj.radius    = conf.rad_star
-        obj.radius_pc = conf.rad_pcap
-        obj.period    = conf.period_star # NOTE should be period_star for normal runs 
+    if False:
+        #star = pyfld.Conductor()
+        star = pypic.Star()
+        star.radius = conf.Rstar 
+        star.period = conf.period  
+        star.B0     = conf.binit*conf.Rstar**3  # TODO normalization here?
+        star.chi    = np.deg2rad(0.0)       # magnetic inclination
+        star.phase  = 0.0
+
+        star.delta  = 2 # in units of cells; smoothing function sharpness
+
+        star.Nx = conf.Lx
+        star.Ny = conf.Ly
+        star.Nz = conf.Lz
+        
+        # transverse polar cap smoothing (g(x) function)
+        star.radius_pc = conf.Rpc
+        star.delta_pc  = 2
 
         if conf.twoD:
-            obj.cenx   = conf.Lx//2 + 0.5
-            obj.ceny   = -conf.rad_star + conf.rad_curv_shift
-            obj.cenz   = 0 
+            star.cenx   = conf.Lx//2 #- 0.5
+            star.ceny   = -conf.Rstar + conf.Ratmos
+            star.cenz   = 0 
         elif conf.threeD:
-            obj.cenx   = conf.Lx//2 #+ 0.5
-            obj.ceny   = conf.Ly//2 #+ 0.5
-            obj.cenz   = -conf.rad_star + conf.rad_curv_shift
+            star.cenx   = conf.Lx//2 #- 0.5
+            star.ceny   = 0
+            star.cenz   = -conf.Rstar + conf.Ratmos
+            sys.exit() # TODO
+
+        sch.lwall = star # add to scheduler
+
+        if sch.is_master:
+            phase = 0.0 #global rotator phase
+            Omega = 2.0*np.pi/conf.period    
+            RLC = 1.0/Omega
+
+            print('P:    ', star.period)
+            print('Omega:', Omega)
+            print('R_*:  ', star.radius)
+            print('R_LC: ', 1.0/Omega)
+            print('chi:  ', np.rad2deg(star.chi))
+
+            bstar = star.B0*star.radius**(-3.0)
+            print('B_*   ', bstar)
+            print('B_LC  ', bstar*(RLC/star.radius)**(-3.0))
 
 
-    #sch.pusher.grav_const = 0.0 # gravitational constant
-    height_atms = conf.height_atms #0.005*conf.rad_star
-    sch.pusher.grav_const = conf.delgam**2/(2*height_atms)
+        # induce initial magnetic and electric field from the star
+        for tile in pytools.tiles_all(grid):
+            star.insert_em(tile)
 
-    star.B0       = conf.b_dipole_norm    # TODO normalization here?
-    star.chi_om   = np.deg2rad(conf.chi)  # rotation axis inclination
-    star.phase_mu = 0.0
-    star.phase_om = 0.0
-    star.delta    = 0.5*conf.height_atms #4.0 #1  # in units of cells; radial smoothing function sharpness; 2x delta = about tanh limit
-
-    star.Nx = conf.Lx
-    star.Ny = conf.Ly
-    star.Nz = conf.Lz
-    
-    star.delta_pc  = 2 # transverse polar cap smoothing (g(x) function)
-
-    star.temp_pairs = conf.delgam
-    star.temp_phots = conf.delgam_x
-    star.ninj_pairs = conf.ninj_pairs #0 #0.05
-    star.ninj_phots = conf.ninj_phots #0.0
-    star.ninj_min_pairs = conf.ninj_min_pairs #0.1
-    star.ninj_min_phots = conf.ninj_min_phots #0.0
-
-    sch.lwall = star # add to scheduler
-
-
-    # induce initial magnetic and electric field from the star
-    for tile in pytools.tiles_all(grid):
-        star.insert_em(tile)
 
     # --------------------------------------------------
     # --------------------------------------------------
@@ -660,6 +602,7 @@ if __name__ == "__main__":
 
     if sch.is_master: print('init: starting simulation...'); sys.stdout.flush()
 
+
     ##################################################
     # simulation time step loop
 
@@ -667,19 +610,9 @@ if __name__ == "__main__":
     time = lap * (conf.cfl / conf.c_omp)
     for lap in range(lap, conf.Nt + 1):
 
-        # ramp up plate smoothly
-        #ramp_up_laps = 1.0*conf.rad_pcap/conf.cfl # duration of the ramp up in polar cap light crossing times
-        #pc_freq = min(max(1,lap)/ramp_up_laps, 1.0)*(1/conf.period_star) # polar cap rotation frequency
-        #pc_freq = 1e-5/conf.period_star # polar cap rotation frequency
-        #star.period = 1/pc_freq
-
-        # rotate star's Omega vector with the period
-        sch.lwall.phase_om += conf.Om_star
-
         # --------------------------------------------------
         # QED interaction loop
         if conf.qed_mode and lap % conf.qed_step == 0:
-
             #timer.start_comp("ph_inj")
             #if conf.zeta_xinj1 > 0 and conf.lum_ph1 > 0:
             #    for tile in pytools.tiles_local(grid):
@@ -697,11 +630,11 @@ if __name__ == "__main__":
             #timer.stop_comp("ep_inj")
 
             #--------------------------------------------------
-            #timer.start_comp("qed")
-            #for tile in pytools.tiles_local(grid):
-            #    i,j,k = pytools.get_index(tile, conf)
-            #    mc.solve_mc(tile)
-            #timer.stop_comp("qed")
+            timer.start_comp("qed")
+            for tile in pytools.tiles_local(grid):
+                i,j,k = pytools.get_index(tile, conf)
+                mc.solve_mc(tile)
+            timer.stop_comp("qed")
 
             #--------------------------------------------------
             timer.start_comp("ph_esc")
@@ -714,7 +647,8 @@ if __name__ == "__main__":
                 mc.comp_tau(tile, conf.N_wgt) # sum over tiles
 
                 # TODO
-                #mc.leak_photons(tile, conf.t_c/conf.dt/conf.N_qdt, conf.tau_ext)  # apply photon escape
+                #mc.leak_photons(tile, conf.N_qdt*conf.t_c/conf.dt, conf.tau_ext)  # apply photon escape
+                mc.leak_photons(tile, conf.t_c/conf.dt/conf.N_qdt, conf.tau_ext)  # apply photon escape
 
                 tau_tile_min = mc.tau_global if mc.tau_global < tau_tile_min else tau_tile_min
                 tau_tile_max = mc.tau_global if mc.tau_global > tau_tile_max else tau_tile_max
@@ -765,7 +699,7 @@ if __name__ == "__main__":
         # --------------------------------------------------
         # push B half
         sch.operate( dict(name='push_half_b1', solver='fldpropB', method='push_half_b', nhood='local',) )
-        sch.operate( dict(name='wall_bc',      solver='lwall',    method='update_b',    nhood='local',) )
+        #sch.operate( dict(name='wall_bc',      solver='lwall',    method='update_b',    nhood='local',) )
 
         # comm B
         sch.operate( dict(name='mpi_b1',    solver='mpi', method='b',                 ) )
@@ -776,7 +710,6 @@ if __name__ == "__main__":
 
         # interpolate fields and push particles in x and u
         sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
-        #sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', ) )
 
         # single-body QED interactions
         if conf.qed_mode and lap % conf.qed_step == 0:
@@ -786,39 +719,34 @@ if __name__ == "__main__":
                 mc.solve_onebody(tile)
             timer.stop_comp("qed_onebody")
 
-
-        # TODO need to recalculate the interpolation step since new particles dont have Bpart and Epart; 
-        #      this is clearly a design error...
-        # DONE new PulsarPusher calculates the fields inside the prtcl loop so this is fixed
-        #      for every other pusher, need to uncomment this
-        #sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
-
+        #sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', ) )
         sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[0]) ) # e^-
         sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[1]) ) # e^+
         sch.operate( dict(name='push',      solver='pusherx',method='solve', nhood='local', args=[2]) ) # x
+
 
         # clear currents; need to call this before wall operations since they can deposit currents too 
         sch.operate( dict(name='clear_cur', solver='tile',   method='clear_current', nhood='all', ) )
 
         # apply moving/reflecting/injecting walls
-        # TODO
-        #if lap*conf.cfl > 1.0*conf.rad_pcap: # apply after a fraction of the disk light crossing time 
-        sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
+        #if lap*conf.cfl > 1.5*conf.Rpc: # apply after a fraction of the disk light crossing time 
+        #    sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
 
 
         # --------------------------------------------------
         # advance half B 
         sch.operate( dict(name='push_half_b2', solver='fldpropB', method='push_half_b', nhood='local', ) )
-        sch.operate( dict(name='wall_bc',      solver='lwall',    method='update_b',    nhood='local',) ) # dynamic B
+        #sch.operate( dict(name='wall_bc',      solver='lwall',    method='update_b',    nhood='local',) ) # dynamic B
 
         # comm B
         sch.operate( dict(name='mpi_b2', solver='mpi', method='b',                 ) )
         sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid, [2,] ], nhood='local',) )
 
+
         # --------------------------------------------------
         # push E
         sch.operate( dict(name='push_e',    solver='fldpropE', method='push_e',  nhood='local', ) )
-        sch.operate( dict(name='wall_bc',   solver='lwall',    method='update_e',nhood='local', ) )
+        #sch.operate( dict(name='wall_bc',   solver='lwall',    method='update_e',nhood='local', ) )
 
 
         # TODO current deposit + MPI was here
@@ -844,10 +772,10 @@ if __name__ == "__main__":
         # --------------------------------------------------
         # current calculation; charge conserving current deposition
         # clear virtual current arrays for boundary addition after mpi, send currents, and exchange between tiles
-        sch.operate( dict(name='comp_curr',     solver='currint', method='solve',             nhood='local', ) )
-        sch.operate( dict(name='clear_vir_cur', solver='tile',    method='clear_current',     nhood='virtual', ) )
-        sch.operate( dict(name='mpi_cur',       solver='mpi',     method='j',                 nhood='all', ) )
-        sch.operate( dict(name='cur_exchange',  solver='tile',    method='exchange_currents', nhood='local', args=[grid,], ) )
+        sch.operate( dict(name='comp_curr', solver='currint', method='solve', nhood='local', ) )
+        sch.operate( dict(name='clear_vir_cur', solver='tile',method='clear_current',     nhood='virtual', ) )
+        sch.operate( dict(name='mpi_cur',       solver='mpi', method='j',                 nhood='all', ) )
+        sch.operate( dict(name='cur_exchange',  solver='tile',method='exchange_currents', nhood='local', args=[grid,], ) )
 
 
         # --------------------------------------------------
@@ -872,7 +800,7 @@ if __name__ == "__main__":
         # --------------------------------------------------
         # add current to E
         sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current',       nhood='local', ) )
-        sch.operate( dict(name='wall_bc',   solver='lwall', method='update_e',              nhood='local', ) )
+        #sch.operate( dict(name='wall_bc',   solver='lwall', method='update_e',              nhood='local', ) )
 
 
         ##################################################
@@ -923,6 +851,8 @@ if __name__ == "__main__":
             # terminal plot 
             if sch.is_master:
 
+                tplt.col_mode = False
+#
                 #epar
                 #d = fld_writer.get_slice(1) # use ex xy-slice as the image
                 #d_norm = 0.1*conf.binit #
@@ -932,26 +862,18 @@ if __name__ == "__main__":
                 #d_norm = conf.ppc
                 #tplt.plot(np.abs(d)/d_norm)
 
-                tplt.col_mode = False
+                tplt.plot_panels( (2,3),
+                    dict(axs=(0,0), data=fld_writer.get_slice( 0)/conf.e_norm, name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(0,1), data=fld_writer.get_slice( 1)/conf.e_norm, name='ey', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    #dict(axs=(0,2), data=fld_writer.get_slice( 2)/conf.e_norm, name='ez', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(0,2), data=fld_writer.get_slice( 9)/conf.p_norm, name='ne', cmap='viridis',vmin= 0, vmax=4),
+                    dict(axs=(1,0), data=fld_writer.get_slice( 3)/conf.b_norm, name='bx', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(1,1), data=fld_writer.get_slice( 4)/conf.b_norm, name='by', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    #dict(axs=(1,2), data=fld_writer.get_slice( 5)/conf.b_norm, name='bz', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(1,2), data=mom_writer.get_slice(14)/conf.x_norm, name='ph', cmap='viridis',vmin= 0, vmax=4),
+                    )
 
-                if conf.twoD:
-                    tplt.plot_panels( (2,3),
-                    dict(axs=(0,0), data=fld_writer.get_slice( 0)/conf.e_norm ,   name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(0,1), data=fld_writer.get_slice( 1)/conf.e_norm ,   name='ey', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(0,2), data=fld_writer.get_slice( 9)/conf.p_norm   , name='ne', cmap='viridis',vmin= 0, vmax=4),
-                    dict(axs=(1,0), data=fld_writer.get_slice( 3)/conf.b_norm ,   name='bx', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(1,1), data=fld_writer.get_slice( 4)/conf.b_norm ,   name='by', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(1,2), data=mom_writer.get_slice(14)/conf.x_norm   , name='ph', cmap='viridis',vmin= 0, vmax=4),
-                    )
-                if conf.threeD:
-                    tplt.plot_panels( (2,3),
-                    dict(axs=(0,0), data=slice_xz_writer.get_slice( 0)/conf.e_norm ,   name='ex (xz)', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(0,1), data=slice_xz_writer.get_slice( 2)/conf.e_norm ,   name='ez (xz)', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(0,2), data=slice_xz_writer.get_slice( 9)/conf.p_norm   , name='ne (xz)', cmap='viridis',vmin= 0, vmax=1),
-                    dict(axs=(1,0), data=slice_xz_writer.get_slice( 3)/conf.b_norm ,   name='bx (xz)', cmap='RdBu'   ,vmin=-1, vmax=1),
-                    dict(axs=(1,1), data=slice_xy_writer.get_slice( 2)/conf.e_norm   , name='ez (top)',cmap='RdBu',   vmin=-1, vmax=1),
-                    dict(axs=(1,2), data=slice_xy_writer.get_slice( 9)/conf.p_norm ,   name='ne (top)',cmap='viridis',vmin=-0, vmax=1),
-                    )
+
 
             #--------------------------------------------------
 
@@ -1024,31 +946,93 @@ if __name__ == "__main__":
                 lw = 0.8
                 ls = 'solid'
 
-                axs[0,0].plot(toolset.lnxs, toolset.h1_enes['ph'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+                axs[0,0].plot(toolset.lnxs, toolset.h1_enes['ph'], 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
 
-                #if lap > 1: # ignore first time step
-                #    axs[0,2].plot(toolset.lnxs, toolset.h1_enes['esc'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+                if lap > 1: # ignore first time step
+                    axs[0,2].plot(toolset.lnxs, toolset.h1_enes['esc'], 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
 
                 zs = toolset.zs
-                axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e-']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
-                axs[0,2].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+                axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e-']*zs, 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
 
                 # LP weight spectrum
-                axs[1,0].plot(toolset.lnxs, toolset.h1_ws['ph'],    drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
-                axs[1,1].plot(toolset.lnzs, toolset.h1_ws['e-']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
-                axs[1,1].plot(toolset.lnzs, toolset.h1_ws['e+']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+
+                axs[1,0].plot(toolset.lnxs, toolset.h1_ws['ph'], 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                axs[1,1].plot(toolset.lnzs, toolset.h1_ws['e-']*zs, 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                axs[1,1].plot(toolset.lnzs, toolset.h1_ws['e+']*zs, 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
 
                 #--------------------------------------------------
                 # LP w spectrum
-                axs[2,0].plot(toolset.lnws, toolset.h1_nums['ph'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
-                axs[2,1].plot(toolset.lnws, toolset.h1_nums['e-'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
-                axs[2,1].plot(toolset.lnws, toolset.h1_nums['e+'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+                axs[2,0].plot(toolset.lnws, toolset.h1_nums['ph'], 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
 
-                im30.set_data(np.log10(toolset.h2_nums.T)) # 2d weight - ene histogram
-                im31.set_data(np.log10(toolset.h2_enes['ph'].T)) # 2d spatial histogram
-                im32.set_data(np.log10(toolset.h2_enes['e-'].T)) # 2d spatial histogram
-                im33.set_data(np.log10(toolset.h2_enes['e+'].T)) # 2d spatial histogram
+                axs[2,1].plot(toolset.lnws, toolset.h1_nums['e-'], 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
 
+                axs[2,1].plot(toolset.lnws, toolset.h1_nums['e+'], 
+                                    drawstyle='steps-pre',
+                                    color=col,
+                                    alpha=1.0,
+                                    lw = lw,
+                                    linestyle=ls,
+                                    )
+
+                im30.set_data(np.log10(toolset.h2_nums.T))
 
                 #--------------------------------------------------
                 # line plots
@@ -1083,10 +1067,11 @@ if __name__ == "__main__":
                 axs[2,3].plot(laps_sparse[-1], toolset.storage.data['lp_num_esc'][-1], color='C3', marker='.')
 
                 lum_in = conf.lum_ep + conf.lum_ph1 + conf.lum_ph2
-                #axs[3,3].axhline(y=lum_in, lw=0.5)
-                #axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_inj_ep'][-1], color='C0', marker='.')
-                #axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_inj_ph'][-1], color='C2', marker='.')
-                #axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_esc'][-1],    color='C3', marker='.')
+                axs[3,3].axhline(y=lum_in, lw=0.5)
+
+                axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_inj_ep'][-1], color='C0', marker='.')
+                axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_inj_ph'][-1], color='C2', marker='.')
+                axs[3,3].plot(laps_sparse[-1], toolset.storage.data['ene_esc'][-1],    color='C3', marker='.')
 
                 axs[4,3].plot(laps_sparse[-1], toolset.storage.data['lum_rat'][-1], color='C0', marker='.')
                 axs[4,3].axhline(y=1.0, lw=0.5)
@@ -1109,27 +1094,28 @@ if __name__ == "__main__":
 
                 #--------------------------------------------------    
                 # extra prints
-                #print("--------------------------------------------------")
-                #print(' tau:  {:6.3f} min/max ({:6.3f}, {:6.3f}'.format(
-                #    toolset.storage.data['tau'][-1],
-                #    toolset.storage.data['tau_min'][-1],
-                #    toolset.storage.data['tau_max'][-1])
-                #      )
-                #print(' lin/lout: {:5.1f} / {:5.1f} = {:6.3f}'.format(
-                #    toolset.storage.data['ene_inj_ep'][-1] + 
-                #    toolset.storage.data['ene_inj_ph'][-1],
-                #    toolset.storage.data['ene_esc'][-1],
-                #    toolset.storage.data['lum_rat'][-1],
-                #      ))
-                #print(' N/N_0: ph {:6.1f} e- {:6.1f} e+ {:6.1f}'.format(
-                #    toolset.storage.data['lp_num_ph'][-1],
-                #    toolset.storage.data['lp_num_e-'][-1],
-                #    toolset.storage.data['lp_num_e+'][-1]
-                #      ))
+                print("--------------------------------------------------")
+                print(' tau:  {:6.3f} min/max ({:6.3f}, {:6.3f}'.format(
+                    toolset.storage.data['tau'][-1],
+                    toolset.storage.data['tau_min'][-1],
+                    toolset.storage.data['tau_max'][-1])
+                      )
+                print(' lin/lout: {:5.1f} / {:5.1f} = {:6.3f}'.format(
+                    toolset.storage.data['ene_inj_ep'][-1] + toolset.storage.data['ene_inj_ph'][-1],
+                    toolset.storage.data['ene_esc'][-1],
+                    toolset.storage.data['lum_rat'][-1],
+                      ))
+                print(' N/N_0: ph {:6.1f} e- {:6.1f} e+ {:6.1f}'.format(
+                    toolset.storage.data['lp_num_ph'][-1],
+                    toolset.storage.data['lp_num_e-'][-1],
+                    toolset.storage.data['lp_num_e+'][-1]
+                      ))
 
             # erase histogram and start a new monitoring cycle
             if lap % conf.plot_interval == 0:
                 mc.clear_hist()
+
+
 
             timer.stop("io2")
             timer.stats("io2")
@@ -1187,10 +1173,11 @@ if __name__ == "__main__":
 
 
         lum_in = conf.lum_ep + conf.lum_ph1 + conf.lum_ph2
-        #axs[3,3].axhline(y=lum_in, lw=0.5)
-        #axs[3,3].plot(laps_sparse, toolset.storage.data['ene_inj_ep'], color='C0', ls='solid')
-        #axs[3,3].plot(laps_sparse, toolset.storage.data['ene_inj_ph'], color='C2', ls='solid')
-        #axs[3,3].plot(laps_sparse, toolset.storage.data['ene_esc'],    color='C3', ls='dashed')
+        axs[3,3].axhline(y=lum_in, lw=0.5)
+
+        axs[3,3].plot(laps_sparse, toolset.storage.data['ene_inj_ep'], color='C0', ls='solid')
+        axs[3,3].plot(laps_sparse, toolset.storage.data['ene_inj_ph'], color='C2', ls='solid')
+        axs[3,3].plot(laps_sparse, toolset.storage.data['ene_esc'],    color='C3', ls='dashed')
 
         axs[4,3].plot(laps_sparse, toolset.storage.data['lum_rat'], color='C0', ls='solid')
         axs[4,3].axhline(y=1.0, lw=0.5)
@@ -1204,10 +1191,38 @@ if __name__ == "__main__":
         # plot the final spectrum
 
         col = 'C0'
-        axs[4,0].plot(toolset.lnxs, toolset.h1_enes['ph'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
-        axs[4,2].plot(toolset.lnxs, toolset.h1_enes['esc'],drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
-        axs[4,1].plot(toolset.lnzs, toolset.h1_enes['e-'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
-        axs[4,1].plot(toolset.lnzs, toolset.h1_enes['e+'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+        axs[4,0].plot(toolset.lnxs, toolset.h1_enes['ph'], 
+                            drawstyle='steps-pre',
+                            color=col,
+                            alpha=1.0,
+                            lw = lw,
+                            linestyle=ls,
+                            )
+
+
+        axs[4,2].plot(toolset.lnxs, toolset.h1_enes['esc'], 
+                            drawstyle='steps-pre',
+                            color=col,
+                            alpha=1.0,
+                            lw = lw,
+                            linestyle=ls,
+                            )
+
+        axs[4,1].plot(toolset.lnzs, toolset.h1_enes['e-'], 
+                            drawstyle='steps-pre',
+                            color=col,
+                            alpha=1.0,
+                            lw = lw,
+                            linestyle=ls,
+                            )
+
+        axs[4,1].plot(toolset.lnzs, toolset.h1_enes['e+'], 
+                            drawstyle='steps-pre',
+                            color=col,
+                            alpha=1.0,
+                            lw = lw,
+                            linestyle=ls,
+                            )
 
         #--------------------------------------------------    
         # close and save fig

@@ -282,6 +282,8 @@ class Configuration_Turbulence(Configuration):
 
         self.rad_curv_shift = self.rad_star - np.sqrt(self.rad_star**2 - self.rad_pcap**2) # height of the curved atmosphere
         self.rad_curv_shift += 6 # pad with some cells to avoid boundary effects close to grid limit
+        if self.threeD:
+            self.rad_curv_shift = 5 # NOTE using flat surface in 3D
 
         self.height_atms = 3 # add padding; this is the height of the atmosphere at r=Rpc in units of cells
 

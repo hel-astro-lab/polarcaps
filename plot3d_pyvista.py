@@ -211,7 +211,7 @@ if __name__ == "__main__":
     #--------------------------------------------------
     # create pyvista object
 
-    dx = conf.stride/conf.c_omp # skindepth resolution
+    dx = 1.0 #conf.stride/conf.c_omp # skindepth resolution
     origin = 0,0,0
 
     Lx = nx*dx
@@ -244,8 +244,8 @@ if __name__ == "__main__":
 
     #--------------------------------------------------
     if True:
-        cenx = conf.Lx//2 #+ 0.5
-        ceny = conf.Ly//2 #+ 0.5
+        cenx = Lx//2 #+ 0.5
+        ceny = Ly//2 #+ 0.5
         cenz = -conf.rad_star + conf.rad_curv_shift
 
         sphere = pv.Sphere(
@@ -332,7 +332,7 @@ if __name__ == "__main__":
 
 
     def cut_wedge(mesh):
-        return mesh # TODO turned off
+        #return mesh # TODO turned off
 
         rcyl = np.sqrt( (mesh.points[:,0]-cenx)**2 + (mesh.points[:,1]-ceny)**2) # cylindrical radius
         mesh['rcyl']  = rcyl
@@ -624,7 +624,7 @@ if __name__ == "__main__":
         #clim = (0, 100.0)
 
         mesh['rho'] = np.log10( np.ravel(rho) )
-        clim = (-3, 2.0)
+        clim = (-2, 2.0)
 
         mesh = cut_wedge(mesh) # TODO
 
@@ -969,9 +969,10 @@ if __name__ == "__main__":
         if conf.Nz*conf.NzMesh == 8*15:
             cpos = [(32, 716, 333), (60, 541, 248), (0.0072, -0.4375, 0.8991)]
         if conf.Nz*conf.NzMesh == 8*10:
-            #cpos = [(-2.88, 603, 274), (7.91, 535., 242), (0.05, -0.42, 0.90)]
-            #cpos = [(-99.68831908266294, 678.4868274427592, 282.12774469714975), (-58.86228207427652, 532.8834421628167, 221.95913229321027), (0.07143556397896247, -0.36376265956013953, 0.928748452331815)]
             cpos = [(-228.29936513149536, 444.5554228160977, 242.55718393317022), (-228.27269124987322, 444.523726219084, 242.54000187076107), (0.2133900321461455, -0.32067591550923413, 0.9228389086904505)]
+        if conf.Nz*conf.NzMesh == 8*20:
+            cpos =[(-540.1300290095163, 687.3946404637908, 390.8047647127543), (-224.72875394035194, 448.5552175978185, 243.5921075455215), (0.27347212927848263, -0.21651929959326455, 0.937193889977701)] 
+
 
     if args_cli.view == 'topside': 
         cpos = [(250, 243, 444),
