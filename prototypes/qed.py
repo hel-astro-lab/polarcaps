@@ -476,7 +476,7 @@ if __name__ == "__main__":
 
     mc.add_interaction(a0) 
     mc.add_interaction(a1) 
-    #mc.add_interaction(b ) # 
+    mc.add_interaction(b ) # 
 
 
     # --------------------------------------------------
