@@ -313,18 +313,16 @@ if __name__ == "__main__":
 
     # --------------------------------------------------
     # load runko
-    if conf.threeD:
-        # 3D modules
-        import pycorgi.threeD as pycorgi      # corgi ++ bindings
-        import pyrunko.pic.threeD as pypic    # pic c++ bindings
+    if conf.threeD: # 3D modules
+        import pycorgi.threeD as pycorgi   # corgi   bindings
+        import pyrunko.pic.threeD as pypic # pic c++ bindings
         import pyrunko.emf.threeD as pyfld # fld c++ bindings
-        import pyrunko.qed.threeD as pyqed    # qed c++ bindings
-    elif conf.twoD:
-        # 2D modules
-        import pycorgi.twoD as pycorgi       # corgi ++ bindings
-        import pyrunko.pic.twoD as pypic     # runko pic c++ bindings
-        import pyrunko.emf.twoD as pyfld  # runko fld c++ bindings
-        import pyrunko.qed.twoD as pyqed     # qed c++ bindings
+        import pyrunko.qed.threeD as pyqed # qed c++ bindings
+    elif conf.twoD: # 2D modules
+        import pycorgi.twoD as pycorgi     # corgi   bindings
+        import pyrunko.pic.twoD as pypic   # pic c++ bindings
+        import pyrunko.emf.twoD as pyfld   # fld c++ bindings
+        import pyrunko.qed.twoD as pyqed   # qed c++ bindings
 
 
 
@@ -520,7 +518,7 @@ if __name__ == "__main__":
 
 
     #--------------------------------------------------
-    mc.prob_norm_onebody = 1.0/(conf.N_lamC*conf.N_qdt) # units of [TODO]
+    mc.prob_norm_onebody = conf.N_onebody/conf.N_qdt # units of [TODO]
 
     a0 = pyrunko.qed.Synchrotron("e-")
     a1 = pyrunko.qed.Synchrotron("e+")
@@ -700,7 +698,7 @@ if __name__ == "__main__":
             #timer.start_comp("qed")
             #for tile in pytools.tiles_local(grid):
             #    i,j,k = pytools.get_index(tile, conf)
-            #    mc.solve_mc(tile)
+            #    mc.solve_twobody(tile)
             #timer.stop_comp("qed")
 
             #--------------------------------------------------
@@ -765,19 +763,18 @@ if __name__ == "__main__":
         # --------------------------------------------------
         # push B half
         sch.operate( dict(name='push_half_b1', solver='fldpropB', method='push_half_b', nhood='local',) )
-        sch.operate( dict(name='wall_bc',      solver='lwall',    method='update_b',    nhood='local',) )
+        sch.operate( dict(name='wall_bc_b',    solver='lwall',    method='update_b',    nhood='local',) )
 
         # comm B
         sch.operate( dict(name='mpi_b1',    solver='mpi', method='b',                 ) )
         sch.operate( dict(name='upd_bc ',   solver='tile',method='update_boundaries',args=[grid, [2,] ], nhood='local',) )
 
-        # --------------------------------------------------
-        # move particles (only locals tiles)
 
         # interpolate fields and push particles in x and u
-        sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
+        #sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
         #sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', ) )
 
+        #--------------------------------------------------
         # single-body QED interactions
         if conf.qed_mode and lap % conf.qed_step == 0:
             timer.start_comp("qed_onebody")
@@ -786,12 +783,14 @@ if __name__ == "__main__":
                 mc.solve_onebody(tile)
             timer.stop_comp("qed_onebody")
 
+        # --------------------------------------------------
+        # move particles (only locals tiles)
 
-        # TODO need to recalculate the interpolation step since new particles dont have Bpart and Epart; 
-        #      this is clearly a design error...
+        # NOTE need to recalculate the interpolation step since new particles dont have up-to-date Bpart and Epart; 
+        #      this is clearly a design error in mc.solve_onebody...
         # DONE new PulsarPusher calculates the fields inside the prtcl loop so this is fixed
         #      for every other pusher, need to uncomment this
-        #sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
+        sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
 
         sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[0]) ) # e^-
         sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[1]) ) # e^+
@@ -809,7 +808,7 @@ if __name__ == "__main__":
         # --------------------------------------------------
         # advance half B 
         sch.operate( dict(name='push_half_b2', solver='fldpropB', method='push_half_b', nhood='local', ) )
-        sch.operate( dict(name='wall_bc',      solver='lwall',    method='update_b',    nhood='local',) ) # dynamic B
+        sch.operate( dict(name='wall_bc_b',    solver='lwall',    method='update_b',    nhood='local',) ) # dynamic B
 
         # comm B
         sch.operate( dict(name='mpi_b2', solver='mpi', method='b',                 ) )
@@ -818,7 +817,7 @@ if __name__ == "__main__":
         # --------------------------------------------------
         # push E
         sch.operate( dict(name='push_e',    solver='fldpropE', method='push_e',  nhood='local', ) )
-        sch.operate( dict(name='wall_bc',   solver='lwall',    method='update_e',nhood='local', ) )
+        sch.operate( dict(name='wall_bc_e', solver='lwall',    method='update_e',nhood='local', ) )
 
 
         # TODO current deposit + MPI was here
@@ -872,7 +871,7 @@ if __name__ == "__main__":
         # --------------------------------------------------
         # add current to E
         sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current',       nhood='local', ) )
-        sch.operate( dict(name='wall_bc',   solver='lwall', method='update_e',              nhood='local', ) )
+        sch.operate( dict(name='wall_bc_e', solver='lwall', method='update_e',              nhood='local', ) )
 
 
         ##################################################
