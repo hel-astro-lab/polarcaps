@@ -98,11 +98,11 @@ if __name__ == "__main__":
         axs[0,0].set_yscale('log')
         axs[0,1].set_yscale('log')
 
-        axs[0,0].set_ylim((1e-4, 1e0))
-        axs[0,1].set_ylim((1e-4, 1e0))
+        axs[0,0].set_ylim((1e-6, 1e-2))
+        axs[0,1].set_ylim((1e-6, 1e-2))
 
-        axs[0,0].set_ylabel(r"$p\, \mathrm{d} \tau/\mathrm{d}p$")
-        axs[0,1].set_ylabel(r"$p\, \mathrm{d} \tau/\mathrm{d}p$")
+        axs[0,0].set_ylabel(r"$p_\pm \, \mathrm{d} \tau/\mathrm{d}p_\pm$")
+        axs[0,1].set_ylabel(r"$p_\pm \, \mathrm{d} \tau/\mathrm{d}p_\pm$")
 
         ph = 24 # panel height
         pad = 0 # padding between panels
@@ -137,8 +137,8 @@ if __name__ == "__main__":
 
 
     if True:
-        hmin = -0.4
-        hmax =  2.4
+        hmin = -0.1
+        hmax =  2.5
 
         #for j in range(ncol_fig):
         #for i in range(nrow_fig):
@@ -306,6 +306,9 @@ if __name__ == "__main__":
                       ) 
 
 
+        axs[1,0].fill_between([-0.5, 0.0], -100, 100, color='gray', alpha=0.4, edgecolor=None) 
+        axs[2,0].fill_between([-0.5, 0.0], -100, 100, color='gray', alpha=0.4, edgecolor=None) 
+        axs[3,0].fill_between([-0.5, 0.0], -100, 100, color='gray', alpha=0.4, edgecolor=None) 
 
 
 
