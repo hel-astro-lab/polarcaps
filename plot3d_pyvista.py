@@ -135,7 +135,7 @@ do_print = True
 if __name__ == "__main__":
 
     args_cli = pytools.parse_args()
-    conf = Configuration(args_cli.conf_filename, do_print=do_print)
+    conf = Configuration(args_cli.conf_filename, do_print=False)
     var = args_cli.var # NOTE uncomment for basic functionality 
     #var = 'bvec' # manually set the plotted variable
 
@@ -158,15 +158,15 @@ if __name__ == "__main__":
         pass
 
 
-    print(conf.outdir)
-    print("plotting {}".format(var))
-
 
     fname_fld = args['file']
     fname_prtcls = "test-prtcls"
 
     lap = args_cli.lap
     #lap = 2000
+
+    print(conf.outdir)
+    print("plotting {}".format(var), ' lap:', lap)
 
     # reading funciton for data
     def read_h5(outdir, fname, var, lap, stride=1):
@@ -332,7 +332,7 @@ if __name__ == "__main__":
 
 
     def cut_wedge(mesh):
-        #return mesh # TODO turned off
+        return mesh # TODO turned off
 
         rcyl = np.sqrt( (mesh.points[:,0]-cenx)**2 + (mesh.points[:,1]-ceny)**2) # cylindrical radius
         mesh['rcyl']  = rcyl
@@ -624,7 +624,7 @@ if __name__ == "__main__":
         #clim = (0, 100.0)
 
         mesh['rho'] = np.log10( np.ravel(rho) )
-        clim = (-2, 2.0)
+        clim = (-2, 1)
 
         mesh = cut_wedge(mesh) # TODO
 
