@@ -51,6 +51,7 @@ if __name__ == "__main__":
     plt.rc('axes',  labelsize=8)
     plt.rc('legend',  handlelength=4.0)
 
+
     #--------------------------------------------------
     if True: # regular gridspec
         nrow_fig = 2
@@ -68,6 +69,8 @@ if __name__ == "__main__":
                 axs[i,j] = plt.subplot(gs[i,j])
                 axs[i,j].minorticks_on()
 
+    axs[0,0].set_title(r"center at $\mu$")
+    axs[0,1].set_title(r"center at $\Omega$")
 
     #--------------------------------------------------
     # read slice file
@@ -104,11 +107,15 @@ if __name__ == "__main__":
 
     it = -1
     #for lap in [args.lap]:
-    for lap in range(0, 1840, conf.interval): # loop over time snapshots
+    for lap in range(0, conf.Nt, conf.interval): # loop over time snapshots
         it += 1 # time step for light curve
         #it = int(lap)
         
         fname = fdir + 'slices-xy_' + str(lap) + '.h5'
+
+        if not(os.path.isfile(fname)):
+            continue
+
         print('lap:', lap, fname)
 
         f5F = h5.File(fname,'r')
@@ -150,7 +157,6 @@ if __name__ == "__main__":
                norm = matplotlib.colors.SymLogNorm(1e-2, vmin=-10.0, vmax=10.0, base=10),
                )
 
-            axs[0,0].set_title(r"center at $\mu$")
 
         #--------------------------------------------------
         # pulsar's observer trajectory
@@ -198,7 +204,6 @@ if __name__ == "__main__":
                norm = matplotlib.colors.SymLogNorm(1e-2, vmin=-10.0, vmax=10.0, base=10),
                )
 
-            axs[0,1].set_title(r"center at $\Omega$")
 
             axs[0,1].set_xlim((-3,3))
             axs[0,1].set_ylim((-3,3))
