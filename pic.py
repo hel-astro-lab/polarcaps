@@ -1064,7 +1064,7 @@ if __name__ == "__main__":
                 # energy
                 axs[1,3].plot(ts[-1], toolset.storage.data['ene_e-'][-1], color='C0', marker='.')
                 axs[1,3].plot(ts[-1], toolset.storage.data['ene_e+'][-1], color='C1', marker='.')
-                axs[1,3].plot(ts[-1], toolset.storage.data['ene_ph'][-1], color='C2', marker='.')
+                axs[1,3].plot(ts[-1], toolset.storage.data['ene_ph'][-1], color='C2', marker='x')
 
                 # energy
                 Ux = np.array(toolset.storage.data['ene_ph'])
@@ -1077,7 +1077,7 @@ if __name__ == "__main__":
                 #print('num_e', toolset.storage.data['num_e-'])
                 axs[2,3].plot(laps[-1], toolset.storage.data['lp_num_e-'][-1], color='C0', marker='.')
                 axs[2,3].plot(laps[-1], toolset.storage.data['lp_num_e+'][-1], color='C1', marker='.')
-                axs[2,3].plot(laps[-1], toolset.storage.data['lp_num_ph'][-1], color='C2', marker='.')
+                axs[2,3].plot(laps[-1], toolset.storage.data['lp_num_ph'][-1], color='C2', marker='x')
 
                 axs[2,3].plot(laps_sparse[-1], toolset.storage.data['lp_num_esc'][-1], color='C3', marker='.')
 
@@ -1092,7 +1092,7 @@ if __name__ == "__main__":
 
                 axs[2,2].plot(laps[-1], toolset.storage.data['num_e-'][-1], color='C0', marker='.')
                 axs[2,2].plot(laps[-1], toolset.storage.data['num_e+'][-1], color='C1', marker='.')
-                axs[2,2].plot(laps[-1], toolset.storage.data['num_ph'][-1], color='C2', marker='.')
+                axs[2,2].plot(laps[-1], toolset.storage.data['num_ph'][-1], color='C2', marker='x')
                 axs[2,2].plot(laps_sparse[-1], toolset.storage.data['num_esc'][-1], color='C3', marker='.')
 
 
