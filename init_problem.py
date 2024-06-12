@@ -421,7 +421,7 @@ class Configuration_Turbulence(Configuration):
             #self.N_lamC = 134*self.cfl**2/abs(self.qe)
             #self.N_lamC2= 134*self.c_omp**2*self.ppc/self.cfl
             self.N_onebody = re/(self.cfl*dx_phys) # reference normalization that would be self-consistent with the grid size
-            self.N_onebody *= 1e8 # artificial amplification factor
+            self.N_onebody *= 1e4 # artificial amplification factor
 
             self.lamC = 134*self.N_onebody*self.cfl # \lam_C in units of \Delta x (here, 134 = 1/alpha_f)
 
