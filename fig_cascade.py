@@ -98,8 +98,8 @@ if __name__ == "__main__":
         axs[0,0].set_yscale('log')
         axs[0,1].set_yscale('log')
 
-        axs[0,0].set_ylim((1e-6, 1e-2))
-        axs[0,1].set_ylim((1e-6, 1e-2))
+        axs[0,0].set_ylim((1e-8, 1e-2))
+        axs[0,1].set_ylim((1e-8, 1e-2))
 
         axs[0,0].set_ylabel(r"$p_\pm \, \mathrm{d} \tau/\mathrm{d}p_\pm$")
         axs[0,1].set_ylabel(r"$p_\pm \, \mathrm{d} \tau/\mathrm{d}p_\pm$")
@@ -359,6 +359,74 @@ if __name__ == "__main__":
     axs[1,0].yaxis.set_major_formatter(majorformatter)
     axs[2,0].yaxis.set_major_formatter(majorformatter)
     axs[3,0].yaxis.set_major_formatter(majorformatter)
+
+
+
+    # find indixes of elements nearest to x
+    def find_arg_nearest(arr, x):
+        d = np.abs(arr - x)
+        i = np.argmin(d)
+        return i
+
+
+    #--------------------------------------------------
+    # debug additions
+    if True:
+
+        # real momenta array for pairs
+        xvals = np.linspace(-px_log_extent, px_log_extent, 2*toolset.Nhist)
+        garr = np.zeros_like(xvals)
+
+        n = len(garr)
+        print('mid-1', xvals[n//2-1]) # neg values
+        print('mid  ', xvals[n//2])   # pos values
+
+        # create a real energy array from the mangled xarr
+        garr[0:n//2] = -10**(-xvals[0:n//2 ] - 2)
+        garr[n//2:]  = +10**(+xvals[n//2:] - 2  )
+
+        #print('garr:', garr)
+        print('mid-1', garr[n//2-1]) # neg values
+        print('mid  ', garr[n//2])   # pos values
+
+        # same for photons
+        xvals = np.linspace(-xx_log_extent, xx_log_extent, 2*toolset.Nhist)
+        xarr = np.zeros_like(xvals)
+        xarr[0:n//2] = -10**(-xvals[0:n//2 ] - 2)
+        xarr[n//2:]  = +10**(+xvals[n//2:] - 2  )
+
+
+        # now plot varios thresholds
+        for gref in [conf.gam_gap, conf.gam_rad]:
+            i1 = find_arg_nearest(garr, -gref)
+            i2 = find_arg_nearest(garr, +gref)
+
+            print('i1:', i1, 'g', garr[i1], 'ggap', -gref)
+            print('i2:', i2, 'g', garr[i2], 'ggap', +gref)
+
+            axs[0,0].axvline(xvals[i1], ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
+            axs[0,0].axvline(xvals[i2], ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
+
+            axs[0,1].axvline(xvals[i1], ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
+            axs[0,1].axvline(xvals[i2], ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
+
+            axs[1,0].axhline(y=xvals[i1], linestyle='solid', color='C0', lw=0.4)
+            axs[1,0].axhline(y=xvals[i2], linestyle='solid', color='C0', lw=0.4)
+        
+            axs[2,0].axhline(y=xvals[i1], linestyle='solid', color='C0', lw=0.4)
+            axs[2,0].axhline(y=xvals[i2], linestyle='solid', color='C0', lw=0.4)
+
+
+
+        for xref in [conf.xsyn]:
+            i1 = find_arg_nearest(xarr, -gref)
+            i2 = find_arg_nearest(xarr, +gref)
+
+            print('i1:', i1, 'x', xarr[i1], 'xref', -xref)
+            print('i2:', i2, 'x', xarr[i2], 'xref', +xref)
+
+            axs[3,0].axhline(y=xvals[i1], linestyle='solid', color='C0', lw=0.4)
+            axs[3,0].axhline(y=xvals[i2], linestyle='solid', color='C0', lw=0.4)
 
 
 
