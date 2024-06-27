@@ -260,7 +260,7 @@ class Configuration_Turbulence(Configuration):
             self.rad_star = 10*self.rad_pcap
 
         else: # millisecond pulsar setup
-            self.rad_pcap = 0.4*self.Lx//2 #0.65 is exactly at the corner for 2d domain when R_* = 10 R_pc
+            self.rad_pcap = 0.4*self.Lx//2 
             self.rad_star = 4*self.rad_pcap
 
 
@@ -297,12 +297,15 @@ class Configuration_Turbulence(Configuration):
         #dV_gap = omB*(self.rad_star/self.cfl)*(self.rad_star/self.rad_lcyl)**2 # DONE
         #print('init: dV_gap:', dV_gap)
 
-        self.nGJ = self.Om_star*bstar/(cfl*abs(self.qe))
+        #self.nGJ = self.Om_star*bstar/(cfl*abs(self.qe))
+        self.nGJ = vrot*bstar/(abs(self.qe)*self.rad_pcap) # latest version
+
         #nGJ = self.Om_star*bstar/(2*pi*self.cfl*abs(self.qe))
 
         deGJ = self.c_omp*(self.nGJ/self.ppc)**(-0.5)
 
-        gam_gap  = vrot**2*(bstar*self.rad_pcap/(cfl**2))
+        gam_gap  = vrot*bstar*self.rad_pcap/(2*cfl**2) # OK
+        #gam_gap  = vrot**2*(bstar*self.rad_pcap/(cfl**2))
         #gam_gap2 = vrot**2*(bstar*self.rad_star/(cfl**2))
         #gam_gap3 = (self.omB/self.Om_star)*(self.rad_star/self.rad_lcyl)**3
 
@@ -321,6 +324,8 @@ class Configuration_Turbulence(Configuration):
             print('init: d_e GJ ', deGJ, 'dx')
             print('init: gam_gap', gam_gap)
 
+        # add variables to the class
+        self.gam_gap = gam_gap
 
             #sys.exit()
 
@@ -421,18 +426,40 @@ class Configuration_Turbulence(Configuration):
             #self.N_lamC = 134*self.cfl**2/abs(self.qe)
             #self.N_lamC2= 134*self.c_omp**2*self.ppc/self.cfl
             self.N_onebody = re/(self.cfl*dx_phys) # reference normalization that would be self-consistent with the grid size
-            self.N_onebody *= 1e4 # artificial amplification factor
+            self.N_onebody *= 1e12 # 1e4 # artificial amplification factor
 
             self.lamC = 134*self.N_onebody*self.cfl # \lam_C in units of \Delta x (here, 134 = 1/alpha_f)
 
+            self.lamC2 = 2*pi*self.B_QED*self.c_omp/sqrt(self.sigma)
+            #print('lamC1', self.lamC)
+            #print('lamC2', self.lamC2)
+
             # radiation reaction limit \gamma_rad
-            self.gam_rad  = (134*3*self.vrot*self.B_QED/2)**(0.25)
-            self.gam_rad *= (self.rad_star**2/self.rad_pcap/self.lamC)**0.5
+            # v1: gives weird results
+            #self.gam_rad  = (134*3/2)**0.25
+            #self.gam_rad *= (self.vrot*self.B_QED)**(0.25)
+            #self.gam_rad *= (self.rad_star**2/self.rad_pcap/self.lamC)**0.5
+
+            # v2 wrong
+            #self.gam_rad  = self.gam_gap**(0.25) 
+            #self.gam_rad *= self.rad_star/self.rad_pcap
+            #self.gam_rad *= ( 3*self.rad_pcap/(134*self.lamC) )**0.25
+
+            #v3
+            self.rad_curv = self.rad_star**2/self.rad_pcap
+            rg = self.c_omp/sqrt(self.sigma)
+
+            self.gam_rad  = self.gam_gap**0.25
+            self.gam_rad *= (self.rad_curv/rg)**0.5
+            self.gam_rad *= self.B_QED**-0.5
+            self.gam_rad *= ( (3/2)*self.lamC/(134*self.rad_pcap) )**0.25
+
 
             # synchrotorn radiation cooling happens over a distance (in units of polar cap size)
             self.len_rad = self.gam_rad*(1/self.B_QED/vrot)*self.lamC/self.rad_pcap
 
-            self.xsyn = 1.5*(self.lamC/self.rad_star)*(self.rad_pcap/self.rad_star)*self.gam_rad**3
+            #self.xsyn = 1.5*(self.lamC/self.rad_star)*(self.rad_pcap/self.rad_star)*self.gam_rad**3
+            self.xsyn = 1.5*self.B_QED*(rg/self.rad_curv)*self.gam_rad**3
 
             #self.N_inj = self.N_w*self.t_c/self.dt # unit of injection luminosity (per dt) DONE
             #self.N_inj *= self.Nx*self.Ny*self.Nz # FIXME
