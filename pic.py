@@ -35,8 +35,12 @@ def insert_em_fields(grid, conf, do_initialization=True):
     for tile in pytools.tiles_all(grid):
         g = tile.get_grids(0)
 
-        ii,jj,kk = tile.index if conf.threeD else (*tile.index, 0)
-
+        if conf.oneD:
+            ii,jj,kk = (tile.index, 0, 0)
+        elif conf.twoD:
+            ii,jj,kk = (*tile.index, 0)
+        else:
+            ii,jj,kk = tile.index
 
         # insert values into Yee lattices; includes halos from -3 to n+3
         if do_initialization:
@@ -313,17 +317,21 @@ if __name__ == "__main__":
 
     # --------------------------------------------------
     # load runko
-    if conf.threeD: # 3D modules
-        import pycorgi.threeD as pycorgi   # corgi   bindings
-        import pyrunko.pic.threeD as pypic # pic c++ bindings
-        import pyrunko.emf.threeD as pyfld # fld c++ bindings
-        import pyrunko.qed.threeD as pyqed # qed c++ bindings
+    if conf.oneD: # 1D modules
+        import pycorgi.oneD as pycorgi     # corgi   bindings
+        import pyrunko.pic.oneD as pypic   # pic c++ bindings
+        import pyrunko.emf.oneD as pyfld   # fld c++ bindings
+        import pyrunko.qed.oneD as pyqed   # qed c++ bindings
     elif conf.twoD: # 2D modules
         import pycorgi.twoD as pycorgi     # corgi   bindings
         import pyrunko.pic.twoD as pypic   # pic c++ bindings
         import pyrunko.emf.twoD as pyfld   # fld c++ bindings
         import pyrunko.qed.twoD as pyqed   # qed c++ bindings
-
+    elif conf.threeD: # 3D modules
+        import pycorgi.threeD as pycorgi   # corgi   bindings
+        import pyrunko.pic.threeD as pypic # pic c++ bindings
+        import pyrunko.emf.threeD as pyfld # fld c++ bindings
+        import pyrunko.qed.threeD as pyqed # qed c++ bindings
 
 
     # --------------------------------------------------
@@ -454,11 +462,11 @@ if __name__ == "__main__":
 
 
     # --------------------------------------------------
-    #sch.pusher = pypic.BorisPusher()
+    sch.pusher = pypic.BorisPusher()
     #sch.pusher = pypic.VayPusher()
     #sch.pusher = pypic.HigueraCaryPusher()
     #sch.pusher  = pypic.rGCAPusher()
-    sch.pusher  = pypic.PulsarPusher()
+    #sch.pusher  = pypic.PulsarPusher()
 
     #if conf.gammarad > 0:
     #    sch.pusher   = pypic.BorisDragPusher()
@@ -531,10 +539,9 @@ if __name__ == "__main__":
     for intr in [a0, a1, b]:
         intr.B_QED = conf.binit/conf.B_QED
 
-    mc.add_interaction(a0) 
-    mc.add_interaction(a1) 
-    mc.add_interaction(b ) # 
-
+    mc.add_interaction(a0) # electron synchrotorn
+    mc.add_interaction(a1) # positron synchrotron
+    #mc.add_interaction(b ) #  multi photon pair creation
 
 
     # --------------------------------------------------
@@ -602,14 +609,21 @@ if __name__ == "__main__":
 
 
     # --------------------------------------------------
+    height_atms = conf.height_atms #0.005*conf.rad_star
+
     #star = pyfld.Conductor()
     star = pypic.Star()
-    for obj in [star, sch.pusher]:
+    #for obj in [star, sch.pusher]:
+    for obj in [star]: # NOTE omitting pusher if it is not pulsarpusher
         obj.radius    = conf.rad_star
         obj.radius_pc = conf.rad_pcap
         obj.period    = conf.period_star # NOTE should be period_star for normal runs 
 
-        if conf.twoD:
+        if conf.oneD:
+            obj.cenx   = -conf.rad_star + conf.rad_curv_shift
+            obj.ceny   = 0
+            obj.cenz   = 0 
+        elif conf.twoD:
             obj.cenx   = conf.Lx//2 + 0.5
             obj.ceny   = -conf.rad_star + conf.rad_curv_shift
             obj.cenz   = 0 
@@ -618,10 +632,8 @@ if __name__ == "__main__":
             obj.ceny   = conf.Ly//2 #+ 0.5
             obj.cenz   = -conf.rad_star + conf.rad_curv_shift
 
-
-    #sch.pusher.grav_const = 0.0 # gravitational constant
-    height_atms = conf.height_atms #0.005*conf.rad_star
-    sch.pusher.grav_const = conf.delgam**2/(2*height_atms)
+        # NOTE omitting pusher if it is not pulsarpusher
+        #sch.pusher.grav_const = conf.delgam**2/(2*height_atms)
 
     star.B0       = conf.b_dipole_norm    # TODO normalization here?
     star.chi_om   = np.deg2rad(conf.chi)  # rotation axis inclination
@@ -933,7 +945,12 @@ if __name__ == "__main__":
 
                 tplt.col_mode = False
 
-                if conf.twoD:
+                if conf.oneD:
+                    #tplt.plot_panels( (2,3),
+                    #)
+                    print('not implemented')
+
+                elif conf.twoD:
                     tplt.plot_panels( (2,3),
                     dict(axs=(0,0), data=fld_writer.get_slice( 0)/conf.e_norm ,   name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
                     dict(axs=(0,1), data=fld_writer.get_slice( 1)/conf.e_norm ,   name='ey', cmap='RdBu'   ,vmin=-1, vmax=1),
@@ -942,7 +959,7 @@ if __name__ == "__main__":
                     dict(axs=(1,1), data=fld_writer.get_slice( 4)/conf.b_norm ,   name='by', cmap='RdBu'   ,vmin=-1, vmax=1),
                     dict(axs=(1,2), data=mom_writer.get_slice(14)/conf.x_norm   , name='ph', cmap='viridis',vmin= 0, vmax=4),
                     )
-                if conf.threeD:
+                elif conf.threeD:
                     tplt.plot_panels( (2,3),
                     dict(axs=(0,0), data=slice_xz_writer.get_slice( 0)/conf.e_norm ,   name='ex (xz)', cmap='RdBu'   ,vmin=-1, vmax=1),
                     dict(axs=(0,1), data=slice_xz_writer.get_slice( 2)/conf.e_norm ,   name='ez (xz)', cmap='RdBu'   ,vmin=-1, vmax=1),

@@ -17,7 +17,9 @@ class QEDToolset:
         self.ny = conf.Ny*conf.NyMesh
         self.nz = conf.Nz*conf.NzMesh
 
-        if conf.twoD:
+        if conf.oneD:
+            self.nh = self.nx
+        elif conf.twoD:
             self.nh = self.ny
         elif conf.threeD:
             self.nh = self.nz
@@ -310,7 +312,10 @@ class QEDToolset:
 
                 bins_w = self.ws_bin
 
-                if conf.twoD:
+                if conf.oneD:
+                    h  = np.array( container.loc(0) ) # y
+                    hv = np.array( container.vel(0) ) # vy
+                elif conf.twoD:
                     h  = np.array( container.loc(1) ) # y
                     hv = np.array( container.vel(1) ) # vy
                 elif conf.threeD:

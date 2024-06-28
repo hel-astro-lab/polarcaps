@@ -255,13 +255,18 @@ class Configuration_Turbulence(Configuration):
         #-------------------------------------------------- 
         # polar cap setup
 
-        if False: # radio pulsar setup
-            self.rad_pcap = 0.6*self.Lx//2 #0.65 is exactly at the corner for 2d domain when R_* = 10 R_pc
+        if self.oneD:
+            self.rad_pcap = 0.6*self.Lx//4 #0.65 is exactly at the corner for 2d domain when R_* = 10 R_pc
             self.rad_star = 10*self.rad_pcap
 
-        else: # millisecond pulsar setup
-            self.rad_pcap = 0.4*self.Lx//2 
-            self.rad_star = 4*self.rad_pcap
+        else:
+            if False: # radio pulsar setup
+                self.rad_pcap = 0.6*self.Lx//2 #0.65 is exactly at the corner for 2d domain when R_* = 10 R_pc
+                self.rad_star = 10*self.rad_pcap
+
+            else: # millisecond pulsar setup
+                self.rad_pcap = 0.4*self.Lx//2 
+                self.rad_star = 4*self.rad_pcap
 
 
         # v1 based on polar cap size we get the star's spin 
@@ -279,6 +284,9 @@ class Configuration_Turbulence(Configuration):
 
         self.rad_curv_shift = self.rad_star - np.sqrt(self.rad_star**2 - self.rad_pcap**2) # height of the curved atmosphere
         self.rad_curv_shift += 6 # pad with some cells to avoid boundary effects close to grid limit
+
+        if self.oneD:
+            self.rad_curv_shift = 5 # NOTE using flat surface in 3D
         if self.threeD:
             self.rad_curv_shift = 5 # NOTE using flat surface in 3D
 
