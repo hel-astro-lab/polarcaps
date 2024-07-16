@@ -169,15 +169,18 @@ if __name__ == "__main__":
 
         #--------------------------------------------------
 
-        if conf.twoD:
+        if conf.oneD:
+            cenx   = -conf.rad_star + conf.rad_curv_shift
+            ceny   = 0 
+            cenz   = 0 
+            Lh = conf.Lx
+        elif conf.twoD:
             cenx   = conf.Lx//2 + 0.5
             ceny   = -conf.rad_star + conf.rad_curv_shift
             cenz   = 0 
-
             Lh = conf.Ly
         elif conf.threeD:
             cenx   = conf.Lx//2 + 0.5
-            #ceny   = conf.Ly//2 + 0.5
             ceny   = -conf.rad_star + conf.rad_curv_shift
             Lh = conf.Lz
 
