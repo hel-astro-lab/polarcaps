@@ -94,15 +94,15 @@ if __name__ == "__main__":
         for i in range(nrow_fig):
             axs[i,j].set_xlim((hmin, hmax))
 
-    #axs[3,0].set_ylim((0, 1.1))
-    #axs[4,0].set_ylim((0, 1.1))
+    axs[3,0].set_ylim((-1, 1))
+    axs[4,0].set_ylim((-1, 1))
     axs[5,0].set_ylim((1, 2.0))
 
     axs[5,0].set_xlabel(r"$h/h_\mathrm{pc}$")
 
-    #for j in range(ncol_fig):
-    #    for i in range(nrow_fig):
-    #        axs[i,j].fill_between([-0.5, 0.0], -100, 100, color='gray', alpha=0.4, edgecolor=None) 
+    for j in range(ncol_fig):
+        for i in range(nrow_fig):
+            axs[i,j].fill_between([-0.5, 0.0], -100, 100, color='gray', alpha=0.4, edgecolor=None) 
 
 
     # grid configuration
@@ -304,17 +304,17 @@ if __name__ == "__main__":
         fname = conf.outdir + '/flds_{}.h5'.format(str(args.lap))
         f5 = h5.File(fname,'r')
 
-        ex = pytools.read_h5_array(f5, 'ex')
-        ey = pytools.read_h5_array(f5, 'ey')
-        ez = pytools.read_h5_array(f5, 'ez')
+        ex = pytools.read_h5_array(f5, 'ex')/conf.e_norm
+        ey = pytools.read_h5_array(f5, 'ey')/conf.e_norm
+        ez = pytools.read_h5_array(f5, 'ez')/conf.e_norm
 
-        jx = pytools.read_h5_array(f5, 'jx')
-        jy = pytools.read_h5_array(f5, 'jy')
-        jz = pytools.read_h5_array(f5, 'jz')
+        jx = pytools.read_h5_array(f5, 'jx')/conf.j_norm
+        jy = pytools.read_h5_array(f5, 'jy')/conf.j_norm
+        jz = pytools.read_h5_array(f5, 'jz')/conf.j_norm
 
-        bx = pytools.read_h5_array(f5, 'bx')/conf.binit
-        by = pytools.read_h5_array(f5, 'by')/conf.binit
-        bz = pytools.read_h5_array(f5, 'bz')/conf.binit
+        bx = pytools.read_h5_array(f5, 'bx')/conf.b_norm
+        by = pytools.read_h5_array(f5, 'by')/conf.b_norm
+        bz = pytools.read_h5_array(f5, 'bz')/conf.b_norm
 
         print('shape ex', np.shape(ex))
 
@@ -344,9 +344,20 @@ if __name__ == "__main__":
         print('b', b)
         
         axs[3,0].plot(hh, ex, lw=1.0, linestyle='solid', color='C0')
+        axs[3,0].plot(hh, ey, lw=1.0, linestyle='solid', color='C1')
+        axs[3,0].plot(hh, ez, lw=1.0, linestyle='solid', color='C2')
+
         axs[4,0].plot(hh, jx, lw=1.0, linestyle='solid', color='C0')
         axs[5,0].plot(hh, bx, lw=1.0, linestyle='solid', color='C0')
 
+
+    #--------------------------------------------------
+    # time stamp
+
+    #print('r_pc:', conf.rad_pcap)
+    print('t:', args.lap/conf.t_norm)
+    stitle = r"$t c/R_\mathrm{pc}$ = " + "{:3.1f}".format(args.lap/conf.t_norm)
+    axs[0,0].set_title(stitle, fontsize=10)
 
 
     #--------------------------------------------------

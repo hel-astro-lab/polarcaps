@@ -256,7 +256,7 @@ class Configuration_Turbulence(Configuration):
         # polar cap setup
 
         if self.oneD:
-            self.rad_pcap = 0.6*self.Lx//4 #0.65 is exactly at the corner for 2d domain when R_* = 10 R_pc
+            self.rad_pcap = 0.6*self.Lx//4 #same size as woudld be for 3D sim (since there Nz = Nx/2)
             self.rad_star = 10*self.rad_pcap
 
         else:
@@ -341,11 +341,12 @@ class Configuration_Turbulence(Configuration):
         #-------------------------------------------------- 
         # default normalization
 
-        self.e_norm = 1.0*self.binit 
         self.b_norm = 1.0*self.binit
-        self.j_norm = abs(self.qe)*self.ppc*2*self.cfl**2
+        self.e_norm = 1.0*self.binit*self.vrot
+        self.j_norm = abs(self.qe)*self.nGJ*self.cfl**2 # j_m \Delta t # abs(self.qe)*self.ppc*2*self.cfl**2
         self.p_norm = self.nGJ # max(self.ppc*2,1)
         self.x_norm = max(self.xpc,1)
+        self.t_norm = self.rad_pcap/self.cfl  # t_pc = R_pc/c; lightcrossing itme across polar cap
 
 
         #-------------------------------------------------- 
