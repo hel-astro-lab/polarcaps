@@ -89,14 +89,15 @@ if __name__ == "__main__":
 
 
     hmin = -0.1
-    hmax =  2.5
+    hmax = 1.5 #7.0
     for j in range(ncol_fig):
         for i in range(nrow_fig):
             axs[i,j].set_xlim((hmin, hmax))
 
     axs[3,0].set_ylim((-1, 1))
-    axs[4,0].set_ylim((-1, 1))
-    axs[5,0].set_ylim((1, 2.0))
+    axs[3,0].set_ylim((-1.2, 1.2))
+    axs[4,0].set_ylim((-1.2, 3.2))
+    axs[5,0].set_ylim((0, 1.2))
 
     axs[5,0].set_xlabel(r"$h/h_\mathrm{pc}$")
 
@@ -343,12 +344,15 @@ if __name__ == "__main__":
         print('j', j)
         print('b', b)
         
-        axs[3,0].plot(hh, ex, lw=1.0, linestyle='solid', color='C0')
-        axs[3,0].plot(hh, ey, lw=1.0, linestyle='solid', color='C1')
-        axs[3,0].plot(hh, ez, lw=1.0, linestyle='solid', color='C2')
+        axs[3,0].plot(hh, ex, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
+        axs[3,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
+        axs[3,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
 
-        axs[4,0].plot(hh, jx, lw=1.0, linestyle='solid', color='C0')
-        axs[5,0].plot(hh, bx, lw=1.0, linestyle='solid', color='C0')
+        axs[4,0].plot(hh, jx, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
+        axs[4,0].plot(hh, jy, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
+        axs[4,0].plot(hh, jz, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
+
+        axs[5,0].plot(hh, bx, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
 
 
     #--------------------------------------------------
