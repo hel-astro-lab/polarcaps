@@ -299,6 +299,9 @@ class Configuration_Turbulence(Configuration):
         bstar = 2*self.b_dipole_norm*self.rad_star**-3 # B_{*,r} = radial magnetic field component 
                                                        # at the star's surface; 
                                                        # factor of 2 comes from dipole coordinate system
+        # NOTE: using constant B in 1D
+        #if self.oneD: self.b_dipole_norm = self.binit
+
         vrot = self.Om_star*self.rad_pcap/cfl
 
         #omB = sqrt(self.sigma)*self.omp
@@ -306,7 +309,7 @@ class Configuration_Turbulence(Configuration):
         #print('init: dV_gap:', dV_gap)
 
         #self.nGJ = self.Om_star*bstar/(cfl*abs(self.qe))
-        self.nGJ = vrot*bstar/(abs(self.qe)*self.rad_pcap) # latest version
+        self.nGJ = vrot*bstar/(abs(self.qe)*self.rad_pcap) # total ppc for both species
 
         #nGJ = self.Om_star*bstar/(2*pi*self.cfl*abs(self.qe))
 
@@ -341,8 +344,8 @@ class Configuration_Turbulence(Configuration):
         #-------------------------------------------------- 
         # default normalization
 
-        self.b_norm = 1.0*self.binit
-        self.e_norm = 1.0*self.binit*self.vrot
+        self.b_norm = 2.0*self.binit # B_0 = 2*binit; hence 2x
+        self.e_norm = 2.0*self.binit*self.vrot
         self.j_norm = abs(self.qe)*self.nGJ*self.cfl**2 # j_m \Delta t # abs(self.qe)*self.ppc*2*self.cfl**2
         self.p_norm = self.nGJ # max(self.ppc*2,1)
         self.x_norm = max(self.xpc,1)
@@ -435,11 +438,11 @@ class Configuration_Turbulence(Configuration):
             #self.N_lamC = 134*self.cfl**2/abs(self.qe)
             #self.N_lamC2= 134*self.c_omp**2*self.ppc/self.cfl
             self.N_onebody = re/(self.cfl*dx_phys) # reference normalization that would be self-consistent with the grid size
-            self.N_onebody *= 1e12 # 1e4 # artificial amplification factor
+            self.N_onebody *= 1e4 # 1e4 # artificial amplification factor; = size of r_e in \Delta x
 
             self.lamC = 134*self.N_onebody*self.cfl # \lam_C in units of \Delta x (here, 134 = 1/alpha_f)
 
-            self.lamC2 = 2*pi*self.B_QED*self.c_omp/sqrt(self.sigma)
+            #self.lamC2 = 2*pi*self.B_QED*self.c_omp/sqrt(self.sigma)
             #print('lamC1', self.lamC)
             #print('lamC2', self.lamC2)
 
@@ -460,9 +463,11 @@ class Configuration_Turbulence(Configuration):
 
             self.gam_rad  = self.gam_gap**0.25
             self.gam_rad *= (self.rad_curv/rg)**0.5
-            self.gam_rad *= self.B_QED**-0.5
-            self.gam_rad *= ( (3/2)*self.lamC/(134*self.rad_pcap) )**0.25
+            self.gam_rad *=  self.B_QED**-0.5
+            self.gam_rad *= ( 1.5*self.lamC/(134*self.rad_pcap) )**0.25
 
+            #self.gam_rad  = self.gam_gap
+            #self.gam_rad *= 2*self.B_QED
 
             # synchrotorn radiation cooling happens over a distance (in units of polar cap size)
             self.len_rad = self.gam_rad*(1/self.B_QED/vrot)*self.lamC/self.rad_pcap
