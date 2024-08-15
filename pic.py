@@ -812,7 +812,6 @@ if __name__ == "__main__":
         sch.operate( dict(name='clear_cur', solver='tile',   method='clear_current', nhood='all', ) )
 
         # apply moving/reflecting/injecting walls
-        # TODO
         #if lap*conf.cfl > 1.0*conf.rad_pcap: # apply after a fraction of the disk light crossing time 
         sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
 
@@ -879,6 +878,14 @@ if __name__ == "__main__":
         #sch.antenna.update_rnd_phases()
         #antenna.get_brms(grid)
         #sch.operate( dict(name='add_antenna', solver='antenna', method='add_ext_cur', nhood='local', ) )
+
+        #if conf.oneD: # rotating frame current (TODO does not work)
+        #    #update bcs
+        #    sch.operate( dict(name='mpi_b3', solver='mpi', method='b', ) )
+        #    sch.operate( dict(name='mpi_e3', solver='mpi', method='e', ) )
+        #    sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid,[1,2] ], nhood='local', ) )
+        #    sch.operate( dict(name='add_jm', solver='lwall', method='update_j',                 nhood='local', ) )
+
 
         # --------------------------------------------------
         # add current to E
