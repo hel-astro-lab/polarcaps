@@ -543,6 +543,10 @@ if __name__ == "__main__":
     mc.add_interaction(a1) # positron synchrotron
     #mc.add_interaction(b ) #  multi photon pair creation
 
+    if conf.oneD: # set 1D curvature parameters for QED reactions
+        mc.use_vir_curvature = True
+        mc.vir_pitch_ang  = conf.c_omp/np.sqrt(conf.sigma)/conf.rad_curv # r_g/R_curv
+
 
     # --------------------------------------------------
     # I/O objects
@@ -889,7 +893,7 @@ if __name__ == "__main__":
 
         # --------------------------------------------------
         # add current to E
-        sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current',       nhood='local', ) )
+        #sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current',       nhood='local', ) )
         sch.operate( dict(name='wall_bc_e', solver='lwall', method='update_e',              nhood='local', ) )
 
 
@@ -955,7 +959,7 @@ if __name__ == "__main__":
                 if conf.oneD:
                     #tplt.plot_panels( (2,3),
                     #)
-                    print('not implemented')
+                    print('terminal plot not implemented')
 
                 elif conf.twoD:
                     tplt.plot_panels( (2,3),

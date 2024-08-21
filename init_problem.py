@@ -296,7 +296,7 @@ class Configuration_Turbulence(Configuration):
         phase = 0.0 #global rotator phase
 
         self.b_dipole_norm = self.binit*self.rad_star**3
-        bstar = 2*self.b_dipole_norm*self.rad_star**-3 # B_{*,r} = radial magnetic field component 
+        self.bstar = 2*self.b_dipole_norm*self.rad_star**-3 # B_{*,r} = radial magnetic field component 
                                                        # at the star's surface; 
                                                        # factor of 2 comes from dipole coordinate system
         # NOTE: using constant B in 1D
@@ -309,13 +309,13 @@ class Configuration_Turbulence(Configuration):
         #print('init: dV_gap:', dV_gap)
 
         #self.nGJ = self.Om_star*bstar/(cfl*abs(self.qe))
-        self.nGJ = vrot*bstar/(abs(self.qe)*self.rad_pcap) # total ppc for both species
+        self.nGJ = vrot*self.bstar/(abs(self.qe)*self.rad_pcap) # total ppc for both species
 
         #nGJ = self.Om_star*bstar/(2*pi*self.cfl*abs(self.qe))
 
         deGJ = self.c_omp*(self.nGJ/self.ppc)**(-0.5)
 
-        gam_gap  = vrot*bstar*self.rad_pcap/(2*cfl**2) # OK
+        gam_gap  = vrot*self.bstar*self.rad_pcap/(2*cfl**2) # OK
         #gam_gap  = vrot**2*(bstar*self.rad_pcap/(cfl**2))
         #gam_gap2 = vrot**2*(bstar*self.rad_star/(cfl**2))
         #gam_gap3 = (self.omB/self.Om_star)*(self.rad_star/self.rad_lcyl)**3
@@ -328,7 +328,7 @@ class Configuration_Turbulence(Configuration):
             print('init: R_pc:  ', self.rad_pcap)
             print('init: R_LC:  ', self.rad_lcyl, ' not consistent for PC setup')
             print('init: chi:   ', np.deg2rad(self.chi))
-            print('init: B_*    ', bstar)
+            print('init: B_*    ', self.bstar)
             #print('init: B_LC   ', bstar*(self.rad_lcyl/self.rad_star)**(-3.0))
             print('init: v_rot  ', vrot)
             print('init: n_GJ   ', self.nGJ)
@@ -458,16 +458,15 @@ class Configuration_Turbulence(Configuration):
             #self.gam_rad *= ( 3*self.rad_pcap/(134*self.lamC) )**0.25
 
             #v3
+            self.h_pcap = self.rad_pcap # polar cap height
+
             self.rad_curv = self.rad_star**2/self.rad_pcap
             rg = self.c_omp/sqrt(self.sigma)
 
             self.gam_rad  = self.gam_gap**0.25
-            self.gam_rad *= (self.rad_curv/rg)**0.5
-            self.gam_rad *=  self.B_QED**-0.5
-            self.gam_rad *= ( 1.5*self.lamC/(134*self.rad_pcap) )**0.25
-
-            #self.gam_rad  = self.gam_gap
-            #self.gam_rad *= 2*self.B_QED
+            self.gam_rad *= (rg/self.rad_curv)**-0.5
+            self.gam_rad *= self.B_QED**-0.5
+            self.gam_rad *= ( 1.5*self.lamC/(134*self.h_pcap) )**0.25
 
             # synchrotorn radiation cooling happens over a distance (in units of polar cap size)
             self.len_rad = self.gam_rad*(1/self.B_QED/vrot)*self.lamC/self.rad_pcap
@@ -502,8 +501,9 @@ class Configuration_Turbulence(Configuration):
                 print('init: N_wgt  :', self.N_wgt)
                 print('init: N_time :', self.N_time)
                 print('init: N_1bQ  :', self.N_onebody)
-                print('init: lamC/R*: {:.2e}'.format(self.lamC/self.rad_star))
+                print('init: lamC/Hp: {:.2e}'.format(self.lamC/self.h_pcap))
                 print('init: x_syn  : {:.2e}'.format(self.xsyn))
+                print('init: rg/R_c : {:.2e}'.format(rg/self.rad_curv))
                 print('init: gam_rad: {:.2e}'.format(self.gam_rad))
                 print('init: len_rad: {:.2e}'.format(self.len_rad))
                 #print('init: N_lamC :', self.N_lamC)
