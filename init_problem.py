@@ -368,8 +368,8 @@ class Configuration_Turbulence(Configuration):
             # QED reaction rate normalization
             #ppc0 = max(2*self.ppc, self.xpc)
             #ppc0 = max(8, ppc0) # min limiter
-            ppc0 = 1.0 # FIXME free to choose this
-            #ppc0 = self.ppc # FIXME free to choose this
+            #ppc0 = 1.0 # FIXME free to choose this
+            ppc0 = self.ppc # FIXME free to choose this
             self.npc_ref = self.NxMesh*self.NyMesh*self.NzMesh*ppc0
 
 
@@ -409,10 +409,14 @@ class Configuration_Turbulence(Configuration):
             #self.dt *= self.qed_step # increase step size based on interval # TODO
 
             if do_print:
-                print("init: t_0/t_c  : ", self.t0/self.t_c)
-                print("init: xi       : ", self.xi)
-                print("init: dt_QED   : ", self.dt)
-                print("init: dt_PIC   : ", self.t0)
+                print("init: t_0/t_c   : ", self.t0/self.t_c)
+                print("init: xi        : ", self.xi)
+                print("init: dt_QED    : ", self.dt)
+                print("init: dt_PIC    : ", self.t0)
+                print("init: dx_phys   : ", dx_phys)
+                print("init: r_e (code): ", -self.qe/self.cfl**2)
+                print("init: r_e (phys): ", re)
+                print("init: r_eC/r_eP : ", -self.qe/self.cfl**2/re)
 
 
             # normalizations 
@@ -435,12 +439,19 @@ class Configuration_Turbulence(Configuration):
 
             # this is inverse of tau_C = lamC/c = alpha_f r_e /c = e^2/mc^2 = e/c^2
             #self.N_lamC = 1.0e3 #H/self.Rpc # TODO
-            #self.N_lamC = 134*self.cfl**2/abs(self.qe)
-            #self.N_lamC2= 134*self.c_omp**2*self.ppc/self.cfl
-            self.N_onebody = re/(self.cfl*dx_phys) # reference normalization that would be self-consistent with the grid size
-            self.N_onebody *= 1e4 # 1e4 # artificial amplification factor; = size of r_e in \Delta x
+            #self.N_lamC = 137*self.cfl**2/abs(self.qe)
+            #self.N_lamC2= 137*self.c_omp**2*self.ppc/self.cfl
 
-            self.lamC = 134*self.N_onebody*self.cfl # \lam_C in units of \Delta x (here, 134 = 1/alpha_f)
+            self.qed_vir_ampl = 1e12 # this becomes inefficient at >1e14; too rare for anything to happen
+            self.N_onebody = re/(self.cfl*dx_phys) # reference normalization that would be self-consistent with the grid size
+            self.N_onebody *= self.qed_vir_ampl # 1e4 # artificial amplification factor; = size of r_e in \Delta x
+
+            self.lamC = self.N_onebody*self.cfl # \lam_C in units of \Delta x 
+            #self.lamC *= 1/137 # (\alpha_f) NOTE: not needed (for some reason)
+
+            #self.lamC = self.N_onebody*self.cfl*dx_phys*137
+            #print('lamC', self.lamC)
+            #print('lamC2', self.qe/(self.cfl**2)/137)
 
             #self.lamC2 = 2*pi*self.B_QED*self.c_omp/sqrt(self.sigma)
             #print('lamC1', self.lamC)
@@ -448,14 +459,14 @@ class Configuration_Turbulence(Configuration):
 
             # radiation reaction limit \gamma_rad
             # v1: gives weird results
-            #self.gam_rad  = (134*3/2)**0.25
+            #self.gam_rad  = (137*3/2)**0.25
             #self.gam_rad *= (self.vrot*self.B_QED)**(0.25)
             #self.gam_rad *= (self.rad_star**2/self.rad_pcap/self.lamC)**0.5
 
             # v2 wrong
             #self.gam_rad  = self.gam_gap**(0.25) 
             #self.gam_rad *= self.rad_star/self.rad_pcap
-            #self.gam_rad *= ( 3*self.rad_pcap/(134*self.lamC) )**0.25
+            #self.gam_rad *= ( 3*self.rad_pcap/(137*self.lamC) )**0.25
 
             #v3
             self.h_pcap = self.rad_pcap # polar cap height
@@ -466,7 +477,12 @@ class Configuration_Turbulence(Configuration):
             self.gam_rad  = self.gam_gap**0.25
             self.gam_rad *= (rg/self.rad_curv)**-0.5
             self.gam_rad *= self.B_QED**-0.5
-            self.gam_rad *= ( 1.5*self.lamC/(134*self.h_pcap) )**0.25
+            self.gam_rad *= ( 1.5*self.lamC/(137*self.h_pcap) )**0.25
+
+            #self.gam_rad *= ( 1.5*self.lamC/(137*self.H) )**0.25
+            #self.gam_rad *= ( 1.5*137*re/self.H )**0.25
+
+            #self.gam_rad *= ( dx_phys*137 )**0.25 # arbitrary correction factor
 
             # synchrotorn radiation cooling happens over a distance (in units of polar cap size)
             self.len_rad = self.gam_rad*(1/self.B_QED/vrot)*self.lamC/self.rad_pcap
@@ -697,6 +713,9 @@ def velocity_profile(xloc, ispcs, conf):
         #if np.isnan(ux) or np.isnan(uy) or np.isnan(uz) or np.isnan(uu):
         #    sys.exit()
 
+    # TODO debug
+    #ux = 1e3
+
     x0 = [xx, yy, zz]
     u0 = [ux, uy, uz]
     return x0, u0
@@ -710,7 +729,14 @@ def velocity_profile(xloc, ispcs, conf):
 #       to conf.ppc only.
 #
 def density_profile(xloc, ispcs, conf):
+
+    # TODO debug
     return 0 # NOTE no injection in the beginning of the simulation
+    
+    #if xloc[0] > conf.height_atms + 1:
+    #    return 0
+    #if xloc[0] < conf.height_atms:
+    #    return 0
 
     #if ispcs in [0,1]:
     #    return conf.ppc

@@ -1053,6 +1053,19 @@ if __name__ == "__main__":
 
                 axs[0,0].plot(toolset.lnxs, toolset.h1_enes['ph'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
 
+                #--------------------------------------------------
+                if False: # TODO synchrotron emission peak
+                    g = 1e3
+                    rg = conf.c_omp/np.sqrt(conf.sigma)
+                    sina = g*(rg/conf.rad_curv)
+
+                    xsyn = 1.5*conf.B_QED*sina*g**2
+                    #print('xsyn', xsyn)
+
+                    axs[0,0].axvline(np.log10(xsyn))
+                    #DONE: ok
+
+                #--------------------------------------------------
                 #if lap > 1: # ignore first time step
                 #    axs[0,2].plot(toolset.lnxs, toolset.h1_enes['esc'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
 
@@ -1093,6 +1106,26 @@ if __name__ == "__main__":
                 axs[1,3].plot(ts[-1], toolset.storage.data['ene_e-'][-1], color='C0', marker='.')
                 axs[1,3].plot(ts[-1], toolset.storage.data['ene_e+'][-1], color='C1', marker='.')
                 axs[1,3].plot(ts[-1], toolset.storage.data['ene_ph'][-1], color='C2', marker='x')
+
+                #--------------------------------------------------
+                if False: # TODO debug; check energy losses
+                    # TODO
+                    alphaf = 1/137
+                    rg = conf.c_omp/np.sqrt(conf.sigma)
+
+                    # curvature radiation power
+                    Psyn = (2/3)*conf.cfl
+                    Psyn *= alphaf/conf.lamC
+                    Psyn *= conf.B_QED**2
+                    Psyn *= (rg/conf.rad_curv)**2
+                    Psyn *= 1e3**4
+
+                    Esyn = Psyn*(lap/conf.N_time)
+
+                    #print('Psyn:', Psyn, ' Esyn:', Esyn, 'esyn/emeas', Esyn/toolset.storage.data['ene_ph'][-1])
+                    axs[1,3].plot(ts[-1], Esyn, color='C2', marker='d')
+
+                #--------------------------------------------------
 
                 # energy
                 Ux = np.array(toolset.storage.data['ene_ph'])
