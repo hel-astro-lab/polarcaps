@@ -704,7 +704,7 @@ def velocity_profile(xloc, ispcs, conf):
 #
 def density_profile(xloc, ispcs, conf):
 
-    return 0 # NOTE no injection in the beginning of the simulation
+    #return 0 # NOTE no injection in the beginning of the simulation
     
     # TODO debug
     if xloc[0] > conf.height_atms + 1:

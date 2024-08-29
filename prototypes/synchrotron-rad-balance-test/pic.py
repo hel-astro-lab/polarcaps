@@ -817,7 +817,7 @@ if __name__ == "__main__":
 
         # apply moving/reflecting/injecting walls
         #if lap*conf.cfl > 1.0*conf.rad_pcap: # apply after a fraction of the disk light crossing time 
-        sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
+        #sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
 
 
         # --------------------------------------------------
