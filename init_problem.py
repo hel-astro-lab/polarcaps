@@ -439,7 +439,9 @@ class Configuration_Turbulence(Configuration):
             # normaliation of onebody interaction; reduced Compton wavelength
             self.N_onebody = lamC/dx_phys/self.cfl # normalization coeff N
             self.N_onebody *= 1.0/alphaf/c # additionally, countering the normalized units in interact (where c=lamc=alpha=1)
-            self.N_onebody *= 1e17 # artificial rate slowdown
+            #self.N_onebody *= 1e15 # artificial rate slowdown; sigma=1e8
+            self.N_onebody *= 1e17 # artificial rate slowdown; sigma=1e6
+            #self.N_onebody *= 1e20 # artificial rate slowdown; sigma=1e4
             self.lamC = self.N_onebody*self.cfl # \lam_C in units of \Delta x 
 
             # radiation reaction limit \gamma_rad; #v3
@@ -447,6 +449,14 @@ class Configuration_Turbulence(Configuration):
 
             self.rad_curv = self.rad_star**2/self.rad_pcap
             rg = self.c_omp/sqrt(self.sigma)
+
+            # set B/B_Q self consistently from the derived lamC distance and r_g which is set by user-given sigma
+            self.B_QED = self.lamC/rg
+
+            # rg from B formulas
+            #rg2 = self.lamC/self.B_QED
+            #sigma2 = (self.c_omp/rg2)**2
+            #print('sigma', self.sigma, sigma2, self.sigma/sigma2)
 
             self.gam_rad  = self.gam_gap**0.25
             self.gam_rad *= (rg/self.rad_curv)**-0.5
@@ -490,6 +500,7 @@ class Configuration_Turbulence(Configuration):
                 print('init: N_wgt  :', self.N_wgt)
                 print('init: N_time :', self.N_time)
                 print('init: N_1bQ  :', self.N_onebody)
+                print('init: b      :', self.B_QED)
                 print('init: lamC/Hp: {:.2e}'.format(self.lamC/self.h_pcap))
                 print('init: rg/R_c : {:.2e}'.format(rg/self.rad_curv))
                 #print('init: N_lamC :', self.N_lamC)
@@ -704,7 +715,7 @@ def velocity_profile(xloc, ispcs, conf):
 #
 def density_profile(xloc, ispcs, conf):
 
-    return 0 # NOTE no injection in the beginning of the simulation
+    #return 0 # NOTE no injection in the beginning of the simulation
     
     # TODO debug
     if xloc[0] > conf.height_atms + 1:
