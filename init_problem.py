@@ -461,7 +461,7 @@ class Configuration_Turbulence(Configuration):
             self.gam_rad  = self.gam_gap**0.25
             self.gam_rad *= (rg/self.rad_curv)**-0.5
             self.gam_rad *= self.B_QED**-0.5
-            self.gam_rad *= ( 1.5*self.lamC*alphaf/self.h_pcap)**0.25
+            self.gam_rad *= ( 1.5*self.lamC/self.h_pcap/alphaf)**0.25
 
             # synchrotorn radiation cooling happens over a distance (in units of polar cap size)
             #self.len_rad = self.gam_rad*(1/self.B_QED/vrot)*self.lamC/self.rad_pcap
