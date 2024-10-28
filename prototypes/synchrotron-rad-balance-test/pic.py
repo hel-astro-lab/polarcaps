@@ -526,7 +526,12 @@ if __name__ == "__main__":
 
 
     #--------------------------------------------------
-    mc.prob_norm_onebody = conf.N_onebody/conf.N_qdt # units of [TODO]
+    #mc.prob_norm_onebody = conf.N_onebody/conf.N_qdt # units of [TODO]
+
+    #Multiplying this with lamC (thus removing the dependence on lamC)
+    #since t_free depends already on lamC through B_QED.
+    #Alternatively, could convert B_QED into units where lamC=1, as assumed in the tau_int calculation.
+    mc.prob_norm_onebody = conf.lamC*conf.N_onebody/conf.N_qdt # units of [TODO]
 
     a0 = pyrunko.qed.Synchrotron("e-")
     a1 = pyrunko.qed.Synchrotron("e+")
