@@ -542,9 +542,10 @@ if __name__ == "__main__":
 
     # set critical magnetic field 
     for intr in [a0, a1, b]:
-        intr.B_QED = conf.binit/conf.B_QED
+        #intr.B_QED = conf.binit/conf.B_QED
+        intr.B_QED = conf.B_QED #B_QED is now Schwinger field already in init_problem.py
 
-    mc.add_interaction(a0) # electron synchrotorn
+    mc.add_interaction(a0) # electron synchrotron
     mc.add_interaction(a1) # positron synchrotron
     #mc.add_interaction(b ) #  multi photon pair creation
 
@@ -1076,7 +1077,6 @@ if __name__ == "__main__":
                 zs = toolset.zs
                 axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e-']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
                 axs[0,2].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
-
 
                 #--------------------------------------------------
                 if True: # TODO radiative balance

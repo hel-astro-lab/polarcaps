@@ -42,11 +42,12 @@ class Configuration_Turbulence(Configuration):
             self.outdir += "p" + str_ppc + "np" + str_np + "c" + str_comp + "_"
 
             #--------------------------------------------------
-            # sigma
-            str_sig = simplify_large_num(self.sigma)
+            # bratio
+            #str_sig = simplify_large_num(self.sigma)
+            str_bratio = simplify_string(self.bratio)
             str_delg = simplify_string(self.delgam)
-            self.outdir += "s" + str_sig + "d" + str_delg + "_"
-
+            #self.outdir += "s" + str_sig + "d" + str_delg + "_"
+            self.outdir += "b" + str_bratio + "d" + str_delg + "_"
 
             #--------------------------------------------------
             # radiation 
@@ -128,6 +129,27 @@ class Configuration_Turbulence(Configuration):
             print("init: Positron thermal spread: ", self.delgam_i)
             print("init: Electron thermal spread: ", self.delgam_e)
 
+        #Calculating sigma from bratio and lamC:
+        c    = 2.99792458e10   # speed of light cm/s
+        lamC = 2.4240e-10/2/3.14 # lamC = \hbar/m c
+        alphaf = 1/137
+        self.Lx = self.Nx*self.NxMesh
+        self.Ly = self.Ny*self.NyMesh
+        self.Lz = self.Nz*self.NzMesh
+        H = self.H          # characteristic physical system size
+        R = self.H          # characteristic physical system radius (assuming cube so not needed)
+        vol = R*R*H         # physical system volume
+        dx_phys = H/self.Lx # physical size of \Delta x
+
+        # normaliation of onebody interaction; reduced Compton wavelength
+        self.N_onebody = lamC/dx_phys/self.cfl # normalization coeff N
+        self.N_onebody *= 1.0/alphaf/c # additionally, countering the normalized units in interact (where c=lamc=alpha=1)
+        self.N_onebody *= 0.3*1e17 #0.07*1e17 #0.3*1e17 #0.01*1e17 # artificial rate slowdown
+        self.lamC = self.N_onebody*self.cfl # \lam_C in units of \Delta x
+
+        rg = self.lamC/self.bratio
+        self.sigma = (self.c_omp/rg)**2
+
         sigmaeff = self.sigma #* temperature corrections
 
         if do_print:
@@ -199,10 +221,6 @@ class Configuration_Turbulence(Configuration):
         self.bpar = 1
         self.bperp = 1
         self.bplan = 1
-
-        self.Lx = self.Nx*self.NxMesh
-        self.Ly = self.Ny*self.NyMesh
-        self.Lz = self.Nz*self.NzMesh
 
         # external fields
         if self.use_maxwell_split:
@@ -361,11 +379,8 @@ class Configuration_Turbulence(Configuration):
 
             me   = 9.1093826e-28   # electron mass g
             sigT = 6.65245873e-25  # Thomson optical depth; cm**2
-            c    = 2.99792458e10   # speed of light cm/s
             kB   = 1.3806505e-16   # erg/K
             re   = 2.82e-13        # classical electron radius
-            lamC = 2.4240e-10/2/3.14 # lamC = \hbar/m c 
-            alphaf = 1/137
 
             # QED reaction rate normalization
             #ppc0 = max(2*self.ppc, self.xpc)
@@ -378,7 +393,7 @@ class Configuration_Turbulence(Configuration):
             #--------------------------------------------------
             # inject
 
-            # synchrotorn seed photon
+            # synchrotron seed photon
             self.enebb1 = 2.7*self.kTbb1
 
             # disk photons
@@ -388,12 +403,6 @@ class Configuration_Turbulence(Configuration):
             self.Nref["ph"] = self.npc_ref # reference photon num dens
             self.Nref["e-"] = self.npc_ref # reference electron num dens 
             self.wsum0 = self.Nref["e-"] # reference weight
-
-            #--------------------------------------------------
-            H = self.H          # characteristic physical system size
-            R = self.H          # characteristic physical system radius (assuming cube so not needed) 
-            vol = R*R*H         # physical system volume
-            dx_phys = H/self.Lx # physical size of \Delta x
 
             #self.nep0  = 1e17 #
             self.nz0  = self.tau_ini/(sigT*H) # number density required for optical depth unity
@@ -436,30 +445,22 @@ class Configuration_Turbulence(Configuration):
 
             # NOTE: it then follows that unit of luminosity is N_wgt / N_time
 
-            # normaliation of onebody interaction; reduced Compton wavelength
-            self.N_onebody = lamC/dx_phys/self.cfl # normalization coeff N
-            self.N_onebody *= 1.0/alphaf/c # additionally, countering the normalized units in interact (where c=lamc=alpha=1)
-            self.N_onebody *= 1e17 # artificial rate slowdown
-            self.lamC = self.N_onebody*self.cfl # \lam_C in units of \Delta x 
-
             # radiation reaction limit \gamma_rad; #v3
             self.h_pcap = self.rad_pcap # polar cap height
 
             self.rad_curv = self.rad_star**2/self.rad_pcap
-            rg = self.c_omp/sqrt(self.sigma)
 
             self.gam_rad  = self.gam_gap**0.25
             self.gam_rad *= (rg/self.rad_curv)**-0.5
-            self.gam_rad *= self.B_QED**-0.5
+            self.gam_rad *= self.bratio**-0.5
             self.gam_rad *= ( 1.5*self.lamC/self.h_pcap/alphaf)**0.25
 
-            # synchrotorn radiation cooling happens over a distance (in units of polar cap size)
+            # synchrotron radiation cooling happens over a distance (in units of polar cap size)
             #self.len_rad = self.gam_rad*(1/self.B_QED/vrot)*self.lamC/self.rad_pcap
             self.len_rad = (self.gam_rad/self.gam_gap)*self.h_pcap # simpler v2
 
             #self.xsyn = 1.5*(self.lamC/self.rad_star)*(self.rad_pcap/self.rad_star)*self.gam_rad**3
-            self.xsyn = 1.5*self.B_QED*(rg/self.rad_curv)*self.gam_rad**3
-
+            self.xsyn = 1.5*self.bratio*(rg/self.rad_curv)*self.gam_rad**3
 
             #--------------------------------------------------
             # external injection normalization
@@ -475,6 +476,8 @@ class Configuration_Turbulence(Configuration):
             #self.N_Q *= 1.0/(self.Nx*self.Ny*self.Nz) # scale up
             #self.N_Q = self.N_wgt*self.N_time
 
+            #Schwinger field:
+            self.B_QED = self.binit/self.bratio
 
             if do_print:
                 print('init: n_pm   :', np.log10(self.nz0))
