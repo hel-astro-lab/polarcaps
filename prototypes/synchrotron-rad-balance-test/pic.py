@@ -541,9 +541,10 @@ if __name__ == "__main__":
     b  = pyrunko.qed.MultiPhotAnn("ph")
 
     # set critical magnetic field 
-    for intr in [a0, a1, b]:
+    for intr in [a0, a1]:#, b]:
         #intr.B_QED = conf.binit/conf.B_QED
         intr.B_QED = conf.B_QED #B_QED is now Schwinger field already in init_problem.py
+        intr.C_SYNC = conf.C_SYNC
 
     mc.add_interaction(a0) # electron synchrotron
     mc.add_interaction(a1) # positron synchrotron

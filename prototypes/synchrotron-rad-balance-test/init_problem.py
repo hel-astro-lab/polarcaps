@@ -87,8 +87,8 @@ class Configuration_Turbulence(Configuration):
                     str_t2 = simplify_string(self.tau_ext)
                     self.outdir += "taui" + str_t1 + "_taue" + str_t2 + "_"
 
-                if "H" in self.__dict__:
-                    self.outdir += "H" + simplify_large_num(self.H) 
+                #if "H" in self.__dict__:
+                #    self.outdir += "H" + simplify_large_num(self.H)
 
 
             #--------------------------------------------------
@@ -132,20 +132,35 @@ class Configuration_Turbulence(Configuration):
         #Calculating sigma from bratio and lamC:
         c    = 2.99792458e10   # speed of light cm/s
         lamC = 2.4240e-10/2/3.14 # lamC = \hbar/m c
+        re   = 2.82e-13        # classical electron radius
         alphaf = 1/137
         self.Lx = self.Nx*self.NxMesh
         self.Ly = self.Ny*self.NyMesh
         self.Lz = self.Nz*self.NzMesh
-        H = self.H          # characteristic physical system size
-        R = self.H          # characteristic physical system radius (assuming cube so not needed)
-        vol = R*R*H         # physical system volume
-        dx_phys = H/self.Lx # physical size of \Delta x
+
+        #self.Nmp = 10000 #making this as an input parameter
+        dx_phys = self.Nmp*(cfl**2)*(4.0*pi*re)
+        H = dx_phys*self.Lx
+        R = H
+        vol = R*R*H
+
+        #H = self.H          # characteristic physical system size
+        #R = self.H          # characteristic physical system radius (assuming cube so not needed)
+        #vol = R*R*H         # physical system volume
+        #dx_phys = H/self.Lx # physical size of \Delta x
 
         # normaliation of onebody interaction; reduced Compton wavelength
-        self.N_onebody = lamC/dx_phys/self.cfl # normalization coeff N
-        self.N_onebody *= 1.0/alphaf/c # additionally, countering the normalized units in interact (where c=lamc=alpha=1)
-        self.N_onebody *= 0.3*1e17 #0.07*1e17 #0.3*1e17 #0.01*1e17 # artificial rate slowdown
-        self.lamC = self.N_onebody*self.cfl # \lam_C in units of \Delta x
+        #self.N_onebody = lamC/dx_phys/self.cfl # normalization coeff N
+        #self.N_onebody *= 1.0/alphaf/c # additionally, countering the normalized units in interact (where c=lamc=alpha=1)
+        #self.N_onebody *= 0.3*1e17 #0.07*1e17 #0.3*1e17 #0.01*1e17 # artificial rate slowdown
+        #self.lamC = self.N_onebody*self.cfl # \lam_C in units of \Delta x
+
+        #CHANGE THE lamC here to be obtained from Nmp instead ... :
+        #self.Nmp   = dx_phys/(cfl**2)/(4.0*pi*re) # number of real electrons in a computational macro particle
+        self.lamC = dx_phys/(4.0*np.pi*cfl**2*self.Nmp*alphaf)
+        #self.lamC = 1.0/(cfl**2*self.Nmp*alphaf)
+
+        self.N_onebody = self.lamC/self.cfl
 
         rg = self.lamC/self.bratio
         self.sigma = (self.c_omp/rg)**2
@@ -380,7 +395,6 @@ class Configuration_Turbulence(Configuration):
             me   = 9.1093826e-28   # electron mass g
             sigT = 6.65245873e-25  # Thomson optical depth; cm**2
             kB   = 1.3806505e-16   # erg/K
-            re   = 2.82e-13        # classical electron radius
 
             # QED reaction rate normalization
             #ppc0 = max(2*self.ppc, self.xpc)
@@ -410,8 +424,8 @@ class Configuration_Turbulence(Configuration):
             self.t_c   = H/c # light crossing time across the system
             self.t_tau = self.t_c/self.tau_ext if self.tau_ext > 0 else self.t_c # minimum time between interactions 
 
-            self.Nmp   = dx_phys/(cfl**2*ppc0)/(4.0*pi*re) # number of real electrons in a computational macro particle
-            self.Nmp2  = self.nz0*dx_phys**3/ppc0 # required macro-particle number to model the given optical depth
+            #self.Nmp   = dx_phys/(cfl**2*ppc0)/(4.0*pi*re) # number of real electrons in a computational macro particle
+            #self.Nmp2  = self.nz0*dx_phys**3/ppc0 # required macro-particle number to model the given optical depth
 
             #self.xi = 1e-3 #0.01 # numerical safety factor for resolving QED interactions
             self.xi = 1.0 #self.t0 # TODO setting this automatically to match PIC 
@@ -446,7 +460,7 @@ class Configuration_Turbulence(Configuration):
             # NOTE: it then follows that unit of luminosity is N_wgt / N_time
 
             # radiation reaction limit \gamma_rad; #v3
-            self.h_pcap = self.rad_pcap # polar cap height
+            self.h_pcap = H #self.rad_pcap # polar cap height
 
             self.rad_curv = self.rad_star**2/self.rad_pcap
 
@@ -454,6 +468,8 @@ class Configuration_Turbulence(Configuration):
             self.gam_rad *= (rg/self.rad_curv)**-0.5
             self.gam_rad *= self.bratio**-0.5
             self.gam_rad *= ( 1.5*self.lamC/self.h_pcap/alphaf)**0.25
+
+            self.C_SYNC = (2.0/3.0)*alphaf**2*self.bratio**2*(rg/self.rad_curv)**2*(self.cfl)**3*self.Nmp
 
             # synchrotron radiation cooling happens over a distance (in units of polar cap size)
             #self.len_rad = self.gam_rad*(1/self.B_QED/vrot)*self.lamC/self.rad_pcap
@@ -481,12 +497,12 @@ class Configuration_Turbulence(Configuration):
 
             if do_print:
                 print('init: n_pm   :', np.log10(self.nz0))
-                print('init: H      :', np.log10(self.H))
+                print('init: H      :', np.log10(H))
                 print('init: tau    :', self.tau_ext)
                 print('init: t_c    :', self.t_c)
                 print('init: t_tau  :', self.t_tau)
                 print('init: N_mp   : {:.2e}'.format(self.Nmp))
-                print('init: N_mp,t : {:.2e}'.format(self.Nmp2))
+                #print('init: N_mp,t : {:.2e}'.format(self.Nmp2))
                 print('init: dt     :', self.dt, 'dt/t_tau:', self.dt/self.t_tau, 'dt/tc:', self.dt/self.t_c)
                 print('init: N_ph   :', self.Nref['ph'])
                 print('init: N_ep   :', self.Nref['e-'])
@@ -504,10 +520,12 @@ class Configuration_Turbulence(Configuration):
                 print('init: esc con1:', 'dt/tc < 1:', self.dt/self.t_c)
                 print('init: esc con1:', 'dt/tt < 1:', self.dt/self.t_tau)
                 print('init:')
+                print('init: gam_gap: {:.2e}'.format(self.gam_gap))
                 print('init: gam_rad: {:.2e} gam_rad/gam_gap {:.4f}'.format(self.gam_rad, self.gam_rad/self.gam_gap))
                 print('init: x_syn  : {:.2e}'.format(self.xsyn))
                 print('init: len_rad: {:.2e} len_rad/H {:.4f}'.format(self.len_rad, self.len_rad/self.h_pcap))
                 print('init:')
+                #exit()
 
             #inject; total number of injected photons
 
