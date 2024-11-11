@@ -157,8 +157,9 @@ class Configuration_Turbulence(Configuration):
 
         #CHANGE THE lamC here to be obtained from Nmp instead ... :
         #self.Nmp   = dx_phys/(cfl**2)/(4.0*pi*re) # number of real electrons in a computational macro particle
-        self.lamC = dx_phys/(4.0*np.pi*cfl**2*self.Nmp*alphaf)
-        #self.lamC = 1.0/(cfl**2*self.Nmp*alphaf)
+        #self.lamC = dx_phys/(4.0*np.pi*cfl**2*self.Nmp*alphaf)
+        #LamC in code units:
+        self.lamC = 1.0/(cfl**2*self.Nmp*alphaf)
 
         self.N_onebody = self.lamC/self.cfl
 
@@ -460,7 +461,7 @@ class Configuration_Turbulence(Configuration):
             # NOTE: it then follows that unit of luminosity is N_wgt / N_time
 
             # radiation reaction limit \gamma_rad; #v3
-            self.h_pcap = H #self.rad_pcap # polar cap height
+            self.h_pcap = H/dx_phys #self.rad_pcap # polar cap height in code units
 
             self.rad_curv = self.rad_star**2/self.rad_pcap
 
