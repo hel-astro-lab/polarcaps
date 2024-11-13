@@ -134,6 +134,7 @@ class Configuration_Turbulence(Configuration):
         lamC = 2.4240e-10/2/3.14 # lamC = \hbar/m c
         re   = 2.82e-13        # classical electron radius
         alphaf = 1/137
+
         self.Lx = self.Nx*self.NxMesh
         self.Ly = self.Ny*self.NyMesh
         self.Lz = self.Nz*self.NzMesh
@@ -158,8 +159,8 @@ class Configuration_Turbulence(Configuration):
         #CHANGE THE lamC here to be obtained from Nmp instead ... :
         #self.Nmp   = dx_phys/(cfl**2)/(4.0*pi*re) # number of real electrons in a computational macro particle
         #self.lamC = dx_phys/(4.0*np.pi*cfl**2*self.Nmp*alphaf)
-        #LamC in code units:
-        self.lamC = 1.0/(cfl**2*self.Nmp*alphaf)
+        #LamC/dx_phys:
+        self.lamC = 1.0/(4.0*np.pi*cfl**2*self.Nmp*alphaf)
 
         self.N_onebody = self.lamC/self.cfl
 
