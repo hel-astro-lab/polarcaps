@@ -471,7 +471,7 @@ class Configuration_Turbulence(Configuration):
             self.gam_rad *= self.bratio**-0.5
             self.gam_rad *= ( 1.5*self.lamC/self.h_pcap/alphaf)**0.25
 
-            self.C_SYNC = (2.0/3.0)*alphaf**2*self.bratio**2*(rg/self.rad_curv)**2*(self.cfl)**3*self.Nmp
+            self.C_SYNC = (8.0*np.pi/3.0)*alphaf**2*self.bratio**2*(rg/self.rad_curv)**2*(self.cfl)**3*self.Nmp
 
             # synchrotron radiation cooling happens over a distance (in units of polar cap size)
             #self.len_rad = self.gam_rad*(1/self.B_QED/vrot)*self.lamC/self.rad_pcap
