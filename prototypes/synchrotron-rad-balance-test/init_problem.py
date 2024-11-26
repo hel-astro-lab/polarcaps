@@ -163,6 +163,7 @@ class Configuration_Turbulence(Configuration):
         self.lamC = 1.0/(4.0*np.pi*cfl**2*self.Nmp*alphaf)
 
         self.N_onebody = self.lamC/self.cfl
+        self.N_onebody *= 1.0/alphaf #additionally, countering the normalized units in interact (where alpha=1)
 
         rg = self.lamC/self.bratio
         self.sigma = (self.c_omp/rg)**2

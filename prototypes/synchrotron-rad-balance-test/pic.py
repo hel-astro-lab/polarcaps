@@ -526,12 +526,7 @@ if __name__ == "__main__":
 
 
     #--------------------------------------------------
-    #mc.prob_norm_onebody = conf.N_onebody/conf.N_qdt # units of [TODO]
-
-    #Multiplying this with lamC (thus removing the dependence on lamC)
-    #since t_free depends already on lamC through B_QED.
-    #Alternatively, could convert B_QED into units where lamC=1, as assumed in the tau_int calculation.
-    mc.prob_norm_onebody = conf.lamC*conf.N_onebody/conf.N_qdt # units of [TODO]
+    mc.prob_norm_onebody = conf.N_onebody/conf.N_qdt # units of [TODO]
 
     a0 = pyrunko.qed.Synchrotron("e-")
     a1 = pyrunko.qed.Synchrotron("e+")
@@ -1078,6 +1073,15 @@ if __name__ == "__main__":
                 zs = toolset.zs
                 axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e-']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
                 axs[0,2].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+
+                particles = toolset.h1_enes['e-']*zs
+                gammas = toolset.lnzs
+                last_nonzero = np.max(np.nonzero(particles))
+                gam_rad_num = 10**gammas[last_nonzero]
+                #print(last_nonzero, gammas[last_nonzero-1], gammas[last_nonzero], gammas[last_nonzero+1])
+                #print(last_nonzero, particles[last_nonzero-1], particles[last_nonzero], particles[last_nonzero+1])                
+                #exit()
+                print("Gam_rad est.:",conf.gam_rad," Gam_rad num.:",gam_rad_num,"ratio:",gam_rad_num/conf.gam_rad)
 
                 #--------------------------------------------------
                 if True: # TODO radiative balance
