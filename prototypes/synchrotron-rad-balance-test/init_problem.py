@@ -463,7 +463,7 @@ class Configuration_Turbulence(Configuration):
             # NOTE: it then follows that unit of luminosity is N_wgt / N_time
 
             # radiation reaction limit \gamma_rad; #v3
-            self.h_pcap = H/dx_phys #self.rad_pcap # polar cap height in code units
+            self.h_pcap = self.rad_pcap #H/dx_phys # polar cap height in code units
 
             self.rad_curv = self.rad_star**2/self.rad_pcap
 
