@@ -34,6 +34,29 @@ class Configuration_Pulsar(Configuration):
             str_m = str(int(self.NxMesh))
             self.outdir += "x" + str_x + "m" + str_m + "_"
 
+            #--------------------------------------------------
+            # particle info
+            self.outdir += "p" + simplify_string(self.ppc)
+            self.outdir += "np" + simplify_string(self.npasses)
+            self.outdir += "_"
+
+            #--------------------------------------------------
+            # pulsar
+            self.outdir += "v" + simplify_string(self.vrot)
+            self.outdir += "inje" + simplify_string(self.ninj_pairs)
+            self.outdir += "injx" + simplify_string(self.ninj_phots)
+            self.outdir += "_"
+
+            #--------------------------------------------------
+            # QED
+            self.outdir += "b" + simplify_string(self.bratio)
+            self.outdir += "N" + simplify_large_num(self.Nmp)
+            self.outdir += "_"
+
+            #--------------------------------------------------
+            # postfix string
+            if "postfix" in self.__dict__:
+                self.outdir += self.postfix
 
 
         #--------------------------------------------------
