@@ -43,8 +43,8 @@ class Configuration_Pulsar(Configuration):
             #--------------------------------------------------
             # pulsar
             self.outdir += "v" + simplify_string(self.vrot)
-            self.outdir += "inje" + simplify_string(self.ninj_pairs)
-            self.outdir += "injx" + simplify_string(self.ninj_phots)
+            #self.outdir += "inje" + simplify_string(self.ninj_pairs)
+            #self.outdir += "injx" + simplify_string(self.ninj_phots)
             self.outdir += "_"
 
             #--------------------------------------------------
@@ -105,7 +105,11 @@ class Configuration_Pulsar(Configuration):
 
         # set polarcap and star size in cells
         if self.oneD:
-            self.rad_pcap = 0.6*self.Lx//4 #same size as would be for 3D sim (since there Nz = Nx/2)
+            #self.rad_pcap = 0.6*self.Lx//4 #same size as would be for 3D sim (since there Nz = Nx/2)
+            #self.rad_star = 10*self.rad_pcap
+
+            # large gap setup
+            self.rad_pcap = 0.8*self.Lx
             self.rad_star = 10*self.rad_pcap
         else:
             sys.error() # not implemented
@@ -176,11 +180,8 @@ class Configuration_Pulsar(Configuration):
         # 1D curvature radius of a field line
         self.rad_curv = self.rad_star**2/self.rad_pcap
 
-        # normalization constant for synchrotron sub-step cooling routine
-        # additional constant used to forcefully cool particles to the limit if QED process is not resolved
-        self.C_SYNC = (8.0*pi/3.0)*alphaf**2*self.bratio**2*(self.rg/self.rad_curv)**2*(self.cfl)**3*self.Nmp
 
-        # gamma_rad, radiation reaction limit where accelerating voltage gains equals radiation losses
+        # gamma_rad, radiation reaction limit where gap gains equals radiation losses
         self.gam_rad  = self.gam_gap**0.25
         self.gam_rad *= (self.rg/self.rad_curv)**-0.5
         self.gam_rad *= self.bratio**-0.5
@@ -195,6 +196,7 @@ class Configuration_Pulsar(Configuration):
 
         #--------------------------------------------------
         # extra undefined parameters
+        # TO BE REMOVED
         H = 1.0e5
         c = 3e10
         self.t_c = H/c # light crossing time across the system
@@ -242,14 +244,24 @@ class Configuration_Pulsar(Configuration):
             print("init:          m-/me:", self.me)
             print("init:          m+-me:", self.mi)
             print("init:        omega_p:", self.omp)
-            print("init:    R = c/omega:", self.c_omp)
-            print("init:         C_SYNC:", self.C_SYNC)
+            print("init:    R = c/omega:", self.c_omp, " dx")
 
             print("phys:")
             print("phys:        gam_gap:", self.gam_gap)
             print("phys:        gam_rad:", self.gam_rad)
             print("phys:    g_rad/g_gap:", self.gam_rad/self.gam_gap)
             print("phys:        len_rad:", self.len_rad)
+
+
+        #--------------------------------------------------
+        # default normalization
+
+        self.b_norm = self.bstar 
+        self.e_norm = self.bstar*self.vrot
+        self.j_norm = abs(self.qe)*self.nGJ*self.cfl**2 # j_m \Delta t # abs(self.qe)*self.ppc*2*self.cfl**2
+        self.p_norm = self.ppc 
+        self.x_norm = max(self.xpc,1)
+        self.t_norm = self.rad_pcap/self.cfl  # t_pc = R_pc/c; lightcrossing itme across polar cap
 
 
         # DONE
@@ -317,13 +329,13 @@ def velocity_profile(xloc, ispcs, conf):
 #
 def density_profile(xloc, ispcs, conf):
 
-    #return 0 # NOTE no injection in the beginning of the simulation
+    return 0 # NOTE no injection in the beginning of the simulation
     
     # TODO debug
-    if xloc[0] > conf.height_atms + 1:
-        return 0
-    if xloc[0] < conf.height_atms:
-        return 0
+    #if xloc[0] > conf.height_atms + 1:
+    #    return 0
+    #if xloc[0] < conf.height_atms:
+    #    return 0
 
     if ispcs in [0,1]:
         return conf.ppc

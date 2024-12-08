@@ -1,4 +1,4 @@
-pic.py# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 from mpi4py import MPI
 import numpy as np
@@ -363,7 +363,6 @@ if __name__ == "__main__":
     # get current restart file status
     io_stat = pytools.check_for_restart(conf)
 
-
     # no restart file; initialize simulation
     if io_stat["do_initialization"]:
         if sch.is_master: print("initializing simulation...")
@@ -536,13 +535,12 @@ if __name__ == "__main__":
     b  = pyrunko.qed.MultiPhotAnn("ph")
 
     # set critical magnetic field 
-    for intr in [a0, a1]:#, b]:
+    for intr in [a0, a1, b]:
         intr.B_QED = conf.B_QED #B_QED is now Schwinger field already in init_problem.py
-        intr.C_SYNC = conf.C_SYNC # TODO not needed in the new scheme
 
     mc.add_interaction(a0) # electron synchrotron
     mc.add_interaction(a1) # positron synchrotron
-    #mc.add_interaction(b ) #  multi photon pair creation
+    mc.add_interaction(b ) #  multi photon pair creation
 
     if conf.oneD: # set 1D curvature parameters for QED reactions
         mc.use_vir_curvature = True
@@ -654,10 +652,10 @@ if __name__ == "__main__":
 
     star.temp_pairs = conf.delgam
     star.temp_phots = conf.delgam_x
-    star.ninj_pairs = conf.ninj_pairs #0 #0.05
-    star.ninj_phots = conf.ninj_phots #0.0
-    star.ninj_min_pairs = conf.ninj_min_pairs #0.1
-    star.ninj_min_phots = conf.ninj_min_phots #0.0
+    star.ninj_pairs = conf.ninj_pairs*conf.ppc 
+    star.ninj_phots = conf.ninj_phots*conf.xpc
+    star.ninj_min_pairs = conf.ninj_min_pairs*conf.ppc
+    star.ninj_min_phots = conf.ninj_min_phots*conf.xpc 
 
     sch.lwall = star # add to scheduler
 
@@ -818,8 +816,7 @@ if __name__ == "__main__":
 
         # apply moving/reflecting/injecting walls
         #if lap*conf.cfl > 1.0*conf.rad_pcap: # apply after a fraction of the disk light crossing time 
-        #sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
-
+        sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
 
         # --------------------------------------------------
         # advance half B 
@@ -868,7 +865,6 @@ if __name__ == "__main__":
         # filter
         for fj in range(conf.npasses):
 
-
             # flt uses halo=2 padding so only every 3rd (0,1,2) pass needs update
             if fj % 2 == 0:
                 sch.operate( dict(name='mpi_cur_flt', solver='mpi', method='j', ) )
@@ -893,7 +889,7 @@ if __name__ == "__main__":
 
         # --------------------------------------------------
         # add current to E
-        #sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current',       nhood='local', ) )
+        sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current',       nhood='local', ) )
         sch.operate( dict(name='wall_bc_e', solver='lwall', method='update_e',              nhood='local', ) )
 
 
@@ -1077,8 +1073,11 @@ if __name__ == "__main__":
                 gammas = 10**toolset.lnzs
 
                 # maximum
-                last_nonzero = np.max(np.nonzero(particles))
-                gam_max = gammas[last_nonzero]
+                try:
+                    last_nonzero = np.max(np.nonzero(particles))
+                    gam_max = gammas[last_nonzero]
+                except:
+                    gam_max = 1.0
 
                 # mean
                 gam_avg = np.sum( gammas*particles )/np.sum(particles)
