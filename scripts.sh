@@ -2,10 +2,8 @@
 
 declare -a conf_arr=(
 #"test.ini"
-"test3d.ini"
+"test1d.ini"
 )
-
-
 
 
 declare -a single_scripts_arr=(
@@ -17,7 +15,8 @@ declare -a single_scripts_arr=(
 declare -a lap_scripts_arr=(
 #"plot3d_pyvista.py --var bvec --view side" 
 #"plot3d_pyvista.py --var bvec --view tilt" 
-"fig_cascade.py "
+#"fig_cascade.py "
+"fig_gap.py"
 #"plot3d_pyvista.py --var bvec --view top" 
 #"plot_pulsar_lc.py "
 )
@@ -41,7 +40,7 @@ done
 # multilap scripts
 
 #for lap in {0..200..10}
-for ((lap=0;lap<=3000;lap+=20))
+for ((lap=0;lap<=10000;lap+=50))
 do
     echo "lap is $lap"
     for c in "${conf_arr[@]}"

@@ -12,7 +12,7 @@ from numpy import pi, log, log10, exp, sin, cos
 
 # runko tools
 import pytools
-from init_problem import Configuration_Turbulence as Configuration
+from init_problem import Configuration_Pulsar as Configuration
 import h5py as h5
 
 from qed_toolset import QEDToolset
