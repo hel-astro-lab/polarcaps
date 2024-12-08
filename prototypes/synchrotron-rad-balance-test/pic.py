@@ -1090,8 +1090,8 @@ if __name__ == "__main__":
                     axs[0,1].axvline(np.log10(conf.gam_gap), color='C0')
                     axs[0,2].axvline(np.log10(conf.gam_gap), color='C0')
 
-                    axs[0,1].axvline(np.log10(conf.gam_rad), color='C1')
-                    axs[0,2].axvline(np.log10(conf.gam_rad), color='C1')
+                    axs[0,1].axvline(np.log10(conf.gam_rad), color='C1', linestyle="dashed")
+                    axs[0,2].axvline(np.log10(conf.gam_rad), color='C1', linestyle="dashed")
 
 
                 # LP weight spectrum

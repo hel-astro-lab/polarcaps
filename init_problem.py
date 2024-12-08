@@ -10,7 +10,7 @@ import numpy as np
 
 
 
-class Configuration_Turbulence(Configuration):
+class Configuration_Pulsar(Configuration):
 
     def __init__(self, *file_names, do_print=False):
         Configuration.__init__(self, *file_names)
@@ -19,7 +19,7 @@ class Configuration_Turbulence(Configuration):
         # problem specific initializations
         if do_print:
             print("init:--------------------------------------------------")
-            print("init: Initializing turbulence setup...")
+            print("init: Initializing pulsar setup...")
             print("init: conf file:", file_names[0])
 
         #--------------------------------------------------
@@ -34,625 +34,204 @@ class Configuration_Turbulence(Configuration):
             str_m = str(int(self.NxMesh))
             self.outdir += "x" + str_x + "m" + str_m + "_"
 
-            #--------------------------------------------------
-            # ppc
-            str_ppc  = simplify_string(self.ppc)
-            str_np   = simplify_string(self.npasses)
-            str_comp = simplify_string(self.c_omp)
-            self.outdir += "p" + str_ppc + "np" + str_np + "c" + str_comp + "_"
-
-            #--------------------------------------------------
-            # sigma
-            str_sig = simplify_large_num(self.sigma)
-            str_delg = simplify_string(self.delgam)
-            self.outdir += "s" + str_sig + "d" + str_delg + "_"
 
 
-            #--------------------------------------------------
-            # radiation 
-            if "gammarad" in self.__dict__:
-                if self.gammarad > 0.0:
-                    str_r = str(int(self.gammarad))
-                    self.outdir += "r" + str_r + "_"
-
-            #--------------------------------------------------
-            # driving  amplitude
-            if "drive_ampl" in self.__dict__:
-                str_a = simplify_string(self.drive_ampl)
-                self.outdir += "a" + str_a + "_"
-
-            if "drive_freq" in self.__dict__:
-                str_f = simplify_string(self.drive_freq)
-                self.outdir += "w" + str_f + "_"
-
-            if "decorr_time" in self.__dict__:
-                str_d = simplify_string(self.decorr_time)
-                self.outdir += "g" + str_d + "_"
-
-            #--------------------------------------------------
-            if self.qed_mode:
-                if "lum_ph1" in self.__dict__ and "lum_ph2" in self.__dict__:
-                    str_lumx1 = simplify_string(self.lum_ph1)
-                    str_lumx2 = simplify_string(self.lum_ph2)
-
-                    self.outdir += "lx" + str_lumx1 + "t" + simplify_large_num(self.kTbb1) 
-                    self.outdir += "_" 
-
-                    self.outdir += "ld" + str_lumx2 + "t" + simplify_large_num(self.kTbb2) 
-                    self.outdir += "_"
-
-                if "tau_ext" in self.__dict__ and "tau_ini" in self.__dict__:
-                    str_t1 = simplify_string(self.tau_ini)
-                    str_t2 = simplify_string(self.tau_ext)
-                    self.outdir += "taui" + str_t1 + "_taue" + str_t2 + "_"
-
-                if "H" in self.__dict__:
-                    self.outdir += "H" + simplify_large_num(self.H) 
-
-
-            #--------------------------------------------------
-            # postfix string
-            if "postfix" in self.__dict__:
-                self.outdir += self.postfix
+        #--------------------------------------------------
+        # end of directory naming
 
         if do_print:
             print("init: output dir", self.outdir)
 
-
         #--------------------------------------------------
-        # turn off some advanced functionality
+        # turn off explicitly some advanced functionality
         self.use_injector = False
         self.c_corr = 1.0 # no speed of light correction
         self.use_maxwell_split = False
 
-        # local variables just for easier/cleaner syntax
+        # grid sizes
+        self.Lx = self.Nx*self.NxMesh
+        self.Ly = self.Ny*self.NyMesh
+        self.Lz = self.Nz*self.NzMesh
+
+        # re-name particle types
+        self.prtcl_types = ['e-', 'e+', 'ph'] 
+
+        #--------------------------------------------------
+        #required cgs constants
+        alphaf = 1/137
+
+        # numerical Compton wavelength lambda_C
+        self.lamC = 1.0/(4.0*pi*self.cfl**2*self.Nmp*alphaf)
+
+        # 1-body QED process normalization constant = t_free/dt
+        self.N_onebody = self.lamC
+        self.N_onebody *= 1.0/alphaf/self.cfl #additionally, countering the normalized units in interact (where c=alpha=1)
+
+        # super-stepping for the QED reactions 
+        self.N_qdt = self.qed_step
+
+        # gyroradius = lamC/b
+        self.rg = self.lamC/self.bratio 
+
+        # B normalization, r_g = lamC/b = c^2 e/mB = c^2/B (in code units)
+        self.binit = self.cfl**2/self.rg
+        self.bstar = 2*self.binit # B_{*,r} = radial magnetic field component 
+
+        #Schwinger field: b = B_*/B_Q
+        self.B_QED = self.bstar/self.bratio
+
+        # set polarcap and star size in cells
+        if self.oneD:
+            self.rad_pcap = 0.6*self.Lx//4 #same size as would be for 3D sim (since there Nz = Nx/2)
+            self.rad_star = 10*self.rad_pcap
+        else:
+            sys.error() # not implemented
+
+
+        # get electron charge from Goldreich-Julian number density
+        # n_GJ = v B_*/e H = nppc 
+        # with this definition, user-given ppc per species corresponds to n_GJ
+        self.qe = -self.vrot*self.bstar/(self.ppc*self.rad_pcap)
+        self.qi = -self.qe # positron charge
+
+        # NOTE: local definitions of me and mi, the code initialiation uses a different definition
         me = np.abs(self.me)
         mi = np.abs(self.mi)
-        cfl = self.cfl
-        ppc = self.ppc * 2.0  # multiply x2 to account for 2 species/pair plasma
+        me *= abs(self.qe) # update electron mass to right units
+        mi *= abs(self.qe) # update electron mass to right units
 
-        # plasma reaction & subsequent normalization
-        self.gamma = 1.0
-        self.omp = cfl / self.c_omp
-        self.qe = -(self.omp ** 2.0 * self.gamma) / ((ppc * 0.5) * (1.0 + me / mi))
-        self.qi = -self.qe
-
-        me *= abs(self.qi)
-        mi *= abs(self.qi)
+        # photons
+        self.qp = 0.0 # dummy charge; NOTE: needs to be 0 for photons to avoid charge deposit
+        self.mp = 0.0 # dummy mass
 
         # temperatures
         self.delgam_e = self.delgam
         self.delgam_i = self.temp_ratio*self.delgam_e
 
-        if do_print:
-            print("init: Positron thermal spread: ", self.delgam_i)
-            print("init: Electron thermal spread: ", self.delgam_e)
+        # magnetization corresponding to GJ number density
+        self.sigma = self.bstar**2/(self.ppc*abs(me)*self.cfl**2)
 
-        sigmaeff = self.sigma #* temperature corrections
-
-        if do_print:
-            print("init: Alfven vel:    ",sqrt(sigmaeff/(1.+sigmaeff)))
-            print("init: Ion beta:      ",     2.*self.delgam_i/(self.sigma*(mi/me+1.)/(mi/me)) )
-            print("init: Electron beta: ",2.*self.delgam_e/(self.sigma*(mi/me+1.)) )
-
-        #--------------------------------------------------
-        # photons
-        self.qp = 0.0 # dummy charge; NOTE: needs to be 0 for photons to avoid charge deposit
-        self.mp = 0.0 # dummy mass
-        #self.delgam_x = 0.1 #  black body temperature
-
-        # re-name particle types
-        self.prtcl_types = ['e-', 'e+', 'ph'] 
-
-
-        #--------------------------------------------------
-        # get magnetic field from sigma: various definitions exist
-
-        # no corrections; cold sigma
-        self.binit_nc = sqrt(ppc*cfl**2.*self.sigma*me)
-
-        #self.gammath = 1.0 + 3.0*delgam_e # approximative \gamma_th = 1 + 3\theta
-        self.gammath = 1.0 + (3.0/2.0)*self.delgam_e # another approximation which is more accurate at \delta ~ 1
-
-        #self.gammath = 1.55 #manual value for theta=0.3
-        self.binit_approx = sqrt(self.gammath*ppc*me*cfl**2.*self.sigma)
-
-        #self.binit = sqrt((self.gamma)*ppc*.5*c**2.*(me*(1.+me/mi))*self.sigma)
-
-        self.binit = self.binit_approx # NOTE: selecting this as our sigma definitions
-
-        self.omB = self.omp*sqrt(self.sigma) # nominal gyrofrequency
-
-        if do_print:
-            print("init: sigma:            ", self.sigma)
-            print("init: mass term:        ", sqrt(mi+me))
-            print("init: q_e:              ", self.qe)
-            #print("init: warm corr:: ", self.warm_corr)
-            print("init: gamma_th:         ", self.gammath)
-            print("init: B_guide (no corr):", self.binit_nc)
-            print("init: B_guide (approx): ", self.binit_approx)
-            print("init: B_guide (used):   ", self.binit)
-
-
-        #forcing scale in units of skin depth
-        #self.l0 = self.Nx*self.NxMesh/self.max_mode/self.c_omp  
-        
-        #thermal larmor radius
-        lth = self.gammath / np.sqrt(self.sigma)*np.sqrt(self.gammath) #gamma_0
-
-        #reconnection radius; gam ~ sigma
-        lsig = self.sigma / np.sqrt(self.sigma)*np.sqrt(self.gammath) 
-
-        # maximum attainable particle energy; from gyro-scale resonance with largest scale
-        #self.g0 = self.l0*np.sqrt(self.sigma)*np.sqrt(self.gammath) 
-
-
-        if do_print:
-            #print("init: driving scale l_0:  ", self.l0)
-            print("init: larmor radi r_g  :  ", lth)
-            print("init: larmor rad post rec:", lsig)
-            #print("init: max gamma:          ", self.g0)
-
-
-        #--------------------------------------------------
-        # adding of static background component to particle pusher
-        self.bpar = 1
-        self.bperp = 1
-        self.bplan = 1
-
-        self.Lx = self.Nx*self.NxMesh
-        self.Ly = self.Ny*self.NyMesh
-        self.Lz = self.Nz*self.NzMesh
-
-        # external fields
-        if self.use_maxwell_split:
-            self.bx_ext = self.binit*self.bpar  #np.cos(bphi)
-            self.by_ext = self.binit*self.bplan #self.binit * bperp #np.sin(bphi) * np.sin(btheta)
-            self.bz_ext = self.binit*self.bperp #np.sin(bphi) * np.cos(btheta)
-
-            self.ex_ext = 0.0
-            self.ey_ext = -self.beta * self.binit*self.bperp
-            self.ez_ext = +self.beta * self.binit*self.bplan
-        else:
-            self.bx_ext = 0.0
-            self.by_ext = 0.0
-            self.bz_ext = 0.0
-
-            self.ex_ext = 0.0
-            self.ey_ext = 0.0
-            self.ez_ext = 0.0
-
-        #-------------------------------------------------- 
-        # radiative cooling
-        if "gammarad" in self.__dict__:
-            if not(self.gammarad == 0.0):
-                self.drag_amplitude = 0.1*self.binit/(self.gammarad**2.0)
-
-                sigma_perp = self.sigma*self.drive_ampl**2
-                self.g0 = self.l0*np.sqrt(sigma_perp)*np.sqrt(self.gammath) #gamma_0
-                A = 0.1*self.g0/self.gammarad**2 #definition we use in Runko
-
-                if do_print:
-                    print("init: using radiation drag...")
-                    print("init: drag amplitude: {} with gamma_rad: {}".format(self.drag_amplitude, self.gammarad))
-                    print("init: rad A:        ", A)
-
-
-        #-------------------------------------------------- 
-        # driving
-        lx = self.Nx*self.NxMesh 
-        #self.t0 = 1.0/(lx/self.cfl/self.max_mode) # time steps in units of light-crossing 
-
-        #if do_print:
-        #    print("init:--------------------------------------------------")
-        #    print("init: using Langevin antenna...")
-        #    print("init: ampl: ", self.drive_ampl)
-        #    print("init: w0:   ", self.drive_freq)
-        #    print("init: g0:   ", self.decorr_time)
-        #    print("init: t0:   ", self.t0, " laps")
-
-
-        #-------------------------------------------------- 
-        # polar cap setup
-
-        if self.oneD:
-            self.rad_pcap = 0.6*self.Lx//4 #same size as woudld be for 3D sim (since there Nz = Nx/2)
-            self.rad_star = 10*self.rad_pcap
-
-        else:
-            if False: # radio pulsar setup
-                self.rad_pcap = 0.6*self.Lx//2 #0.65 is exactly at the corner for 2d domain when R_* = 10 R_pc
-                self.rad_star = 10*self.rad_pcap
-
-            else: # millisecond pulsar setup
-                self.rad_pcap = 0.4*self.Lx//2 
-                self.rad_star = 4*self.rad_pcap
-
-
-        # v1 based on polar cap size we get the star's spin 
-        #self.rad_lcyl = self.rad_star*(self.rad_star/self.rad_pcap)**2
-        #self.Om_star = self.cfl/self.rad_lcyl # \Omega_*
-        #self.period_star = 2*np.pi/self.Om_star # P_*
-        #self.vrot  = self.Om_star*self.rad_pcap/self.cfl # v_\phi of the polar cap edge
-
-        # v2 based on given vrot infer other parameters
-        self.period_star = 2*pi*self.rad_pcap/(self.vrot*self.cfl)
-        self.Om_star = 2.0*np.pi/self.period_star
+        # pulsar parameters from user-given parameters
+        self.period_star = 2*pi*self.rad_pcap/(self.vrot*self.cfl) # P_*
+        self.Om_star = 2.0*pi/self.period_star # Omega_*
         self.rad_lcyl = self.cfl/self.Om_star # light cylinder distance in cells; not self consistent in PC setup
 
-        self.t0 = self.cfl/self.rad_pcap # time steps in units of light-crossing across the polar cap
 
-        self.rad_curv_shift = self.rad_star - np.sqrt(self.rad_star**2 - self.rad_pcap**2) # height of the curved atmosphere
-        self.rad_curv_shift += 6 # pad with some cells to avoid boundary effects close to grid limit
-
-        if self.oneD:
-            self.rad_curv_shift = 5 # NOTE using flat surface in 3D
-        if self.threeD:
-            self.rad_curv_shift = 5 # NOTE using flat surface in 3D
+        # the height of the star's curving surface (in cells)
+        #self.rad_curv_shift = self.rad_star - np.sqrt(self.rad_star**2 - self.rad_pcap**2) # height of the curved atmosphere
+        #self.rad_curv_shift += 6 # pad with some cells to avoid boundary effects close to grid limit
+        self.rad_curv_shift = 5 # NOTE using flat surface 
 
         self.height_atms = 3 # add padding; this is the height of the atmosphere at r=Rpc in units of cells
 
-        #self.chi = 10 # magnetic obliquity angle
-        phase = 0.0 #global rotator phase
-
+        # normalization coefficient for internal dipole coordinate system
+        # defined so that we have B_* at the star's surface
         self.b_dipole_norm = self.binit*self.rad_star**3
-        self.bstar = 2*self.b_dipole_norm*self.rad_star**-3 # B_{*,r} = radial magnetic field component 
-                                                       # at the star's surface; 
-                                                       # factor of 2 comes from dipole coordinate system
-        # NOTE: using constant B in 1D
-        #if self.oneD: self.b_dipole_norm = self.binit
 
-        vrot = self.Om_star*self.rad_pcap/cfl
+        # rotation velocity (in units of c) of the polar cap disk; given by user
+        #vrot = self.Om_star*self.rad_pcap/cfl
 
-        #omB = sqrt(self.sigma)*self.omp
-        #dV_gap = omB*(self.rad_star/self.cfl)*(self.rad_star/self.rad_lcyl)**2 # DONE
-        #print('init: dV_gap:', dV_gap)
+        # Goldreich-Julian density; given by user but recalculated
+        self.nGJ = self.vrot*self.bstar/(abs(self.qe)*self.rad_pcap) # total ppc for both species
 
-        #self.nGJ = self.Om_star*bstar/(cfl*abs(self.qe))
-        self.nGJ = vrot*self.bstar/(abs(self.qe)*self.rad_pcap) # total ppc for both species
+        # omega_p plasma frequency
+        self.omp = sqrt(self.ppc*self.qe**2/abs(me))
 
-        #nGJ = self.Om_star*bstar/(2*pi*self.cfl*abs(self.qe))
+        # skindepth in units of cell size
+        self.c_omp = self.cfl/self.omp
 
-        deGJ = self.c_omp*(self.nGJ/self.ppc)**(-0.5)
 
-        gam_gap  = vrot*self.bstar*self.rad_pcap/(2*cfl**2) # OK
-        #gam_gap  = vrot**2*(bstar*self.rad_pcap/(cfl**2))
-        #gam_gap2 = vrot**2*(bstar*self.rad_star/(cfl**2))
-        #gam_gap3 = (self.omB/self.Om_star)*(self.rad_star/self.rad_lcyl)**3
+        #--------------------------------------------------
+        # gap parameters
 
+        #polar cap height in code units, set to equal the polarcap radius
+        self.h_pcap = self.rad_pcap 
+
+        # maximum energy from the gap
+        self.gam_gap = self.vrot*self.bstar*self.rad_pcap/(2*self.cfl**2) 
+
+        # 1D curvature radius of a field line
+        self.rad_curv = self.rad_star**2/self.rad_pcap
+
+        # normalization constant for synchrotron sub-step cooling routine
+        # additional constant used to forcefully cool particles to the limit if QED process is not resolved
+        self.C_SYNC = (8.0*pi/3.0)*alphaf**2*self.bratio**2*(self.rg/self.rad_curv)**2*(self.cfl)**3*self.Nmp
+
+        # gamma_rad, radiation reaction limit where accelerating voltage gains equals radiation losses
+        self.gam_rad  = self.gam_gap**0.25
+        self.gam_rad *= (self.rg/self.rad_curv)**-0.5
+        self.gam_rad *= self.bratio**-0.5
+        self.gam_rad *= ( 1.5*self.lamC/self.h_pcap/alphaf)**0.25
+
+        # radiation length (distance that the particle travels before reaching the limit)
+        self.len_rad = (self.gam_rad/self.gam_gap)*self.h_pcap # simpler v2
+
+        # characteristic synchrotron photon energy
+        self.xsyn = 1.5*self.bratio*(self.rg/self.rad_curv)*self.gam_rad**3
+
+
+        #--------------------------------------------------
+        # extra undefined parameters
+        H = 1.0e5
+        c = 3e10
+        self.t_c = H/c # light crossing time across the system
+        self.xi = 1.0 #self.t0 # TODO setting this automatically to match PIC 
+        self.dt = self.xi*self.t_c # time step; we resolve mean interaction time by xi
+        ppc0 = self.ppc # FIXME free to choose this
+        self.npc_ref = self.NxMesh*self.NyMesh*self.NzMesh*ppc0
+        self.N_box = self.Nx*self.Ny*self.Nz
+        self.N_time = self.dt/self.t_c # time step in units of light crossing time
+        self.N_wgt = 1.0
+
+        self.Nref = {}
+        self.Nref["ph"] = self.npc_ref # reference photon num dens
+        self.Nref["e-"] = self.npc_ref # reference electron num dens 
+        self.wsum0 = self.Nref["e-"] # reference weight
+
+
+        #--------------------------------------------------
         if do_print:
-            print(' pulsar initialization...')
-            print('init: P_*:   ', self.period_star)
-            print('init: Om_*:  ', self.Om_star, " f_*:",self.Om_star/(2*pi) )
-            print('init: R_*:   ', self.rad_star)
-            print('init: R_pc:  ', self.rad_pcap)
-            print('init: R_LC:  ', self.rad_lcyl, ' not consistent for PC setup')
-            print('init: chi:   ', np.deg2rad(self.chi))
-            print('init: B_*    ', self.bstar)
-            #print('init: B_LC   ', bstar*(self.rad_lcyl/self.rad_star)**(-3.0))
-            print('init: v_rot  ', vrot)
-            print('init: n_GJ   ', self.nGJ)
-            print('init: d_e GJ ', deGJ, 'dx')
-            print('init: gam_gap', gam_gap)
-
-        # add variables to the class
-        self.gam_gap = gam_gap
-
-            #sys.exit()
-
-
-        #-------------------------------------------------- 
-        # default normalization
-
-        self.b_norm = 2.0*self.binit # B_0 = 2*binit; hence 2x
-        self.e_norm = 2.0*self.binit*self.vrot
-        self.j_norm = abs(self.qe)*self.nGJ*self.cfl**2 # j_m \Delta t # abs(self.qe)*self.ppc*2*self.cfl**2
-        self.p_norm = self.nGJ # max(self.ppc*2,1)
-        self.x_norm = max(self.xpc,1)
-        self.t_norm = self.rad_pcap/self.cfl  # t_pc = R_pc/c; lightcrossing itme across polar cap
-
-
-        #-------------------------------------------------- 
-        # QED definitions
-        if self.qed_mode:
-
-            if do_print:
-                print("init:--------------------------------------------------")
-
-            me   = 9.1093826e-28   # electron mass g
-            sigT = 6.65245873e-25  # Thomson optical depth; cm**2
-            c    = 2.99792458e10   # speed of light cm/s
-            kB   = 1.3806505e-16   # erg/K
-            re   = 2.82e-13        # classical electron radius
-            lamC = 2.4240e-10/2/3.14 # lamC = \hbar/m c 
-            alphaf = 1/137
-
-            # QED reaction rate normalization
-            #ppc0 = max(2*self.ppc, self.xpc)
-            #ppc0 = max(8, ppc0) # min limiter
-            #ppc0 = 1.0 # FIXME free to choose this
-            ppc0 = self.ppc # FIXME free to choose this
-            self.npc_ref = self.NxMesh*self.NyMesh*self.NzMesh*ppc0
-
-
-            #--------------------------------------------------
-            # inject
-
-            # synchrotorn seed photon
-            self.enebb1 = 2.7*self.kTbb1
-
-            # disk photons
-            self.enebb2 = 2.7*self.kTbb2
-
-            self.Nref = {}
-            self.Nref["ph"] = self.npc_ref # reference photon num dens
-            self.Nref["e-"] = self.npc_ref # reference electron num dens 
-            self.wsum0 = self.Nref["e-"] # reference weight
-
-            #--------------------------------------------------
-            H = self.H          # characteristic physical system size
-            R = self.H          # characteristic physical system radius (assuming cube so not needed) 
-            vol = R*R*H         # physical system volume
-            dx_phys = H/self.Lx # physical size of \Delta x
-
-            #self.nep0  = 1e17 #
-            self.nz0  = self.tau_ini/(sigT*H) # number density required for optical depth unity
-            #tau0       = sigT*self.nep0*self.H # reference optical depth
-            self.t_c   = H/c # light crossing time across the system
-            self.t_tau = self.t_c/self.tau_ext if self.tau_ext > 0 else self.t_c # minimum time between interactions 
-
-            self.Nmp   = dx_phys/(cfl**2*ppc0)/(4.0*pi*re) # number of real electrons in a computational macro particle
-            self.Nmp2  = self.nz0*dx_phys**3/ppc0 # required macro-particle number to model the given optical depth
-
-            #self.xi = 1e-3 #0.01 # numerical safety factor for resolving QED interactions
-            self.xi = 1.0 #self.t0 # TODO setting this automatically to match PIC 
-            self.dt = self.xi*self.t_c # time step; we resolve mean interaction time by xi
-            #self.dt *= self.qed_step # increase step size based on interval # TODO
-
-            if do_print:
-                print("init: t_0/t_c   : ", self.t0/self.t_c)
-                print("init: xi        : ", self.xi)
-                print("init: dt_QED    : ", self.dt)
-                print("init: dt_PIC    : ", self.t0)
-                print("init: dx_phys   : ", dx_phys)
-                #print("init: r_e (code): ", -self.qe/self.cfl**2)
-                #print("init: r_e (phys): ", re)
-                #print("init: r_eC/r_eP : ", -self.qe/self.cfl**2/re)
-
-
-            # normalizations 
-            self.N_wgt = self.nz0*sigT*H/self.wsum0 # unit conversion factor
-            self.N_wgt *= 0.5 # normalize with two species pair plasma
-            #self.N_w *= 1.0/(self.Nx*self.Ny*self.Nz) # FIXME normalize with total box size
-            # NOTE N_wgt uses wsum0 tile ppc as a reference; hence it already has 1/N_box
-
-            # tau is sum over tiles; we normalize to get mean tau per tile
-            #self.N_tau = self.N_w
-            #self.N_tau *= 1.0/(self.Nx*self.Ny*self.Nz) # FIXME
-
-            self.N_time = self.dt/self.t_c # time step in units of light crossing time
-            self.N_box = self.Nx*self.Ny*self.Nz
-            self.N_qdt = self.qed_step     # QED reaction time steps to plasma time steps  
-
-            # NOTE: it then follows that unit of luminosity is N_wgt / N_time
-
-            # normaliation of onebody interaction; reduced Compton wavelength
-            self.N_onebody = lamC/dx_phys/self.cfl # normalization coeff N
-            self.N_onebody *= 1.0/alphaf/c # additionally, countering the normalized units in interact (where c=lamc=alpha=1)
-            #self.N_onebody *= 1e15 # artificial rate slowdown; sigma=1e8
-            self.N_onebody *= 1e17 # artificial rate slowdown; sigma=1e6
-            #self.N_onebody *= 1e20 # artificial rate slowdown; sigma=1e4
-            self.lamC = self.N_onebody*self.cfl # \lam_C in units of \Delta x 
-
-            # radiation reaction limit \gamma_rad; #v3
-            self.h_pcap = self.rad_pcap # polar cap height
-
-            self.rad_curv = self.rad_star**2/self.rad_pcap
-            rg = self.c_omp/sqrt(self.sigma)
-
-            # set B/B_Q self consistently from the derived lamC distance and r_g which is set by user-given sigma
-            self.B_QED = self.lamC/rg
-
-            # rg from B formulas
-            #rg2 = self.lamC/self.B_QED
-            #sigma2 = (self.c_omp/rg2)**2
-            #print('sigma', self.sigma, sigma2, self.sigma/sigma2)
-
-            self.gam_rad  = self.gam_gap**0.25
-            self.gam_rad *= (rg/self.rad_curv)**-0.5
-            self.gam_rad *= self.B_QED**-0.5
-            self.gam_rad *= ( 1.5*self.lamC/self.h_pcap/alphaf)**0.25
-
-            # synchrotorn radiation cooling happens over a distance (in units of polar cap size)
-            #self.len_rad = self.gam_rad*(1/self.B_QED/vrot)*self.lamC/self.rad_pcap
-            self.len_rad = (self.gam_rad/self.gam_gap)*self.h_pcap # simpler v2
-
-            #self.xsyn = 1.5*(self.lamC/self.rad_star)*(self.rad_pcap/self.rad_star)*self.gam_rad**3
-            self.xsyn = 1.5*self.B_QED*(rg/self.rad_curv)*self.gam_rad**3
-
-
-            #--------------------------------------------------
-            # external injection normalization
-            #self.N_inj = self.N_w*self.t_c/self.dt # unit of injection luminosity (per dt) DONE
-            #self.N_inj *= self.Nx*self.Ny*self.Nz # FIXME
-
-            # how much to inject as an initial solution
-            #self.ppc_ini = int( 0.25* ppc0 )
-            #if do_print: print('ppc_ini', self.ppc_ini)
-
-            #--------------------------------------------------
-            #self.N_Q = (self.t_c/self.dt)/self.N_w   # TODO
-            #self.N_Q *= 1.0/(self.Nx*self.Ny*self.Nz) # scale up
-            #self.N_Q = self.N_wgt*self.N_time
-
-
-            if do_print:
-                print('init: n_pm   :', np.log10(self.nz0))
-                print('init: H      :', np.log10(self.H))
-                print('init: tau    :', self.tau_ext)
-                print('init: t_c    :', self.t_c)
-                print('init: t_tau  :', self.t_tau)
-                print('init: N_mp   : {:.2e}'.format(self.Nmp))
-                print('init: N_mp,t : {:.2e}'.format(self.Nmp2))
-                print('init: dt     :', self.dt, 'dt/t_tau:', self.dt/self.t_tau, 'dt/tc:', self.dt/self.t_c)
-                print('init: N_ph   :', self.Nref['ph'])
-                print('init: N_ep   :', self.Nref['e-'])
-                print('init: N_wgt  :', self.N_wgt)
-                print('init: N_time :', self.N_time)
-                print('init: N_1bQ  :', self.N_onebody)
-                print('init: b      :', self.B_QED)
-                print('init: lamC/Hp: {:.2e}'.format(self.lamC/self.h_pcap))
-                print('init: rg/R_c : {:.2e}'.format(rg/self.rad_curv))
-                #print('init: N_lamC :', self.N_lamC)
-                #print('init: N_lamC2:', self.N_lamC2)
-                #print('init: N_Q    :', self.N_Q)
-                #print('init: N_inj  :', self.N_inj)
-                print('init: wsum0  :', self.wsum0)
-                #print('L:     :', lum_units)
-                print('init: esc con1:', 'dt/tc < 1:', self.dt/self.t_c)
-                print('init: esc con1:', 'dt/tt < 1:', self.dt/self.t_tau)
-                print('init:')
-                print('init: gam_rad: {:.2e} gam_rad/gam_gap {:.4f}'.format(self.gam_rad, self.gam_rad/self.gam_gap))
-                print('init: x_syn  : {:.2e}'.format(self.xsyn))
-                print('init: len_rad: {:.2e} len_rad/H {:.4f}'.format(self.len_rad, self.len_rad/self.h_pcap))
-                print('init:')
-
-            #inject; total number of injected photons
-
-            # required weight to get lum_ph
-            if True:
-                if self.zeta_xinj1 > 0 and self.lum_ph1 > 0:
-                    self.Nph_inj1 = self.zeta_xinj1*self.wsum0 #self.Nref["ph"]
-                    #self.wph_inj1 = self.lum_ph1/(self.Nph_inj1*self.enebb1*self.N_wgt/self.N_time*self.N_box)
-                    self.wph_inj1 = self.lum_ph1/(self.Nph_inj1*self.enebb1*self.N_wgt/self.N_time)
-                else:
-                    self.Nph_inj1 = 0
-                    self.wph_inj1 = 1
-
-                if self.zeta_xinj2 > 0 and self.lum_ph2 > 0:
-                    self.Nph_inj2 = self.zeta_xinj2*self.wsum0 #self.Nref["ph"]
-                    #self.wph_inj2 = self.lum_ph2/(self.Nph_inj2*self.enebb2*self.N_wgt/self.N_time*self.N_box)
-                    self.wph_inj2 = self.lum_ph2/(self.Nph_inj2*self.enebb2*self.N_wgt/self.N_time)
-                else:
-                    self.Nph_inj2 = 0
-                    self.wph_inj2 = 1
-
-                # TODO increase weight 
-                self.wph_inj1 *= self.N_qdt 
-                self.wph_inj2 *= self.N_qdt
-
-            else: # inject uni weight photons (but lots of 'em)
-
-                if do_print:
-                    print("WARN: forcing photons to have w=1")
-                self.wph_inj1 = 1.0
-                self.wph_inj2 = 1.0
-
-                #self.zeta_xinj1 = self.lum_ph1/( self.Nref['ph']*self.wph_inj1*self.enebb1*self.N_wgt/self.N_time*self.N_box)
-                self.zeta_xinj1 = self.lum_ph1/( self.Nref['ph']*self.wph_inj1*self.enebb1*self.N_wgt/self.N_time)
-                #self.zeta_xinj2 = self.lum_ph2/( self.Nref['ph']*self.wph_inj2*self.enebb2*self.N_wgt/self.N_time*self.N_box)
-                self.zeta_xinj2 = self.lum_ph2/( self.Nref['ph']*self.wph_inj2*self.enebb2*self.N_wgt/self.N_time)
-
-                self.Nph_inj1 = self.zeta_xinj1*self.Nref['ph']
-                self.Nph_inj2 = self.zeta_xinj2*self.Nref['ph']
-
-
-            #gplaw = ( pmax**(pslope+2) - pmin**(pslope+2) )/(pslope + 2)
-
-            #integral_a^b (b^p x^(-p) (a x^p - x a^p))/(a b^p - b a^p) dx = 
-            #(b^2 a^p - a^2 (p - 1) b^p + a (p - 2) b^(p + 1))/((p - 2) (a b^p - b a^p)) for 0<a<b
-
-            def int_plaw(a, b, p):
-                #(b^2 a^p - a^2 (p-1) b^p + a(p-2) b^(p + 1))/((p - 2) (a b^p - b a^p)) 
-                return (b*b*a**p - a*a*(p-1)*b**p + a*(p-2)*b**(p+1))/( (p-2)*(a*b**p - b*a**p)) 
-            gplaw = int_plaw(self.pmin, self.pmax, self.pslope)
-
-            z = np.random.rand(10000000)
-            v = ( self.pmin**(1+self.pslope) + z*( self.pmax**(1+self.pslope) - self.pmin**(1+self.pslope) ))**(1/(1+self.pslope))
-            #if do_print: print('init: mean brute force', np.mean(v), gplaw)
-            gplaw = np.mean(v) # FIXME
-
-            # v1
-            #Nep_inj = zeta_pinj*Nref["e-"]
-            #wep_inj = lum_ep/(Nep_inj*gplaw*N_inj) 
-
-            #v2 # NOTE: assume wep_inj = 1 and calc zeta_pinj
-            self.wep_inj = 1.0 
-            # NOTE pair luminosity to electron luminosity so 0.5x
-            self.zeta_pinj = 0.5*self.lum_ep/( self.Nref['e-']*self.wep_inj*gplaw*self.N_wgt/self.N_time )  
-            self.Nep_inj  = self.zeta_pinj*self.Nref["e-"]   # injecting pair plasma so x2
-            self.Nep_inj *= self.N_qdt # TODO increase by qed activity ratio
-
-            Lp1_ergs = self.Nph_inj1*(self.wph_inj1/self.wsum0)*self.enebb1/self.dt
-            Lp1_ergs *= 1/self.N_qdt # TODO normalize by weight since wph has N_qdt
-            Lp1_ergs *= vol*self.nz0*me*c**2
-
-            if do_print:
-                print("init:-------------------- ph inj 1---------------------")
-                print('init: lum_ph   :', self.lum_ph1)
-                print('init: kTbb     :', self.kTbb1)
-                print('init: enebb    :', self.enebb1)
-                print('init: zeta_xinj:', self.zeta_xinj1, ' N:', self.Nph_inj1)
-                print('init: wph_inj  :', self.wph_inj1, np.log10(self.wph_inj1) + 1e-100)
-                print('init: Lp1      :', np.log10(Lp1_ergs + 1e-100), ' erg/s')
-
-            Lp2_ergs = self.Nph_inj2*(self.wph_inj2/self.wsum0)*self.enebb2/self.dt
-            Lp2_ergs *= 1/self.N_qdt # TODO normalize by weight since wph has N_qdt
-            Lp2_ergs *= vol*self.nz0*me*c**2
-
-            if do_print:
-                print("init:-------------------- ph inj 2---------------------")
-                print('init: lum_ph   :', self.lum_ph2)
-                print('init: kTbb     :', self.kTbb2)
-                print('init: enebb    :', self.enebb2)
-                print('init: zeta_xinj:', self.zeta_xinj2, ' N:', self.Nph_inj2)
-                print('init: wph_inj  :', self.wph_inj2, np.log10(self.wph_inj2 + 1e-100))
-                print('init: Lp2      :', np.log10(Lp2_ergs + 1e-100), ' erg/s')
-
-
-
-            # NOTE we inject electrons AND positrons w/ Nep_inj prtcls so 2x here
-            Le_ergs = 2.0*self.Nep_inj*(self.wep_inj/self.wsum0)*gplaw/self.dt 
-            Le_ergs *= 1/self.N_qdt # TODO normalize by weight since wep has N_qdt
-            Le_ergs *= vol*self.nz0*me*c**2
-
-            if do_print:
-                print("init:-------------------- ep inj ----------------------")
-                #print("init: pslope:   ", self.pslope)
-                #print("init: pmin:     ", self.pmin)
-                #print("init: pmax:     ", self.pmax)
-                #print("init: pmean:    ", gplaw)
-                #print("init: zeta_pinj:", self.zeta_pinj, ' N:', self.Nep_inj)
-                #print("init: wep_inj:  ", self.wep_inj, np.log10(self.wep_inj + 1e-100))
-                print("init: ell:      ", self.lum_ep)
-                print("init: Le:       ", np.log10(Le_ergs + 1e-100), ' erg/s')
-            
-            # injected compactness from B field is sigma * \tau/t_A 
-            # tau = self.nz0*sigT*H
-            #self.lum_ant  = self.sigma*self.nz0*sigT*H*self.drive_ampl*self.drive_freq
-            #self.lum_ant *= 4.0
-            #Le_ant_ergs = self.lum_ant*me*c**3*H/sigT
-
-            #if do_print:
-            #    print("init:-------------------- ep ant ----------------------")
-            #    print("init: ell:      ", self.lum_ant)
-            #    print("init: Le:       ", np.log10(Le_ant_ergs + 1e-100), ' erg/s')
-
-        else:
-
-            # manually set some quantities to avoid problems later on
-            self.N_wgt = 1
-            self.N_box = 1
-            self.N_time = 1
-            self.npc_ref = 1
-            self.N_qdt = self.qed_step
+            print("conf:              b:", self.bratio)
+            print("conf:            Nmp:", self.Nmp)
+            print("conf:            cfl:", self.cfl)
+            print("conf:            ppc:", self.ppc)
+
+            print("star:")
+            print("star:          v_rot:", self.vrot)
+            print("star:            P_*:", self.period_star)
+            print("star:           Om_*:", self.Om_star)
+            print("star:           R_LC:", self.rad_lcyl)
+            print("star:           R_pc:", self.rad_pcap)
+            print("star:            R_*:", self.rad_star)
+            print("star:         B_norm:", self.b_dipole_norm)
+            print("star: rad_curv_shift:", self.rad_curv_shift)
+            print("star:    height_atms:", self.height_atms)
+
+            print("init:")
+            print("init:           lamC:", self.lamC)
+            print("init:             rg:", self.rg)
+            print("init:          sigma:", self.sigma)
+            print("init:          binit:", self.binit)
+            print("init:            B_*:", self.bstar)
+            print("init:            nGJ:", self.nGJ)
+            print("init:             qe:", self.qe, me)
+            print("init:             qi:", self.qi, mi)
+            print("init:          m-/me:", self.me)
+            print("init:          m+-me:", self.mi)
+            print("init:        omega_p:", self.omp)
+            print("init:    R = c/omega:", self.c_omp)
+            print("init:         C_SYNC:", self.C_SYNC)
+
+            print("phys:")
+            print("phys:        gam_gap:", self.gam_gap)
+            print("phys:        gam_rad:", self.gam_rad)
+            print("phys:    g_rad/g_gap:", self.gam_rad/self.gam_gap)
+            print("phys:        len_rad:", self.len_rad)
 
 
         # DONE
         if do_print:
             print("init:--------------------------------------------------")
-
-        return
 
 # end of class
 

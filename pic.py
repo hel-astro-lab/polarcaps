@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+pic.py# -*- coding: utf-8 -*-
 
 from mpi4py import MPI
 import numpy as np
@@ -10,7 +10,7 @@ import pytools  # runko python tools
 import pyrunko
 
 # problem specific modules
-from init_problem import Configuration_Turbulence as Configuration
+from init_problem import Configuration_Pulsar as Configuration
 from init_problem import velocity_profile
 from init_problem import density_profile
 from init_problem import weigth_profile
@@ -526,12 +526,7 @@ if __name__ == "__main__":
 
 
     #--------------------------------------------------
-    #mc.prob_norm_onebody = conf.N_onebody/conf.N_qdt # units of [TODO]
-
-    #Multiplying this with lamC (thus removing the dependence on lamC)
-    #since t_free depends already on lamC through B_QED.
-    #Alternatively, could convert B_QED into units where lamC=1, as assumed in the tau_int calculation.
-    mc.prob_norm_onebody = conf.lamC*conf.N_onebody/conf.N_qdt # units of [TODO]
+    mc.prob_norm_onebody = conf.N_onebody/conf.N_qdt # units of [TODO]
 
     a0 = pyrunko.qed.Synchrotron("e-")
     a1 = pyrunko.qed.Synchrotron("e+")
@@ -541,16 +536,17 @@ if __name__ == "__main__":
     b  = pyrunko.qed.MultiPhotAnn("ph")
 
     # set critical magnetic field 
-    for intr in [a0, a1, b]:
-        intr.B_QED = conf.binit/conf.B_QED
+    for intr in [a0, a1]:#, b]:
+        intr.B_QED = conf.B_QED #B_QED is now Schwinger field already in init_problem.py
+        intr.C_SYNC = conf.C_SYNC # TODO not needed in the new scheme
 
-    mc.add_interaction(a0) # electron synchrotorn
+    mc.add_interaction(a0) # electron synchrotron
     mc.add_interaction(a1) # positron synchrotron
     #mc.add_interaction(b ) #  multi photon pair creation
 
     if conf.oneD: # set 1D curvature parameters for QED reactions
         mc.use_vir_curvature = True
-        mc.vir_pitch_ang  = conf.c_omp/np.sqrt(conf.sigma)/conf.rad_curv # r_g/R_curv
+        mc.vir_pitch_ang  = conf.rg/conf.rad_curv # r_g/R_curv
 
 
     # --------------------------------------------------
@@ -822,7 +818,7 @@ if __name__ == "__main__":
 
         # apply moving/reflecting/injecting walls
         #if lap*conf.cfl > 1.0*conf.rad_pcap: # apply after a fraction of the disk light crossing time 
-        sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
+        #sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
 
 
         # --------------------------------------------------
@@ -1074,8 +1070,33 @@ if __name__ == "__main__":
                 #    axs[0,2].plot(toolset.lnxs, toolset.h1_enes['esc'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
 
                 zs = toolset.zs
-                axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e-']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
-                axs[0,2].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+                axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e-']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw=lw, linestyle=ls,)
+                axs[0,2].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw=lw, linestyle=ls,)
+
+                particles = toolset.h1_enes['e-']*zs
+                gammas = 10**toolset.lnzs
+
+                # maximum
+                last_nonzero = np.max(np.nonzero(particles))
+                gam_max = gammas[last_nonzero]
+
+                # mean
+                gam_avg = np.sum( gammas*particles )/np.sum(particles)
+
+                # mode
+                imod = np.argmax(particles)
+                gam_mod = gammas[imod]
+
+                print("gam_max:", gam_max, 
+                      "rad(",gam_max/conf.gam_rad,")",
+                      #"gap(",gam_max/conf.gam_gap,")",
+                      " gam_avg:", gam_avg, 
+                      "rad(",gam_avg/conf.gam_rad,")",
+                      #"gap(",gam_avg/conf.gam_gap,")",
+                      " gam_mod:", gam_mod, 
+                      "rad(",gam_mod/conf.gam_rad,")",
+                      #"gap(",gam_mod/conf.gam_gap,")",
+                      )
 
 
                 #--------------------------------------------------
@@ -1085,8 +1106,8 @@ if __name__ == "__main__":
                     axs[0,1].axvline(np.log10(conf.gam_gap), color='C0')
                     axs[0,2].axvline(np.log10(conf.gam_gap), color='C0')
 
-                    axs[0,1].axvline(np.log10(conf.gam_rad), color='C1')
-                    axs[0,2].axvline(np.log10(conf.gam_rad), color='C1')
+                    axs[0,1].axvline(np.log10(conf.gam_rad), color='C1', linestyle="dashed")
+                    axs[0,2].axvline(np.log10(conf.gam_rad), color='C1', linestyle="dashed")
 
 
                 # LP weight spectrum
