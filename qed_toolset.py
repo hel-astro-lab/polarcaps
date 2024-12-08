@@ -25,13 +25,13 @@ class QEDToolset:
             self.nh = self.nz
 
         # limits for various histograms
-        self.xxlims = (-2, 7) # photon xlim
+        self.xxlims = (-2, 5) # photon xlim
         self.xylims = (1e-8, 1e-2) # photon ylim (1e-4, 1e2)
 
-        self.pxlims = (-2, 7) # pair xlim
+        self.pxlims = (-2, 5) # pair xlim
         self.pylims = (1e-8, 1e-2) # pair ylim
 
-        self.wxlims = (-1, 7) # pair wlim
+        self.wxlims = (-1, 5) # pair wlim
         self.hhlims = (0, self.nh) # spatial box height limits
 
         self.Nhist = 1024 #128
