@@ -96,9 +96,9 @@ class Configuration_Pulsar(Configuration):
         # gyroradius = lamC/b
         self.rg = self.lamC/self.bratio 
 
-        # B normalization, r_g = lamC/b = c^2 e/mB = c^2/B (in code units)
-        self.binit = self.cfl**2/self.rg
-        self.bstar = 2*self.binit # B_{*,r} = radial magnetic field component 
+        # B normalization, r_g = lamC/b = mc^2/eB = c^2/B (in code units)
+        self.bstar = self.cfl**2/self.rg
+        self.binit = self.bstar/2.0 # B_{*,r} = radial magnetic field component
 
         #Schwinger field: b = B_*/B_Q
         self.B_QED = self.bstar/self.bratio
