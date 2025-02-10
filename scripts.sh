@@ -16,7 +16,9 @@ declare -a lap_scripts_arr=(
 #"plot3d_pyvista.py --var bvec --view side" 
 #"plot3d_pyvista.py --var bvec --view tilt" 
 #"fig_cascade.py "
+#"fig_gap_TS_RCF.py"
 "fig_gap.py"
+#"fig_cascade.py"
 #"plot3d_pyvista.py --var bvec --view top" 
 #"plot_pulsar_lc.py "
 )
@@ -40,7 +42,7 @@ done
 # multilap scripts
 
 #for lap in {0..200..10}
-for ((lap=0;lap<=10000;lap+=50))
+for ((lap=0;lap<=150000;lap+=200))
 do
     echo "lap is $lap"
     for c in "${conf_arr[@]}"

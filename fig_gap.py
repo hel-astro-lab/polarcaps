@@ -29,7 +29,7 @@ if __name__ == "__main__":
     #--------------------------------------------------
     # command line driven version
     args = pytools.parse_args()
-    conf = Configuration(args.conf_filename, do_print=False)
+    conf = Configuration(args.conf_filename, do_print=True)#False)
     fdir = conf.outdir + "/"
 
     print("reading {}".format(fdir))

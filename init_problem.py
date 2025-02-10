@@ -43,8 +43,8 @@ class Configuration_Pulsar(Configuration):
             #--------------------------------------------------
             # pulsar
             self.outdir += "v" + simplify_string(self.vrot)
-            #self.outdir += "inje" + simplify_string(self.ninj_pairs)
-            #self.outdir += "injx" + simplify_string(self.ninj_phots)
+            self.outdir += "inje" + simplify_string(self.ninj_pairs)
+            self.outdir += "injx" + simplify_string(self.ninj_phots)
             self.outdir += "_"
 
             #--------------------------------------------------
@@ -192,7 +192,6 @@ class Configuration_Pulsar(Configuration):
 
         # characteristic synchrotron photon energy
         self.xsyn = 1.5*self.bratio*(self.rg/self.rad_curv)*self.gam_rad**3
-
 
         #--------------------------------------------------
         # extra undefined parameters

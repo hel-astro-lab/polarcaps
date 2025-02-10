@@ -411,6 +411,10 @@ if __name__ == "__main__":
 
     if sch.is_master: print("load balancing grid..."); sys.stdout.flush()
 
+    ######################################
+    from antenna1d_pulsar import Antenna
+    sch.antenna = Antenna(1.0, 1.0, conf)
+    ######################################
 
     # update boundaries
     grid.analyze_boundaries()
@@ -680,6 +684,11 @@ if __name__ == "__main__":
     time = lap * (conf.cfl / conf.c_omp)
     for lap in range(lap, conf.Nt + 1):
 
+        #Stopping injection after certain number of laps:
+        if(lap == 11):
+            star.ninj_pairs = 0.0
+            star.ninj_min_pairs = 0.0
+
         # ramp up plate smoothly
         #ramp_up_laps = 1.0*conf.rad_pcap/conf.cfl # duration of the ramp up in polar cap light crossing times
         #pc_freq = min(max(1,lap)/ramp_up_laps, 1.0)*(1/conf.period_star) # polar cap rotation frequency
@@ -877,7 +886,9 @@ if __name__ == "__main__":
         # add antenna
         #sch.antenna.update_rnd_phases()
         #antenna.get_brms(grid)
-        #sch.operate( dict(name='add_antenna', solver='antenna', method='add_ext_cur', nhood='local', ) )
+        sch.operate( dict(name='add_antenna', solver='antenna', method='add_ext_cur', nhood='local', ) )
+
+
 
         #if conf.oneD: # rotating frame current (TODO does not work)
         #    #update bcs
@@ -1088,7 +1099,7 @@ if __name__ == "__main__":
 
                 print("gam_max:", gam_max, 
                       "rad(",gam_max/conf.gam_rad,")",
-                      #"gap(",gam_max/conf.gam_gap,")",
+                      "gap(",gam_max/conf.gam_gap,")",
                       " gam_avg:", gam_avg, 
                       "rad(",gam_avg/conf.gam_rad,")",
                       #"gap(",gam_avg/conf.gam_gap,")",

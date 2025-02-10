@@ -12,7 +12,7 @@ from numpy import pi, log, log10, exp, sin, cos
 
 # runko tools
 import pytools
-from init_problem import Configuration_Turbulence as Configuration
+from init_problem import Configuration_Pulsar as Configuration
 import h5py as h5
 
 from qed_toolset import QEDToolset
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     #--------------------------------------------------
     # command line driven version
     args = pytools.parse_args()
-    conf = Configuration(args.conf_filename, do_print=False)
+    conf = Configuration(args.conf_filename, do_print=True)#False)
     fdir = conf.outdir + "/"
 
     print("reading {}".format(fdir))
@@ -98,8 +98,8 @@ if __name__ == "__main__":
         axs[0,0].set_yscale('log')
         axs[0,1].set_yscale('log')
 
-        axs[0,0].set_ylim((1e-8, 1e-2))
-        axs[0,1].set_ylim((1e-8, 1e-2))
+        #axs[0,0].set_ylim((1e-8, 1e-2))
+        #axs[0,1].set_ylim((1e-8, 1e-2))
 
         axs[0,0].set_ylabel(r"$p_\pm \, \mathrm{d} \tau/\mathrm{d}p_\pm$")
         axs[0,1].set_ylabel(r"$p_\pm \, \mathrm{d} \tau/\mathrm{d}p_\pm$")
