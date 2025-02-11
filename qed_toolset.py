@@ -26,7 +26,7 @@ class QEDToolset:
 
         # limits for various histograms
         self.xxlims = (-2, 7) # photon xlim
-        self.xylims = (1e-2, 1e6) # photon ylim (1e-4, 1e2)
+        self.xylims = (1e-2, 1e8) #(1e-2, 1e6) # photon ylim (1e-4, 1e2)
 
         self.pxlims = (-2, 7) # pair xlim
         self.pylims = (1e-2, 1e4) # pair ylim

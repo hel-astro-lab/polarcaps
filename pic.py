@@ -506,7 +506,11 @@ if __name__ == "__main__":
 
     # QED
     mc = pyqed.Pairing()
-    mc.prob_norm = 1/(conf.N_time*conf.N_wgt*conf.N_qdt) # units of [per prtcl per time]
+    #mc.prob_norm = 1/(conf.N_time*conf.N_wgt*conf.N_qdt) # units of [per prtcl per time]
+
+    #New version:
+    #TS: I am not sure if conf.N_time*conf.N_wgt*conf.N_qdt is still needed
+    mc.prob_norm = conf.N_twobody/(conf.N_time*conf.N_wgt*conf.N_qdt) # units of [per prtcl per time]
 
     # histogram edges of leaking photons
     mc.update_hist_lims(toolset.xxlims[0], toolset.xxlims[1], toolset.Nhist)
@@ -522,8 +526,8 @@ if __name__ == "__main__":
     #mc.add_interaction(a) # ON                      # phot-ann
     #mc.add_interaction(b) # ON                      # pair-ann
     #mc.add_interaction(c) # off for double counting # pair-ann
-    #mc.add_interaction(d) # ON
-    #mc.add_interaction(e) # ON
+    mc.add_interaction(d) # ON
+    mc.add_interaction(e) # ON
     #mc.add_interaction(f) # off for double counting
     #mc.add_interaction(g) # off for double counting
 
@@ -719,11 +723,11 @@ if __name__ == "__main__":
             #timer.stop_comp("ep_inj")
 
             #--------------------------------------------------
-            #timer.start_comp("qed")
-            #for tile in pytools.tiles_local(grid):
-            #    i,j,k = pytools.get_index(tile, conf)
-            #    mc.solve_twobody(tile)
-            #timer.stop_comp("qed")
+            timer.start_comp("qed")
+            for tile in pytools.tiles_local(grid):
+                i,j,k = pytools.get_index(tile, conf)
+                mc.solve_twobody(tile)
+            timer.stop_comp("qed")
 
             #--------------------------------------------------
             timer.start_comp("ph_esc")

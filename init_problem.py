@@ -90,6 +90,9 @@ class Configuration_Pulsar(Configuration):
         self.N_onebody = self.lamC
         self.N_onebody *= 1.0/alphaf/self.cfl #additionally, countering the normalized units in interact (where c=alpha=1)
 
+        # 2-body QED process normalization constant = t_free/dt
+        self.N_twobody = 6.0*pi*self.cfl**3*self.Nmp*self.NxMesh*self.NyMesh*self.NzMesh
+
         # super-stepping for the QED reactions 
         self.N_qdt = self.qed_step
 
