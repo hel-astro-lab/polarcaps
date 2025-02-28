@@ -113,7 +113,7 @@ class Configuration_Pulsar(Configuration):
 
             # large gap setup
             self.rad_pcap = 0.8*self.Lx
-            self.rad_star = 10*self.rad_pcap
+            self.rad_star = 2*self.rad_pcap #3*self.rad_pcap #10*self.rad_pcap
         else:
             sys.error() # not implemented
 
@@ -183,7 +183,6 @@ class Configuration_Pulsar(Configuration):
         # 1D curvature radius of a field line
         self.rad_curv = self.rad_star**2/self.rad_pcap
 
-
         # gamma_rad, radiation reaction limit where gap gains equals radiation losses
         self.gam_rad  = self.gam_gap**0.25
         self.gam_rad *= (self.rg/self.rad_curv)**-0.5
@@ -233,6 +232,7 @@ class Configuration_Pulsar(Configuration):
             print("star:         B_norm:", self.b_dipole_norm)
             print("star: rad_curv_shift:", self.rad_curv_shift)
             print("star:    height_atms:", self.height_atms)
+            print("star:    r_g/R_curv:", self.rg/self.rad_curv)
 
             print("init:")
             print("init:           lamC:", self.lamC)
@@ -253,7 +253,7 @@ class Configuration_Pulsar(Configuration):
             print("phys:        gam_rad:", self.gam_rad)
             print("phys:    g_rad/g_gap:", self.gam_rad/self.gam_gap)
             print("phys:        len_rad:", self.len_rad)
-
+            print("star:    xcurv:", (3.0/2.0)*self.bratio*(self.rg/self.rad_curv)*self.gam_rad**3)
 
         #--------------------------------------------------
         # default normalization

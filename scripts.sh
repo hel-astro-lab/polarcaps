@@ -42,7 +42,7 @@ done
 # multilap scripts
 
 #for lap in {0..200..10}
-for ((lap=0;lap<=150000;lap+=200))
+for ((lap=0;lap<=30000;lap+=200))
 do
     echo "lap is $lap"
     for c in "${conf_arr[@]}"
