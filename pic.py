@@ -203,23 +203,23 @@ if __name__ == "__main__":
         axs[0,3].set_ylabel(r'$\tau$') 
         #axs[0,3].set_yscale('linear')
         axs[0,3].set_yscale('log')
-        axs[0,3].set_ylim((1e-4, 1.0))
+        axs[0,3].set_ylim((1e-2, 1.4))
 
         axs[1,2].set_xlabel(r'$t$ ($H/c$)')
         axs[1,2].set_ylabel(r'$U_x/U_\pm$') 
-        axs[1,2].set_ylim((1e-2, 1e0))
+        axs[1,2].set_ylim((1e-4, 1e0))
 
         axs[1,3].set_xlabel(r'$t$ ($H/c$)')
         axs[1,3].set_ylabel(r'energy $\ell$') 
-        axs[1,3].set_ylim((1e-2, 1e4))
+        axs[1,3].set_ylim((1e-2, 1e8))
 
         axs[2,2].set_xlabel(r'lap')
         axs[2,2].set_ylabel(r'$n_p/n_0$') 
-        axs[2,2].set_ylim((1e-3, 1e1))
+        axs[2,2].set_ylim((1e-3, 1e4))
 
         axs[2,3].set_xlabel(r'lap')
         axs[2,3].set_ylabel(r'$N_p/N_0$') 
-        axs[2,3].set_ylim((1e-3, 1e1))
+        axs[2,3].set_ylim((1e-3, 1e4))
 
         # 2d histogram
         axs[3,0].set_xscale("linear")
@@ -669,8 +669,9 @@ if __name__ == "__main__":
 
 
     # induce initial magnetic and electric field from the star
-    for tile in pytools.tiles_all(grid):
-        star.insert_em(tile)
+    if io_stat["do_initialization"]:
+        for tile in pytools.tiles_all(grid):
+            star.insert_em(tile)
 
     # --------------------------------------------------
     # --------------------------------------------------
@@ -723,11 +724,12 @@ if __name__ == "__main__":
             #timer.stop_comp("ep_inj")
 
             #--------------------------------------------------
-            timer.start_comp("qed")
-            for tile in pytools.tiles_local(grid):
-                i,j,k = pytools.get_index(tile, conf)
-                mc.solve_twobody(tile)
-            timer.stop_comp("qed")
+            if True:
+                timer.start_comp("qed2")
+                for tile in pytools.tiles_local(grid):
+                    i,j,k = pytools.get_index(tile, conf)
+                    mc.solve_twobody(tile)
+                timer.stop_comp("qed2")
 
             #--------------------------------------------------
             timer.start_comp("ph_esc")
@@ -805,11 +807,11 @@ if __name__ == "__main__":
         #--------------------------------------------------
         # single-body QED interactions
         if conf.qed_mode and lap % conf.qed_step == 0:
-            timer.start_comp("qed_onebody")
+            timer.start_comp("qed1")
             for tile in pytools.tiles_local(grid):
                 #print("calling onebody")
                 mc.solve_onebody(tile)
-            timer.stop_comp("qed_onebody")
+            timer.stop_comp("qed1")
 
         # --------------------------------------------------
         # move particles (only locals tiles)
