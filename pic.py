@@ -526,8 +526,8 @@ if __name__ == "__main__":
     #mc.add_interaction(a) # ON                      # phot-ann
     #mc.add_interaction(b) # ON                      # pair-ann
     #mc.add_interaction(c) # off for double counting # pair-ann
-    mc.add_interaction(d) # ON
-    mc.add_interaction(e) # ON
+    #mc.add_interaction(d) # ON
+    #mc.add_interaction(e) # ON
     #mc.add_interaction(f) # off for double counting
     #mc.add_interaction(g) # off for double counting
 
@@ -892,7 +892,8 @@ if __name__ == "__main__":
         # add antenna
         #sch.antenna.update_rnd_phases()
         #antenna.get_brms(grid)
-        sch.operate( dict(name='add_antenna', solver='antenna', method='add_ext_cur', nhood='local', ) )
+        if lap > conf.rad_pcap/conf.cfl: # add external current for t > H_pc/c
+            sch.operate( dict(name='add_antenna', solver='antenna', method='add_ext_cur', nhood='local', ) )
 
 
 
