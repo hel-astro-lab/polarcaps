@@ -233,6 +233,7 @@ class Configuration_Pulsar(Configuration):
             print("star: rad_curv_shift:", self.rad_curv_shift)
             print("star:    height_atms:", self.height_atms)
             print("star:    r_g/R_curv:", self.rg/self.rad_curv)
+            print("star:    R_curv:", self.rad_curv)
 
             print("init:")
             print("init:           lamC:", self.lamC)

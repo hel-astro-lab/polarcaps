@@ -17,7 +17,6 @@ from init_problem import weigth_profile
 
 from qed_toolset import QEDToolset
 
-
 #--------------------------------------------------
 live_plot = True
 rnd_seed_default = 1
@@ -553,6 +552,7 @@ if __name__ == "__main__":
     if conf.oneD: # set 1D curvature parameters for QED reactions
         mc.use_vir_curvature = True
         mc.vir_pitch_ang  = conf.rg/conf.rad_curv # r_g/R_curv
+        mc.r_curv = conf.rad_curv
 
 
     # --------------------------------------------------
@@ -809,7 +809,6 @@ if __name__ == "__main__":
         if conf.qed_mode and lap % conf.qed_step == 0:
             timer.start_comp("qed1")
             for tile in pytools.tiles_local(grid):
-                #print("calling onebody")
                 mc.solve_onebody(tile)
             timer.stop_comp("qed1")
 
@@ -822,7 +821,7 @@ if __name__ == "__main__":
         #      for every other pusher, need to uncomment this
         sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
 
-        sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[0]) ) # e^-
+        sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[0]) ) # e^-        
         sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[1]) ) # e^+
         sch.operate( dict(name='push',      solver='pusherx',method='solve', nhood='local', args=[2]) ) # x
 
@@ -872,6 +871,8 @@ if __name__ == "__main__":
         # current calculation; charge conserving current deposition
         # clear virtual current arrays for boundary addition after mpi, send currents, and exchange between tiles
         sch.operate( dict(name='comp_curr',     solver='currint', method='solve',             nhood='local', ) )
+        
+        
         sch.operate( dict(name='clear_vir_cur', solver='tile',    method='clear_current',     nhood='virtual', ) )
         sch.operate( dict(name='mpi_cur',       solver='mpi',     method='j',                 nhood='all', ) )
         sch.operate( dict(name='cur_exchange',  solver='tile',    method='exchange_currents', nhood='local', args=[grid,], ) )
@@ -894,7 +895,6 @@ if __name__ == "__main__":
         #antenna.get_brms(grid)
         if lap > conf.rad_pcap/conf.cfl: # add external current for t > H_pc/c
             sch.operate( dict(name='add_antenna', solver='antenna', method='add_ext_cur', nhood='local', ) )
-
 
 
         #if conf.oneD: # rotating frame current (TODO does not work)
