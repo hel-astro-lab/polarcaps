@@ -189,6 +189,18 @@ class Configuration_Pulsar(Configuration):
         self.gam_rad *= self.bratio**-0.5
         self.gam_rad *= ( 1.5*self.lamC/self.h_pcap/alphaf)**0.25
 
+
+        r_e = 2.8179e-13 #cm
+        deltax = 4.0*np.pi*self.cfl**2*r_e*self.Nmp
+        sigT  = 6.65246e-25  # Thomson cross section; cm^2
+        #n_x = 1e21 # cm^-3 for delgam_x = 1e-3, should calculate this directly
+        n_x = self.ninj_phots*self.xpc*deltax**-3
+        h_pcap_cm = self.h_pcap*deltax
+
+        self.gam_rad_comp = self.gam_gap**0.5
+        self.gam_rad_comp *= self.delgam_x**-0.5 #m_e c^2 / kT = 1.0 / delgam_x
+        self.gam_rad_comp *= (0.28/(sigT*n_x*h_pcap_cm))**0.5
+
         # radiation length (distance that the particle travels before reaching the limit)
         self.len_rad = (self.gam_rad/self.gam_gap)*self.h_pcap # simpler v2
 
@@ -252,9 +264,14 @@ class Configuration_Pulsar(Configuration):
             print("phys:")
             print("phys:        gam_gap:", self.gam_gap)
             print("phys:        gam_rad:", self.gam_rad)
+            print("phys:        gam_rad_comp:", self.gam_rad_comp)
             print("phys:    g_rad/g_gap:", self.gam_rad/self.gam_gap)
+            print("phys:    g_rad_comp/g_gap:", self.gam_rad_comp/self.gam_gap)
+            print("phys:    h_pcap_cm:", h_pcap_cm)
+
             print("phys:        len_rad:", self.len_rad)
             print("star:    xcurv:", (3.0/2.0)*self.bratio*(self.rg/self.rad_curv)*self.gam_rad**3)
+
 
         #--------------------------------------------------
         # default normalization
@@ -264,7 +281,7 @@ class Configuration_Pulsar(Configuration):
         self.j_norm = abs(self.qe)*self.nGJ*self.cfl**2 # j_m \Delta t # abs(self.qe)*self.ppc*2*self.cfl**2
         self.p_norm = self.ppc 
         self.x_norm = max(self.xpc,1)
-        self.t_norm = self.rad_pcap/self.cfl  # t_pc = R_pc/c; lightcrossing itme across polar cap
+        self.t_norm = self.rad_pcap/self.cfl  # t_pc = R_pc/c; lightcrossing time across polar cap
 
 
         # DONE
