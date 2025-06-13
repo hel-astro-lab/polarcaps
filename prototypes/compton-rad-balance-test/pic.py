@@ -580,8 +580,8 @@ if __name__ == "__main__":
     #for ispc in [0, 1, 2]: #electrons & positrons
     #    mpi_comm_size = grid.size() if not(conf.mpi_task_mode) else grid.size() - 1
     #    n_local_tiles = int(conf.Nx*conf.Ny*conf.Nz/mpi_comm_size)
-    #    #print("average n_local_tiles:", n_local_tiles, " / ", mpi_comm_size)
-
+    #    #print("average n_local_tiles: ", n_local_tiles, " / ", mpi_comm_size)
+    #    #print("conf.n_test_prtcsl: ",conf.n_test_prtcls)
     #    prtcl_writer = pypic.TestPrtclWriter(
     #            conf.outdir,
     #            conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh,

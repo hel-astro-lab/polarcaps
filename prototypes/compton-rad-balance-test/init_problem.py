@@ -207,7 +207,7 @@ class Configuration_Pulsar(Configuration):
         #self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp**2/(ninj_phots_per_cell*self.h_pcap))**0.5
         
         #Use this formula when manually adding the photons:
-        self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**4*self.Nmp**2/(self.xpc*self.h_pcap))**0.5
+        self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**4*self.Nmp/(self.xpc*self.h_pcap))**0.5
 
         # radiation length (distance that the particle travels before reaching the limit)
         self.len_rad = (self.gam_rad/self.gam_gap)*self.h_pcap # simpler v2
@@ -336,6 +336,7 @@ def velocity_profile(xloc, ispcs, conf):
         )
     elif ispcs == 2: # photons
         ux, uy, uz, uu = pytools.sample_blackbody(delgam)
+        #ux = np.abs(ux) #to have photons moving only to positive x-direction
 
         #if np.isnan(ux) or np.isnan(uy) or np.isnan(uz) or np.isnan(uu):
         #    sys.exit()
