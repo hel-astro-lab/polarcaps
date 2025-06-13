@@ -29,7 +29,7 @@ class QEDToolset:
         self.xylims = (1e2, 1e10) #(1e-2, 1e6) # photon ylim (1e-4, 1e2)
 
         self.pxlims = (-2, 7) # pair xlim
-        self.pylims = (1e1, 1e6) # pair ylim
+        self.pylims = (1e-6, 1e6) # pair ylim
 
         self.wxlims = (-1, 7) # pair wlim
         self.hhlims = (0, self.nh) # spatial box height limits

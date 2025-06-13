@@ -152,7 +152,9 @@ class Configuration_Pulsar(Configuration):
         #self.rad_curv_shift += 6 # pad with some cells to avoid boundary effects close to grid limit
         self.rad_curv_shift = 5 # NOTE using flat surface 
 
-        self.height_atms = 3 # add padding; this is the height of the atmosphere at r=Rpc in units of cells
+        self.height_atms = 1 #3 # add padding; this is the height of the atmosphere at r=Rpc in units of cells
+        self.wph = self.wph
+
 
         # normalization coefficient for internal dipole coordinate system
         # defined so that we have B_* at the star's surface
@@ -184,21 +186,40 @@ class Configuration_Pulsar(Configuration):
         self.rad_curv = self.rad_star**2/self.rad_pcap
 
         # gamma_rad, radiation reaction limit where gap gains equals radiation losses
-        self.gam_rad  = self.gam_gap**0.25
-        self.gam_rad *= (self.rg/self.rad_curv)**-0.5
-        self.gam_rad *= self.bratio**-0.5
-        self.gam_rad *= ( 1.5*self.lamC/self.h_pcap/alphaf)**0.25
+        self.gam_rad_synch  = self.gam_gap**0.25
+        self.gam_rad_synch *= (self.rg/self.rad_curv)**-0.5
+        self.gam_rad_synch *= self.bratio**-0.5
+        self.gam_rad_synch *= ( 1.5*self.lamC/self.h_pcap/alphaf)**0.25
 
-        ninj_phots_per_cell = self.ninj_phots*self.xpc
+        ninj_phots_per_cell = self.ninj_phots*self.xpc*self.wph
         self.gam_rad_comp = self.gam_gap**0.5
         self.gam_rad_comp *= self.delgam_x**-0.5 #m_e c^2 / kT = 1.0 / delgam_x
-        self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp**2/(ninj_phots_per_cell*self.h_pcap**2))**0.5
+        self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp/(ninj_phots_per_cell*self.h_pcap))**0.5
 
         # radiation length (distance that the particle travels before reaching the limit)
-        self.len_rad = (self.gam_rad/self.gam_gap)*self.h_pcap # simpler v2
+        self.len_rad = (self.gam_rad_synch/self.gam_gap)*self.h_pcap # simpler v2
 
         # characteristic synchrotron photon energy
-        self.xsyn = 1.5*self.bratio*(self.rg/self.rad_curv)*self.gam_rad**3
+        self.xsyn = 1.5*self.bratio*(self.rg/self.rad_curv)*self.gam_rad_synch**3
+
+        hplanck = 6.6261e-27 #erg s
+        c = 2.9979e10 #cm/s
+        kev2erg = 1.602176633e-9
+        mec2_inkev = 511.0
+        Tkev = 0.5
+        kTperhc = kev2erg*Tkev/(hplanck*c)
+        nBB = 16.0*np.pi*1.202*kTperhc**3
+        x2_av_ene = 2.7*Tkev/mec2_inkev
+
+        comp_scale = 6.0*np.pi*self.cfl**5*self.Nmp/(ninj_phots_per_cell*self.h_pcap)
+        x1 = 1e5
+        x2 = x2_av_ene
+        xpr = x1*x2
+        efac = 0.652*(xpr**2-1.0)*np.log(xpr)*np.heaviside(xpr-1.0,1.0)/xpr**3
+        efac = 1.0/efac
+        lmfp_per_h = comp_scale*efac
+        #print("comp_scale: ", comp_scale)
+        #print("lmfp_per_h:", lmfp_per_h)
 
         #--------------------------------------------------
         # extra undefined parameters
@@ -256,14 +277,19 @@ class Configuration_Pulsar(Configuration):
 
             print("phys:")
             print("phys:        gam_gap:", self.gam_gap)
-            print("phys:        gam_rad:", self.gam_rad)
+            print("phys:        gam_rad_synch:", self.gam_rad_synch)
             print("phys:        gam_rad_comp:", self.gam_rad_comp)
-            print("phys:    g_rad/g_gap:", self.gam_rad/self.gam_gap)
+            print("phys:    g_rad_synch/g_gap:", self.gam_rad_synch/self.gam_gap)
             print("phys:    g_rad_comp/g_gap:", self.gam_rad_comp/self.gam_gap)
 
-            print("phys:        len_rad:", self.len_rad)
-            print("star:    xcurv:", (3.0/2.0)*self.bratio*(self.rg/self.rad_curv)*self.gam_rad**3)
+            print("phys:    2-photon mfp/H:", lmfp_per_h)
 
+            print("phys:        len_rad:", self.len_rad)
+            print("star:    xcurv:", (3.0/2.0)*self.bratio*(self.rg/self.rad_curv)*self.gam_rad_synch**3)
+
+        #if(self.gam_rad > self.gam_rad_comp):
+        #    self.gam_rad = self.gam_rad_comp
+        self.gam_rad = self.gam_rad_comp
         #--------------------------------------------------
         # default normalization
 
@@ -343,9 +369,9 @@ def density_profile(xloc, ispcs, conf):
     return 0 # NOTE no injection in the beginning of the simulation
     
     # TODO debug
-    #if xloc[0] > conf.height_atms + 1:
+    #if xloc[0] > conf.height_atms + 11:
     #    return 0
-    #if xloc[0] < conf.height_atms:
+    #if xloc[0] < conf.height_atms + 10:
     #    return 0
 
     if ispcs in [0,1]:

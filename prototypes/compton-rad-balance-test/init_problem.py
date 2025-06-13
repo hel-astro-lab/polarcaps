@@ -203,8 +203,7 @@ class Configuration_Pulsar(Configuration):
         
         self.gam_rad_comp = self.gam_gap**0.5
         self.gam_rad_comp *= self.delgam_x**-0.5 #m_e c^2 / kT = 1.0 / delgam_x
-        #self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp**2/(ninj_phots_per_cell*self.h_pcap**2))**0.5
-        #self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp**2/(ninj_phots_per_cell*self.h_pcap))**0.5
+        #self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp/(ninj_phots_per_cell*self.h_pcap))**0.5
         
         #Use this formula when manually adding the photons:
         self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**4*self.Nmp/(self.xpc*self.h_pcap))**0.5
