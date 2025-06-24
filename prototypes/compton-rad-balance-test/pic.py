@@ -214,11 +214,11 @@ if __name__ == "__main__":
 
         axs[2,2].set_xlabel(r'lap')
         axs[2,2].set_ylabel(r'$n_p/n_0$') 
-        axs[2,2].set_ylim((1e-3, 1e4))
+        axs[2,2].set_ylim((1e1, 1e8))
 
         axs[2,3].set_xlabel(r'lap')
         axs[2,3].set_ylabel(r'$N_p/N_0$') 
-        axs[2,3].set_ylim((1e-3, 1e4))
+        axs[2,3].set_ylim((1e1, 1e6))
 
         # 2d histogram
         axs[3,0].set_xscale("linear")
@@ -522,11 +522,11 @@ if __name__ == "__main__":
     f = pyrunko.qed.Compton("e-", "ph")
     g = pyrunko.qed.Compton("e+", "ph")
 
-    #mc.add_interaction(a) # ON                      # phot-ann
+    #mc.add_interaction(a) # ON                      # phot-ann #this for MSP
     #mc.add_interaction(b) # ON                      # pair-ann
     #mc.add_interaction(c) # off for double counting # pair-ann
-    #mc.add_interaction(d) # ON
-    #mc.add_interaction(e) # ON
+    mc.add_interaction(d) # ON
+    mc.add_interaction(e) # ON
     #mc.add_interaction(f) # off for double counting
     #mc.add_interaction(g) # off for double counting
 
@@ -545,8 +545,8 @@ if __name__ == "__main__":
     for intr in [a0, a1, b]:
         intr.B_QED = conf.B_QED #B_QED is now Schwinger field already in init_problem.py
 
-    mc.add_interaction(a0) # electron synchrotron
-    mc.add_interaction(a1) # positron synchrotron
+    #mc.add_interaction(a0) # electron synchrotron
+    #mc.add_interaction(a1) # positron synchrotron
     #mc.add_interaction(b ) #  multi photon pair creation
 
     if conf.oneD: # set 1D curvature parameters for QED reactions
@@ -580,8 +580,8 @@ if __name__ == "__main__":
     #for ispc in [0, 1, 2]: #electrons & positrons
     #    mpi_comm_size = grid.size() if not(conf.mpi_task_mode) else grid.size() - 1
     #    n_local_tiles = int(conf.Nx*conf.Ny*conf.Nz/mpi_comm_size)
-    #    #print("average n_local_tiles:", n_local_tiles, " / ", mpi_comm_size)
-
+    #    #print("average n_local_tiles: ", n_local_tiles, " / ", mpi_comm_size)
+    #    #print("conf.n_test_prtcsl: ",conf.n_test_prtcls)
     #    prtcl_writer = pypic.TestPrtclWriter(
     #            conf.outdir,
     #            conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh,
@@ -724,7 +724,7 @@ if __name__ == "__main__":
             #timer.stop_comp("ep_inj")
 
             #--------------------------------------------------
-            if False: #True:
+            if True:
                 timer.start_comp("qed2")
                 for tile in pytools.tiles_local(grid):
                     i,j,k = pytools.get_index(tile, conf)
@@ -1209,8 +1209,12 @@ if __name__ == "__main__":
                 axs[2,2].plot(laps[-1], toolset.storage.data['num_e-'][-1], color='C0', marker='.')
                 axs[2,2].plot(laps[-1], toolset.storage.data['num_e+'][-1], color='C1', marker='.')
                 axs[2,2].plot(laps[-1], toolset.storage.data['num_ph'][-1], color='C2', marker='x')
+                axs[2,2].axhline(y=((1.0/conf.cfl)*star.ninj_phots), color='blue')       
+                axs[2,2].axhline(y=((conf.h_pcap/conf.cfl)*star.ninj_phots), color='black')
                 axs[2,2].plot(laps_sparse[-1], toolset.storage.data['num_esc'][-1], color='C3', marker='.')
 
+
+                print("Nphot_i/Nphot_max_appr =", toolset.storage.data['num_ph'][-1]/((1.0/conf.cfl)*star.ninj_phots))
 
                 # QED analysis
                 toolset.save(lap, conf)
