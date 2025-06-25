@@ -9,6 +9,8 @@ from matplotlib.cm import get_cmap
 from matplotlib import colorbar
 
 from numpy import pi, log, log10, exp, sin, cos 
+from scipy.signal import savgol_filter
+
 
 # runko tools
 import pytools
@@ -343,6 +345,11 @@ if __name__ == "__main__":
         print('e', e)
         print('j', j)
         print('b', b)
+
+        # smooth current 
+        if True:
+            jx = savgol_filter(jx, 300, 2)
+
         
         axs[3,0].plot(hh, ex, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
         axs[3,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
