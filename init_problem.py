@@ -183,7 +183,8 @@ class Configuration_Pulsar(Configuration):
         self.gam_gap = self.vrot*self.bstar*self.rad_pcap/(2*self.cfl**2) 
 
         # 1D curvature radius of a field line
-        self.rad_curv = self.rad_star**2/self.rad_pcap
+        #self.rad_curv = self.rad_star**2/self.rad_pcap
+        self.rad_curv = self.rad_curv*self.rad_pcap
 
         # gamma_rad, radiation reaction limit where gap gains equals radiation losses
         self.gam_rad_synch  = self.gam_gap**0.25
@@ -258,8 +259,8 @@ class Configuration_Pulsar(Configuration):
             print("star:         B_norm:", self.b_dipole_norm)
             print("star: rad_curv_shift:", self.rad_curv_shift)
             print("star:    height_atms:", self.height_atms)
-            print("star:    r_g/R_curv:", self.rg/self.rad_curv)
-            print("star:    R_curv:", self.rad_curv)
+            print("star:     r_g/R_curv:", self.rg/self.rad_curv)
+            print("star:         R_curv:", self.rad_curv)
 
             print("init:")
             print("init:           lamC:", self.lamC)
@@ -274,6 +275,10 @@ class Configuration_Pulsar(Configuration):
             print("init:          m+-me:", self.mi)
             print("init:        omega_p:", self.omp)
             print("init:    R = c/omega:", self.c_omp, " dx")
+            print("init: R_pc / c/omega:", self.rad_pcap/self.c_omp)
+
+            print("time")
+            print("time:         t_esc:", self.rad_pcap/self.cfl, " laps")
 
             print("phys:")
             print("phys:        gam_gap:", self.gam_gap)
@@ -284,7 +289,7 @@ class Configuration_Pulsar(Configuration):
 
             print("phys:  2-photon mfp/H:", lmfp_per_h)
 
-            print("phys:         len_rad:", self.len_rad)
+            print("phys:         len_rad:", self.len_rad, " len_rad/H_pc", self.len_rad/self.rad_pcap)
             print("star:           xcurv:", (3.0/2.0)*self.bratio*(self.rg/self.rad_curv)*self.gam_rad_synch**3)
 
         #if(self.gam_rad > self.gam_rad_comp):
