@@ -194,7 +194,7 @@ class Configuration_Pulsar(Configuration):
         ninj_phots_per_cell = self.ninj_phots*self.xpc*self.wph
         self.gam_rad_comp = self.gam_gap**0.5
         self.gam_rad_comp *= self.delgam_x**-0.5 #m_e c^2 / kT = 1.0 / delgam_x
-        self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp/(ninj_phots_per_cell*self.h_pcap))**0.5
+        self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp/(max(ninj_phots_per_cell,1)*self.h_pcap))**0.5
 
         # radiation length (distance that the particle travels before reaching the limit)
         self.len_rad = (self.gam_rad_synch/self.gam_gap)*self.h_pcap # simpler v2
@@ -211,7 +211,7 @@ class Configuration_Pulsar(Configuration):
         nBB = 16.0*np.pi*1.202*kTperhc**3
         x2_av_ene = 2.7*Tkev/mec2_inkev
 
-        comp_scale = 6.0*np.pi*self.cfl**5*self.Nmp/(ninj_phots_per_cell*self.h_pcap)
+        comp_scale = 6.0*np.pi*self.cfl**5*self.Nmp/(max(ninj_phots_per_cell,1)*self.h_pcap)
         x1 = 1e5
         x2 = x2_av_ene
         xpr = x1*x2
@@ -277,15 +277,15 @@ class Configuration_Pulsar(Configuration):
 
             print("phys:")
             print("phys:        gam_gap:", self.gam_gap)
-            print("phys:        gam_rad_synch:", self.gam_rad_synch)
-            print("phys:        gam_rad_comp:", self.gam_rad_comp)
-            print("phys:    g_rad_synch/g_gap:", self.gam_rad_synch/self.gam_gap)
-            print("phys:    g_rad_comp/g_gap:", self.gam_rad_comp/self.gam_gap)
+            print("phys:    gam_rad_syn:", self.gam_rad_synch)
+            print("phys:   gam_rad_comp:", self.gam_rad_comp)
+            print("phys:g_rad_syn/g_gap:", self.gam_rad_synch/self.gam_gap)
+            print("phys:g_rad_com/g_gap:", self.gam_rad_comp/self.gam_gap)
 
-            print("phys:    2-photon mfp/H:", lmfp_per_h)
+            print("phys:  2-photon mfp/H:", lmfp_per_h)
 
-            print("phys:        len_rad:", self.len_rad)
-            print("star:    xcurv:", (3.0/2.0)*self.bratio*(self.rg/self.rad_curv)*self.gam_rad_synch**3)
+            print("phys:         len_rad:", self.len_rad)
+            print("star:           xcurv:", (3.0/2.0)*self.bratio*(self.rg/self.rad_curv)*self.gam_rad_synch**3)
 
         #if(self.gam_rad > self.gam_rad_comp):
         #    self.gam_rad = self.gam_rad_comp

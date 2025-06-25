@@ -522,14 +522,26 @@ if __name__ == "__main__":
     f = pyrunko.qed.Compton("e-", "ph")
     g = pyrunko.qed.Compton("e+", "ph")
 
-    mc.add_interaction(a) # ON                      # phot-ann
-    #mc.add_interaction(b) # ON                      # pair-ann
-    #mc.add_interaction(c) # off for double counting # pair-ann
-    mc.add_interaction(d) # ON
-    mc.add_interaction(e) # ON
-    #mc.add_interaction(f) # off for double counting
-    #mc.add_interaction(g) # off for double counting
 
+    # Different run-time modes for automating the MC interaction selection
+    qed_mode_msp = False
+    qed_mode_rp  = True
+    
+    # Set 2-body MC processes 
+    if qed_mode_msp:
+        if sch.is_master: print("loading MSP 2-body QED processes..."); sys.stdout.flush()
+
+        mc.add_interaction(a) # ON                      # phot-ann
+        #mc.add_interaction(b) # ON                      # pair-ann
+        #mc.add_interaction(c) # off for double counting # pair-ann
+        mc.add_interaction(d) # ON
+        mc.add_interaction(e) # ON
+        #mc.add_interaction(f) # off for double counting
+        #mc.add_interaction(g) # off for double counting
+
+    elif qed_mode_rp:
+        if sch.is_master: print("loading RP 2-body QED processes..."); sys.stdout.flush()
+        #none
 
     #--------------------------------------------------
     mc.prob_norm_onebody = conf.N_onebody/conf.N_qdt # units of [TODO]
@@ -545,9 +557,17 @@ if __name__ == "__main__":
     for intr in [a0, a1, b]:
         intr.B_QED = conf.B_QED #B_QED is now Schwinger field already in init_problem.py
 
-    #mc.add_interaction(a0) # electron synchrotron
-    #mc.add_interaction(a1) # positron synchrotron
-    #mc.add_interaction(b ) #  multi photon pair creation
+
+    if qed_mode_msp:
+        if sch.is_master: print("loading MSP 1-body QED processes..."); sys.stdout.flush()
+        #none
+    elif qed_mode_rp:
+        if sch.is_master: print("loading RP 1-body QED processes..."); sys.stdout.flush()
+
+        mc.add_interaction(a0) # electron synchrotron
+        mc.add_interaction(a1) # positron synchrotron
+        mc.add_interaction(b ) #  multi photon pair creation
+
 
     if conf.oneD: # set 1D curvature parameters for QED reactions
         mc.use_vir_curvature = True
@@ -900,12 +920,12 @@ if __name__ == "__main__":
             sch.operate( dict(name='add_antenna', solver='antenna', method='add_ext_cur', nhood='local', ) )
 
 
-        #if conf.oneD: # rotating frame current (TODO does not work)
-        #    #update bcs
-        #    sch.operate( dict(name='mpi_b3', solver='mpi', method='b', ) )
-        #    sch.operate( dict(name='mpi_e3', solver='mpi', method='e', ) )
-        #    sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid,[1,2] ], nhood='local', ) )
-        #    sch.operate( dict(name='add_jm', solver='lwall', method='update_j',                 nhood='local', ) )
+        if conf.oneD and qed_mode_rp: # rotating frame current (TODO does not work)
+            #update bcs
+            sch.operate( dict(name='mpi_b3', solver='mpi', method='b', ) )
+            sch.operate( dict(name='mpi_e3', solver='mpi', method='e', ) )
+            sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid,[1,2] ], nhood='local', ) )
+            sch.operate( dict(name='add_jm', solver='lwall', method='update_j',                           nhood='local', ) )
 
 
         # --------------------------------------------------
