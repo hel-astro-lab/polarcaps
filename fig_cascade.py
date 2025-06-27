@@ -460,7 +460,7 @@ if __name__ == "__main__":
     fig.subplots_adjust(left=axleft, bottom=axbottom, right=axright, top=axtop)
 
 
-    slap = str(args.lap).rjust(5, '0')
+    slap = str(args.lap).rjust(8, '0')
 
     #fname = fdir + 'fig_casc_' + slap + '.pdf' 
     #plt.savefig(fname)
