@@ -114,8 +114,11 @@ class Configuration_Pulsar(Configuration):
             #self.rad_pcap = 0.6*self.Lx//4 #same size as would be for 3D sim (since there Nz = Nx/2)
             #self.rad_star = 10*self.rad_pcap
 
+            # medium gap setup
+            #self.rad_pcap = 0.8*self.Lx
+
             # large gap setup
-            self.rad_pcap = 0.8*self.Lx
+            self.rad_pcap = 1.0*self.Lx
             self.rad_star = 2*self.rad_pcap #3*self.rad_pcap #10*self.rad_pcap
         else:
             sys.error() # not implemented
