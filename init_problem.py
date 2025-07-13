@@ -46,6 +46,9 @@ class Configuration_Pulsar(Configuration):
             self.outdir += "inje" + simplify_string(self.ninj_pairs)
             self.outdir += "injx" + simplify_string(self.ninj_phots)
             self.outdir += "_"
+            self.outdir += "jm" + simplify_string(self.jm_scaling)
+            self.outdir += "rc" + simplify_string(self.rad_curv)
+            self.outdir += "_"
 
             #--------------------------------------------------
             # QED
