@@ -75,7 +75,7 @@ if __name__ == "__main__":
                 if i <= nrow_fig-2:
                     axs[i,j].tick_params(labelbottom=False)
 
-                axs[i,j].set_xlim((0.0, 20.0))
+                axs[i,j].set_xlim((0.0, 30.0))
 
             #axs[0,0].tick_params(labeltop=True)
 
@@ -176,6 +176,10 @@ if __name__ == "__main__":
 
         # read from output file
         fname = conf.outdir + '/qed_{}.h5'.format(str(lap))
+        if not(os.path.isfile(fname)):
+            continue
+        print(lap, fname)
+
         f5 = h5.File(fname,'r')
 
         hem = f5['h2_ene_e-'][()]
@@ -303,6 +307,8 @@ if __name__ == "__main__":
 
     #--------------------------------------------------
 
+    tt = tt[0:len(mpes)] # cut time array into same length as number of files analyzed
+
     #v1 with electrons and positrons
     #axs[0,0].plot(tt, mpes, color="C0", lw=0.9, linestyle="solid")
     #axs[0,0].plot(tt, mpps, color="C0", lw=0.9, linestyle="dashed")
@@ -339,7 +345,7 @@ if __name__ == "__main__":
 
     axs[0,0].set_yscale("log")
 
-    axs[0,0].set_ylim((0.1, 1e2))
+    axs[0,0].set_ylim((0.1, 1e6))
     axs[1,0].set_ylim((-0.1, 1.1))
     axs[2,0].set_ylim((-0.3, 0.3))
     #axs[2,0].set_ylim((-1.0, 1.0))

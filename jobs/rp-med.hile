@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J rp-oned
+#SBATCH -J rp-jm1.5-ninj
 #SBATCH -C c
 #SBATCH --output=%J.out
 #SBATCH --error=%J.err
@@ -7,7 +7,7 @@
 #SBATCH --ntasks-per-node=64   # 128 for amd epyc romes
 #SBATCH -t 30-00:00:00         # max run time
 #SBATCH --nodes=1              # nodes reserved
-#SBATCH --mem-per-cpu=14G       # max 7G/128 cores
+#SBATCH --mem-per-cpu=14G      # max 7G/128 cores
 #SBATCH --distribution=block:block
 
 module load libfabric
