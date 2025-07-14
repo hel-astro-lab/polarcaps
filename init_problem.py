@@ -203,11 +203,21 @@ class Configuration_Pulsar(Configuration):
         self.gam_rad_comp *= self.delgam_x**-0.5 #m_e c^2 / kT = 1.0 / delgam_x
         self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp/(max(ninj_phots_per_cell,1)*self.h_pcap))**0.5
 
-        # radiation length (distance that the particle travels before reaching the limit)
+        # radiation length (distance that the particle travels before reaching the radiation limit)
         self.len_rad = (self.gam_rad_synch/self.gam_gap)*self.h_pcap # simpler v2
 
         # characteristic synchrotron photon energy
         self.xsyn = 1.5*self.bratio*(self.rg/self.rad_curv)*self.gam_rad_synch**3
+
+        # 1-photon pair creation mean free path
+
+        lmfp1_per_h  = self.rad_curv/(self.xsyn*self.bratio) # prefactor
+        lmfp1_per_h *= 1.0/( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*self.xsyn**2 ) )**(3/8) )
+                            - np.log( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*self.xsyn**2 ) )**(3/8) )) )
+        lmfp1_per_h *= 1.0/self.rad_pcap # into units of gap height
+
+        #--------------------------------------------------
+        # Calculation of 2-photon pair creation mean free path
 
         hplanck = 6.6261e-27 #erg s
         c = 2.9979e10 #cm/s
@@ -224,9 +234,9 @@ class Configuration_Pulsar(Configuration):
         xpr = x1*x2
         efac = 0.652*(xpr**2-1.0)*np.log(xpr)*np.heaviside(xpr-1.0,1.0)/xpr**3
         efac = 1.0/efac
-        lmfp_per_h = comp_scale*efac
+        lmfp2_per_h = comp_scale*efac
         #print("comp_scale: ", comp_scale)
-        #print("lmfp_per_h:", lmfp_per_h)
+        #print("lmfp2_per_h:", lmfp2_per_h)
 
         #--------------------------------------------------
         # extra undefined parameters
@@ -290,13 +300,15 @@ class Configuration_Pulsar(Configuration):
             print("phys:        gam_gap:", self.gam_gap)
             print("phys:    gam_rad_syn:", self.gam_rad_synch)
             print("phys:   gam_rad_comp:", self.gam_rad_comp)
-            print("phys:g_rad_syn/g_gap:", self.gam_rad_synch/self.gam_gap)
-            print("phys:g_rad_com/g_gap:", self.gam_rad_comp/self.gam_gap)
+            print("phys:    g_syn/g_gap:", self.gam_rad_synch/self.gam_gap)
+            print("phys:    g_com/g_gap:", self.gam_rad_comp/self.gam_gap)
 
-            print("phys:  2-photon mfp/H:", lmfp_per_h)
+            print("phys:  1-photon mfp/H:", lmfp1_per_h)
+            print("phys:  2-photon mfp/H:", lmfp2_per_h)
 
-            print("phys:         len_rad:", self.len_rad, " len_rad/H_pc", self.len_rad/self.rad_pcap)
-            print("star:           xcurv:", (3.0/2.0)*self.bratio*(self.rg/self.rad_curv)*self.gam_rad_synch**3)
+            print("phys:         len_rad:", self.len_rad)
+            print("phys:           xcurv:", self.xsyn)
+
 
         #if(self.gam_rad > self.gam_rad_comp):
         #    self.gam_rad = self.gam_rad_comp
