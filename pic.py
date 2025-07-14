@@ -76,14 +76,15 @@ if __name__ == "__main__":
     # initialize auxiliary tools
     sch  = pytools.Scheduler() # Set MPI aware task scheduler
     args = pytools.parse_args() # parse command line arguments
-    tplt = pytools.TerminalPlot(13, 13) # terminal plotting tool
-
 
     # create conf object with simulation parameters based on them
     conf = Configuration(args.conf_filename, do_print=sch.is_master)
     sch.conf = conf # remember to update scheduler
-
     if conf.mpi_task_mode: sch.switch_to_task_mode()
+
+    # terminal plotting 
+    if conf.oneD:                tplt = pytools.TerminalPlot(38, 1) 
+    if conf.twoD or conf.threeD: tplt = pytools.TerminalPlot(13, 13)
 
     # --------------------------------------------------
     # Timer for profiling
@@ -981,22 +982,14 @@ if __name__ == "__main__":
             #--------------------------------------------------
             # terminal plot 
             if sch.is_master:
-
-                #epar
-                #d = fld_writer.get_slice(1) # use ex xy-slice as the image
-                #d_norm = 0.1*conf.binit #
-
-                # rho
-                #d = fld_writer.get_slice(9) # rho
-                #d_norm = conf.ppc
-                #tplt.plot(np.abs(d)/d_norm)
-
                 tplt.col_mode = False
 
                 if conf.oneD:
-                    #tplt.plot_panels( (2,3),
-                    #)
-                    print('terminal plot not implemented')
+                    tplt.plot_panels( (2,1),
+                    dict(axs=(0,0), data=fld_writer.get_slice( 0)/conf.e_norm ,   name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(1,0), data=fld_writer.get_slice( 9)/conf.p_norm   , name='ne', cmap='viridis',vmin= 0, vmax=100),
+                    )
+                    #print('terminal plot not implemented')
 
                 elif conf.twoD:
                     tplt.plot_panels( (2,3),
