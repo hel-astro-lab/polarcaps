@@ -672,6 +672,8 @@ if __name__ == "__main__":
     star.phase_mu = 0.0
     star.phase_om = 0.0
     star.delta    = 0.5*conf.height_atms #4.0 #1  # in units of cells; radial smoothing function sharpness; 2x delta = about tanh limit
+    
+    if conf.oneD: star.set_const_b = True # make background B constant (set to be dipole value at r=R)
 
     star.Nx = conf.Lx
     star.Ny = conf.Ly
