@@ -752,47 +752,45 @@ if __name__ == "__main__":
             #timer.stop_comp("ep_inj")
 
             #--------------------------------------------------
-            if conf.qed_mode and lap % conf.qed_step == 0:
+            timer.start_comp("qed2")
+            for tile in pytools.tiles_local(grid):
+                i,j,k = pytools.get_index(tile, conf)
+                mc.solve_twobody(tile)
+            timer.stop_comp("qed2")
 
-                timer.start_comp("qed2")
-                for tile in pytools.tiles_local(grid):
-                    i,j,k = pytools.get_index(tile, conf)
-                    mc.solve_twobody(tile)
-                timer.stop_comp("qed2")
+            #--------------------------------------------------
+            timer.start_comp("ph_esc")
 
-                #--------------------------------------------------
-                timer.start_comp("ph_esc")
+            # ver2: local tau
+            tau_tile_min = 1e7
+            tau_tile_max = 0
+            for tile in pytools.tiles_local(grid): 
+                mc.tau_global = 0.0 # clear tau measure 
+                mc.comp_tau(tile, conf.N_wgt) # sum over tiles
 
-                # ver2: local tau
-                tau_tile_min = 1e7
-                tau_tile_max = 0
-                for tile in pytools.tiles_local(grid): 
-                    mc.tau_global = 0.0 # clear tau measure 
-                    mc.comp_tau(tile, conf.N_wgt) # sum over tiles
+                # TODO
+                #mc.leak_photons(tile, conf.t_c/conf.dt/conf.N_qdt, conf.tau_ext)  # apply photon escape
+                tau_tile_min = mc.tau_global if mc.tau_global < tau_tile_min else tau_tile_min
+                tau_tile_max = mc.tau_global if mc.tau_global > tau_tile_max else tau_tile_max
 
-                    # TODO
-                    #mc.leak_photons(tile, conf.t_c/conf.dt/conf.N_qdt, conf.tau_ext)  # apply photon escape
-                    tau_tile_min = mc.tau_global if mc.tau_global < tau_tile_min else tau_tile_min
-                    tau_tile_max = mc.tau_global if mc.tau_global > tau_tile_max else tau_tile_max
+            # store values
+            toolset.tau_tile_min = tau_tile_min
+            toolset.tau_tile_max = tau_tile_max
 
-                # store values
-                toolset.tau_tile_min = tau_tile_min
-                toolset.tau_tile_max = tau_tile_max
+            # ver1; global tau
+            #mc.tau_global = 0.0 # clear tau measure 
+            #for tile in pytools.tiles_local(grid): 
+            #    mc.comp_tau(tile, conf.N_tau) # sum over tiles # TODO
+            #
+            # MPI sum over ranks TODO no tau reduction
+            #tau_global = mc.tau_global
+            #tau_global = MPI.COMM_WORLD.allreduce(tau_global, op=MPI.SUM)
+            #mc.tau_global = tau_global
 
-                # ver1; global tau
-                #mc.tau_global = 0.0 # clear tau measure 
-                #for tile in pytools.tiles_local(grid): 
-                #    mc.comp_tau(tile, conf.N_tau) # sum over tiles # TODO
-                #
-                # MPI sum over ranks TODO no tau reduction
-                #tau_global = mc.tau_global
-                #tau_global = MPI.COMM_WORLD.allreduce(tau_global, op=MPI.SUM)
-                #mc.tau_global = tau_global
+            #for tile in pytools.tiles_local(grid):
+            #    mc.leak_photons(tile, conf.t_c/conf.dt, conf.tau_ext)  # apply photon escape
 
-                #for tile in pytools.tiles_local(grid):
-                #    mc.leak_photons(tile, conf.t_c/conf.dt, conf.tau_ext)  # apply photon escape
-
-                timer.stop_comp("ph_esc")
+            timer.stop_comp("ph_esc")
 
 
         # --------------------------------------------------
