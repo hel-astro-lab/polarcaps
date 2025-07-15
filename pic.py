@@ -730,7 +730,7 @@ if __name__ == "__main__":
         sch.lwall.phase_om += conf.Om_star
 
         # --------------------------------------------------
-        # QED interaction loop
+        # 2-body QED reactions 
         if conf.qed_mode and lap % conf.qed_step == 0:
 
             #timer.start_comp("ph_inj")
@@ -750,64 +750,47 @@ if __name__ == "__main__":
             #timer.stop_comp("ep_inj")
 
             #--------------------------------------------------
-            if True:
+            if conf.qed_mode and lap % conf.qed_step == 0:
+
                 timer.start_comp("qed2")
                 for tile in pytools.tiles_local(grid):
                     i,j,k = pytools.get_index(tile, conf)
                     mc.solve_twobody(tile)
                 timer.stop_comp("qed2")
 
-            #--------------------------------------------------
-            timer.start_comp("ph_esc")
+                #--------------------------------------------------
+                timer.start_comp("ph_esc")
 
-            # ver2: local tau
-            tau_tile_min = 1e7
-            tau_tile_max = 0
-            for tile in pytools.tiles_local(grid): 
-                mc.tau_global = 0.0 # clear tau measure 
-                mc.comp_tau(tile, conf.N_wgt) # sum over tiles
+                # ver2: local tau
+                tau_tile_min = 1e7
+                tau_tile_max = 0
+                for tile in pytools.tiles_local(grid): 
+                    mc.tau_global = 0.0 # clear tau measure 
+                    mc.comp_tau(tile, conf.N_wgt) # sum over tiles
 
-                # TODO
-                #mc.leak_photons(tile, conf.t_c/conf.dt/conf.N_qdt, conf.tau_ext)  # apply photon escape
+                    # TODO
+                    #mc.leak_photons(tile, conf.t_c/conf.dt/conf.N_qdt, conf.tau_ext)  # apply photon escape
+                    tau_tile_min = mc.tau_global if mc.tau_global < tau_tile_min else tau_tile_min
+                    tau_tile_max = mc.tau_global if mc.tau_global > tau_tile_max else tau_tile_max
 
-                tau_tile_min = mc.tau_global if mc.tau_global < tau_tile_min else tau_tile_min
-                tau_tile_max = mc.tau_global if mc.tau_global > tau_tile_max else tau_tile_max
+                # store values
+                toolset.tau_tile_min = tau_tile_min
+                toolset.tau_tile_max = tau_tile_max
 
-            # store values
-            toolset.tau_tile_min = tau_tile_min
-            toolset.tau_tile_max = tau_tile_max
+                # ver1; global tau
+                #mc.tau_global = 0.0 # clear tau measure 
+                #for tile in pytools.tiles_local(grid): 
+                #    mc.comp_tau(tile, conf.N_tau) # sum over tiles # TODO
+                #
+                # MPI sum over ranks TODO no tau reduction
+                #tau_global = mc.tau_global
+                #tau_global = MPI.COMM_WORLD.allreduce(tau_global, op=MPI.SUM)
+                #mc.tau_global = tau_global
 
+                #for tile in pytools.tiles_local(grid):
+                #    mc.leak_photons(tile, conf.t_c/conf.dt, conf.tau_ext)  # apply photon escape
 
-            # ver1; global tau
-            #mc.tau_global = 0.0 # clear tau measure 
-            #for tile in pytools.tiles_local(grid): 
-            #    mc.comp_tau(tile, conf.N_tau) # sum over tiles # TODO
-            #
-            # MPI sum over ranks TODO no tau reduction
-            #tau_global = mc.tau_global
-            #tau_global = MPI.COMM_WORLD.allreduce(tau_global, op=MPI.SUM)
-            #mc.tau_global = tau_global
-
-            #for tile in pytools.tiles_local(grid):
-            #    mc.leak_photons(tile, conf.t_c/conf.dt, conf.tau_ext)  # apply photon escape
-
-            timer.stop_comp("ph_esc")
-
-            # TODO testing second particle comm after QED
-
-            # local and global particle exchange 
-            #sch.operate( dict(name='check_outg_prtcls',     solver='tile',  method='check_outgoing_particles',     nhood='local', ) )
-            #sch.operate( dict(name='pack_outg_prtcls',      solver='tile',  method='pack_outgoing_particles',      nhood='boundary', ) )
-
-            #sch.operate( dict(name='mpi_prtcls',            solver='mpi',   method='p1',                           nhood='all', ) )
-            #sch.operate( dict(name='mpi_prtcls',            solver='mpi',   method='p2',                           nhood='all', ) )
-
-            #sch.operate( dict(name='unpack_vir_prtcls',     solver='tile',  method='unpack_incoming_particles',    nhood='virtual', ) )
-            #sch.operate( dict(name='check_outg_vir_prtcls', solver='tile',  method='check_outgoing_particles',     nhood='virtual', ) )
-            #sch.operate( dict(name='get_inc_prtcls',        solver='tile',  method='get_incoming_particles',       nhood='local', args=[grid,]) )
-
-            #sch.operate( dict(name='del_trnsfrd_prtcls',    solver='tile',  method='delete_transferred_particles', nhood='local', ) )
-            #sch.operate( dict(name='del_vir_prtcls',        solver='tile',  method='delete_all_particles',         nhood='virtual', ) )
+                timer.stop_comp("ph_esc")
 
 
         # --------------------------------------------------
@@ -825,10 +808,6 @@ if __name__ == "__main__":
         sch.operate( dict(name='mpi_b1',    solver='mpi', method='b',                 ) )
         sch.operate( dict(name='upd_bc ',   solver='tile',method='update_boundaries',args=[grid, [2,] ], nhood='local',) )
 
-
-        # interpolate fields and push particles in x and u
-        #sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
-        #sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', ) )
 
         #--------------------------------------------------
         # single-body QED interactions
@@ -872,9 +851,6 @@ if __name__ == "__main__":
         sch.operate( dict(name='push_e',    solver='fldpropE', method='push_e',  nhood='local', ) )
         sch.operate( dict(name='wall_bc_e', solver='lwall',    method='update_e',nhood='local', ) )
 
-
-        # TODO current deposit + MPI was here
-
         # --------------------------------------------------
         # particle communication (only local/boundary tiles)
 
@@ -897,7 +873,6 @@ if __name__ == "__main__":
         # current calculation; charge conserving current deposition
         # clear virtual current arrays for boundary addition after mpi, send currents, and exchange between tiles
         sch.operate( dict(name='comp_curr',     solver='currint', method='solve',             nhood='local', ) )
-        
         
         sch.operate( dict(name='clear_vir_cur', solver='tile',    method='clear_current',     nhood='virtual', ) )
         sch.operate( dict(name='mpi_cur',       solver='mpi',     method='j',                 nhood='all', ) )
@@ -922,14 +897,12 @@ if __name__ == "__main__":
         if lap > conf.rad_pcap/conf.cfl: # add external current for t > H_pc/c
             sch.operate( dict(name='add_antenna', solver='antenna', method='add_ext_cur', nhood='local', ) )
 
-
         if conf.oneD and qed_mode_rp: # rotating frame current (TODO does not work)
             #update bcs
             sch.operate( dict(name='mpi_b3', solver='mpi', method='b', ) )
             sch.operate( dict(name='mpi_e3', solver='mpi', method='e', ) )
             sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid,[1,2] ], nhood='local', ) )
             sch.operate( dict(name='add_jm', solver='lwall', method='update_j',                           nhood='local', ) )
-
 
         # --------------------------------------------------
         # add current to E
@@ -939,6 +912,7 @@ if __name__ == "__main__":
 
         ##################################################
         # data reduction and I/O
+
 
         timer.lap("step")
         if lap % conf.interval == 0:
@@ -991,8 +965,6 @@ if __name__ == "__main__":
                     dict(axs=(0,0), data=fld_writer.get_slice( 0)/conf.e_norm ,   name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
                     dict(axs=(1,0), data=fld_writer.get_slice( 9)/conf.p_norm   , name='ne', cmap='viridis',vmin= 0, vmax=100),
                     )
-                    #print('terminal plot not implemented')
-
                 elif conf.twoD:
                     tplt.plot_panels( (2,3),
                     dict(axs=(0,0), data=fld_writer.get_slice( 0)/conf.e_norm ,   name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
@@ -1017,11 +989,6 @@ if __name__ == "__main__":
             #print statistics
             if sch.is_master:
                 print('simulation time    {:7d} ({:7.1f} omp)   {:5.1f}%'.format( int(lap), time, 100.0*lap/conf.Nt))
-                #print('sim time {:7d} ({:7.1f} omp) ({:5.1f} H/c) ({:7.2f} l0/c) {:5.2f}%'.format(int(lap), 
-                #                                                                         time, 
-                #                                                                         lap*conf.dt/conf.t_c,
-                #                                                                         sch.antenna.tcur,
-                #                                                                         100.0*lap/conf.Nt))
 
 
             #--------------------------------------------------
@@ -1061,11 +1028,6 @@ if __name__ == "__main__":
             timer.stats("io")
 
 
-        ###################################################
-        # QED plotting
-        if conf.qed_mode and lap % conf.N_qdt == 0:
-            toolset.update_stats(grid, lap, conf)
-
 
         if lap % conf.plot_interval == 0 and live_plot:
 
@@ -1076,6 +1038,9 @@ if __name__ == "__main__":
                 toolset.update_esc_stats(mc, lap, conf) # needs to be called w/ plot_interval
                 toolset.update_esc_hists(mc, lap, conf) # needs to be called w/ plot_interval
                 mc.clear_hist() # remember to clear histogram after reading
+
+            # save data snapshot 
+            if conf.qed_mode: toolset.update_stats(grid, lap, conf)
 
             if conf.qed_mode and sch.is_master:
 
@@ -1122,22 +1087,21 @@ if __name__ == "__main__":
                 imod = np.argmax(particles)
                 gam_mod = gammas[imod]
 
-                print("gam_max:", gam_max, 
-                      "rad(",gam_max/conf.gam_rad,")",
-                      "gap(",gam_max/conf.gam_gap,")",
-                      " gam_avg:", gam_avg, 
-                      "rad(",gam_avg/conf.gam_rad,")",
-                      #"gap(",gam_avg/conf.gam_gap,")",
-                      " gam_mod:", gam_mod, 
-                      "rad(",gam_mod/conf.gam_rad,")",
-                      #"gap(",gam_mod/conf.gam_gap,")",
-                      )
+                #print("gam_max:", gam_max, 
+                #      "rad(",gam_max/conf.gam_rad,")",
+                #      "gap(",gam_max/conf.gam_gap,")",
+                #      " gam_avg:", gam_avg, 
+                #      "rad(",gam_avg/conf.gam_rad,")",
+                #      #"gap(",gam_avg/conf.gam_gap,")",
+                #      " gam_mod:", gam_mod, 
+                #      "rad(",gam_mod/conf.gam_rad,")",
+                #      #"gap(",gam_mod/conf.gam_gap,")",
+                #      )
 
 
                 #--------------------------------------------------
                 if True: # TODO radiative balance
-                    print("g_gap:", conf.gam_gap, " g_rad:", conf.gam_rad)
-
+                    #print("g_gap:", conf.gam_gap, " g_rad:", conf.gam_rad)
                     axs[0,1].axvline(np.log10(conf.gam_gap), color='C0')
                     axs[0,2].axvline(np.log10(conf.gam_gap), color='C0')
 
@@ -1180,7 +1144,7 @@ if __name__ == "__main__":
                 axs[1,3].plot(ts[-1], toolset.storage.data['ene_ph'][-1], color='C2', marker='x')
 
                 #--------------------------------------------------
-                if True: # TODO debug; check energy losses
+                if False: # TODO debug; check energy losses
                     # TODO
                     alphaf = 1/137
                     rg = conf.c_omp/np.sqrt(conf.sigma)
@@ -1268,10 +1232,8 @@ if __name__ == "__main__":
             timer.stats("io2")
             #--------------------------------------------------
 
-
-            timer.start("step")  # refresh lap counter (avoids IO profiling)
-
             sys.stdout.flush()
+            timer.start("step")  # refresh lap counter (avoids IO profiling)
 
         # next step
         time += conf.cfl / conf.c_omp
