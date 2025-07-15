@@ -87,11 +87,11 @@ if __name__ == "__main__":
     axs[2,0].set_ylabel(r"$x$ ($m_e c^2$)")
     axs[3,0].set_ylabel(r"$E/E_\mathrm{rot}$")
     axs[4,0].set_ylabel(r"$j/j_m$")
-    axs[5,0].set_ylabel(r"$B/B_0$")
+    axs[5,0].set_ylabel(r"$B/B_0 - 1$")
 
 
     hmin = -0.1
-    hmax = 1.5 #7.0
+    hmax = 1.0 #7.0
     for j in range(ncol_fig):
         for i in range(nrow_fig):
             axs[i,j].set_xlim((hmin, hmax))
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     axs[3,0].set_ylim((-1, 1))
     axs[3,0].set_ylim((-1.2, 1.2))
     axs[4,0].set_ylim((-1.2, 3.2))
-    axs[5,0].set_ylim((0, 1.2))
+    axs[5,0].set_ylim((-0.05, 0.05))
 
     axs[5,0].set_xlabel(r"$h/h_\mathrm{pc}$")
 
@@ -359,7 +359,7 @@ if __name__ == "__main__":
         axs[4,0].plot(hh, jy, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
         axs[4,0].plot(hh, jz, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
 
-        axs[5,0].plot(hh, bx, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
+        axs[5,0].plot(hh, bx-1.0, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
 
 
     #--------------------------------------------------
@@ -398,7 +398,7 @@ if __name__ == "__main__":
     fig.subplots_adjust(left=axleft, bottom=axbottom, right=axright, top=axtop)
 
 
-    slap = str(args.lap).rjust(8, '0')
+    slap = str(args.lap).rjust(5, '0')
 
     #fname = fdir + 'fig_casc_' + slap + '.pdf' 
     #plt.savefig(fname)
