@@ -87,7 +87,8 @@ if __name__ == "__main__":
     axs[2,0].set_ylabel(r"$x$ ($m_e c^2$)")
     axs[3,0].set_ylabel(r"$E/E_\mathrm{rot}$")
     axs[4,0].set_ylabel(r"$j/j_m$")
-    axs[5,0].set_ylabel(r"$B/B_0 - 1$")
+    #axs[5,0].set_ylabel(r"$B/B_0 - 1$")
+    axs[5,0].set_ylabel(r"$E_\perp$")
 
 
     hmin = -0.1
@@ -99,7 +100,12 @@ if __name__ == "__main__":
     axs[3,0].set_ylim((-1, 1))
     axs[3,0].set_ylim((-1.2, 1.2))
     axs[4,0].set_ylim((-1.2, 3.2))
-    axs[5,0].set_ylim((-0.05, 0.05))
+    #axs[5,0].set_ylim((-0.00005, 0.00005))
+
+    axs[5,0].set_ylim((-1e-3, 1e-3))
+    axs[5,0].set_yscale("symlog", linthresh=1e-7)
+
+
 
     axs[5,0].set_xlabel(r"$h/h_\mathrm{pc}$")
 
@@ -221,15 +227,18 @@ if __name__ == "__main__":
                     xp = 0
 
                 if xp > 0:
-                    xps = xp - 2
-                    return f"$10^{int(xps)}$"
+                    xps = xp - 2 # NOTE: this assumes pxlims left value is -2
+                    s = int(xps)
+                    return f"$10^{s}$"
                 if xp == 0:
-                    return "$10^{-2}$"
+                    return "$10^{-2}$" # NOTE: same here
                 else:
                     xps = -xp - 2
-                    return f"-$10^{int(xps)}$"
+                    s = int(xps)
+                    return f"-$10^{s}$"
 
-    yticks = [-6, -2, 2, 6]
+    #yticks = [-10, -6, -2, 2, 6, 10] # narrower grid for previous pxlims (-2, 6)
+    yticks = [-10, -6, -2, 2, 6, 10] # expanded grid for pxlims (-2, -7)
     axs[0,0].set_yticks(yticks)
     axs[1,0].set_yticks(yticks)
     axs[2,0].set_yticks(yticks)
@@ -360,6 +369,8 @@ if __name__ == "__main__":
         axs[4,0].plot(hh, jz, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
 
         axs[5,0].plot(hh, bx-1.0, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
+        axs[5,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
+        axs[5,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
 
 
     #--------------------------------------------------
@@ -372,7 +383,7 @@ if __name__ == "__main__":
 
 
     #--------------------------------------------------
-    axleft    = 0.22
+    axleft    = 0.25
     axbottom  = 0.05
     axright   = 0.97
     axtop     = 0.95
