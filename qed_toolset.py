@@ -28,7 +28,7 @@ class QEDToolset:
         self.xxlims = (-2, 7) # photon xlim
         self.xylims = (1e1, 1e5) #(1e-2, 1e6) # photon ylim (1e-4, 1e2)
 
-        self.pxlims = (-2, 7) # pair xlim
+        self.pxlims = (-2, 10) # pair xlim
         self.pylims = (1e-1, 1e2) # pair ylim
 
         self.wxlims = (-1, 7) # pair wlim
