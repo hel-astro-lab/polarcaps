@@ -88,7 +88,7 @@ if __name__ == "__main__":
     axs[3,0].set_ylabel(r"$E/E_\mathrm{rot}$")
     axs[4,0].set_ylabel(r"$j/j_m$")
     #axs[5,0].set_ylabel(r"$B/B_0 - 1$")
-    axs[5,0].set_ylabel(r"$E_\perp$")
+    axs[5,0].set_ylabel(r"$\langle E \rangle_\mathrm{LF}/E_\mathrm{rot}$")
 
 
     hmin = -0.1
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     axs[4,0].set_ylim((-1.2, 3.2))
     #axs[5,0].set_ylim((-0.00005, 0.00005))
 
-    axs[5,0].set_ylim((-1e-3, 1e-3))
+    axs[5,0].set_ylim((-1, 1))
     axs[5,0].set_yscale("symlog", linthresh=1e-7)
 
 
@@ -368,9 +368,13 @@ if __name__ == "__main__":
         axs[4,0].plot(hh, jy, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
         axs[4,0].plot(hh, jz, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
 
-        axs[5,0].plot(hh, bx-1.0, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
+
+
+        ex_flt = savgol_filter(ex, 300, 1)
+        axs[5,0].plot(hh, ex_flt, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
         axs[5,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
         axs[5,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
+        axs[5,0].plot(hh, bx-1.0, lw=0.8, linestyle='dashed', color='C0', alpha=0.8)
 
 
     #--------------------------------------------------
