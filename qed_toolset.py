@@ -55,6 +55,8 @@ class QEDToolset:
         self.dlnx = np.diff(np.log10(self.xs_bin))
         self.dlnw = np.diff(np.log10(self.ws_bin))
 
+        self.tau_tile_min = 1e7
+        self.tau_tile_max = 0
 
         self.types = ["e-", "e+", "ph"]
 
