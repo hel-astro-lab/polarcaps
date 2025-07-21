@@ -508,7 +508,8 @@ if __name__ == "__main__":
     mc = pyqed.Pairing()
     #mc.prob_norm = 1/(conf.N_time*conf.N_wgt*conf.N_qdt) # units of [per prtcl per time]
 
-    mc.max_tile_prtcl_num = conf.ppc*conf.NxMesh*conf.max_tile_prtcl_num #maximum cap for prtcls per species per tile
+    if hasattr(conf, 'max_tile_prtcl_num'):
+        mc.max_tile_prtcl_num = conf.ppc*conf.NxMesh*conf.max_tile_prtcl_num #maximum cap for prtcls per species per tile
 
     #New version:
     #TS: I am not sure if conf.N_time*conf.N_wgt*conf.N_qdt is still needed
