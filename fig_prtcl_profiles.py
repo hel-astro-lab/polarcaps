@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
 
     #--------------------------------------------------
-    fig = plt.figure(1, figsize=(2.2, 5.0)) # single figure
+    fig = plt.figure(1, figsize=(2.2, 6.0)) # single figure
 
     #fig = plt.figure(1, figsize=(3.25, 8.0)) # single figure
     #fig = plt.figure(1, figsize=(7.0,  5.5)) # two-column figure
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     #--------------------------------------------------
     if True: # regular gridspec
-        nrow_fig = 4
+        nrow_fig = 5
         ncol_fig = 1
 
         gs = plt.GridSpec(nrow_fig, ncol_fig)
@@ -85,8 +85,11 @@ if __name__ == "__main__":
     #axs[1,0].set_ylabel(r"$p_+$ ($m_e c$)")
     axs[1,0].set_ylabel(r"$x$ ($m_e c^2$)")
 
-    axs[2,0].set_ylabel(r"$m$")
-    axs[3,0].set_ylabel(r"$\langle \gamma \rangle$")
+    axs[2,0].set_ylabel(r"$\mathrm{d} m/\mathrm{d} h$")
+    axs[3,0].set_ylabel(r"$\langle p \rangle$, $\langle x \rangle$")
+
+    axs[4,0].set_ylabel(r"$\langle \gamma^{-3} \rangle / \langle \gamma \rangle^{-3}$")
+    #axs[4,0].set_ylabel(r"$\langle \gamma^{-3} \rangle$")
 
     hmin = -0.1
     hmax = 1.0 #7.0
@@ -96,19 +99,22 @@ if __name__ == "__main__":
 
     axs[2,0].set_yscale("log")
     axs[3,0].set_yscale("log")
+    axs[4,0].set_yscale("log")
 
     axs[2,0].set_ylim((1e-1, 1e3))
-    axs[3,0].set_ylim((1e-1, 1e3))
+    axs[3,0].set_ylim((1e0, 1e8))
+
+    axs[4,0].set_ylim((1e0, 1e12))
 
 
     #axs[4,0].set_ylim((-1.2, 3.2))
     #axs[5,0].set_ylim((-0.00005, 0.00005))
 
-    axs[3,0].set_xlabel(r"$h/h_\mathrm{pc}$")
+    axs[4,0].set_xlabel(r"$h/h_\mathrm{pc}$")
 
     for j in range(ncol_fig):
         for i in range(nrow_fig):
-            axs[i,j].fill_between([-0.5, 0.0], -100, 10000, color='gray', alpha=0.4, edgecolor=None) 
+            axs[i,j].fill_between([-0.5, 0.0], -100, 1e20, color='gray', alpha=0.4, edgecolor=None) 
 
 
     # grid configuration
@@ -168,6 +174,8 @@ if __name__ == "__main__":
         # momentum axis
         lnzs  = toolset.lnzs
         lnzs2 = np.array( [-np.flip(lnzs), lnzs ] ).flatten()
+        zs    = toolset.zs
+        gs    = np.sqrt( 1 + toolset.zs**2 )
 
         # photon energy axes; turn into [-val,+val]
         lnxs = toolset.lnxs
@@ -197,9 +205,11 @@ if __name__ == "__main__":
         n_units *= 1.0/toolset.Nhist # normalize to per histogram cell 
 
         # conversion factor into units of n_GJ
-        nx_units = toolset.N_box*toolset.N_time/toolset.N_wgt
-        nx_units *= 1/toolset.Nhist # normalize by area into xx per cell
+        nx_units = toolset.N_box*toolset.N_time/toolset.N_wgt # de-unitize what we have in qed_toolset
         nx_units *= 1/conf.ppc      # normalize to n_GJ
+        nx_units *= 1/toolset.Nhist # normalize by area into xx per cell
+
+        #NOTE: after these units, integral over the x axis gives total number of particles in units of multiplicity
 
 
         #--------------------------------------------------
@@ -221,6 +231,7 @@ if __name__ == "__main__":
         hx_m = np.flip( hph[:, :N], axis=1) # neg vels
 
 
+        # multiplicities for positive velocities (_p) and negative (_m) velocities
         me_p = np.zeros(N)
         me_m = np.zeros(N)
         mp_p = np.zeros(N)
@@ -228,6 +239,25 @@ if __name__ == "__main__":
         mx_p = np.zeros(N)
         mx_m = np.zeros(N)
 
+        # mean gamma factor <\gamma> for positive/negative vels
+
+        # he/hm/hx are particle distribution functions represented as h(x, ln z) 
+        gam_me_p = np.zeros(N)
+        gam_me_m = np.zeros(N)
+        gam_mp_p = np.zeros(N)
+        gam_mp_m = np.zeros(N)
+        gam_mx_p = np.zeros(N)
+        gam_mx_m = np.zeros(N)
+
+
+        # <\gamma^-3>/<\gamma>^-3
+        g3_me_p = np.zeros(N)
+        g3_me_m = np.zeros(N)
+        g3_mp_p = np.zeros(N)
+        g3_mp_m = np.zeros(N)
+
+
+        # loop over spatial coordinate
         for i in range(N):
             me_p[i] = integrate(lnzs, he_p[i,:])*n_units
             me_m[i] = integrate(lnzs, he_m[i,:])*n_units
@@ -237,7 +267,32 @@ if __name__ == "__main__":
 
             mx_p[i] = integrate(lnxs, hx_p[i,:])*nx_units
             mx_m[i] = integrate(lnxs, hx_m[i,:])*nx_units
+
+            gam_me_p[i] = integrate(lnzs, zs*he_p[i,:])/integrate(lnzs, he_p[i,:])
+            gam_me_m[i] = integrate(lnzs, zs*he_m[i,:])/integrate(lnzs, he_m[i,:])
+
+            gam_mp_p[i] = integrate(lnzs, zs*hp_p[i,:])/integrate(lnzs, hp_p[i,:])
+            gam_mp_m[i] = integrate(lnzs, zs*hp_m[i,:])/integrate(lnzs, hp_m[i,:])
+
+            gam_mx_p[i] = integrate(lnzs, xs*hx_p[i,:])/integrate(lnzs, hx_p[i,:])
+            gam_mx_m[i] = integrate(lnzs, xs*hx_m[i,:])/integrate(lnzs, hx_m[i,:])
  
+            #g3 = integrate(lnzs, (zs**(-3))*he_m[i,:])*n_units
+            #g  = integrate(lnzs,         zs*he_m[i,:])*n_units
+            #g3_me_p[i] = g3/g**-3
+            #print(i, g3, g**-3, g3**(-1/3), g)
+
+            #g3_me_p[i] = ( integrate(lnzs, (zs**(-3))*he_p[i,:])*n_units ) / ( integrate(lnzs, zs*he_p[i,:])*n_units )
+
+            g3_me_p[i] = integrate(lnzs, (gs**(-3))*he_p[i,:])*n_units / integrate(lnzs, he_p[i,:])
+            g3_me_m[i] = integrate(lnzs, (gs**(-3))*he_m[i,:])*n_units / integrate(lnzs, he_m[i,:])
+            g3_mp_p[i] = integrate(lnzs, (gs**(-3))*hp_p[i,:])*n_units / integrate(lnzs, hp_p[i,:])
+            g3_mp_m[i] = integrate(lnzs, (gs**(-3))*hp_m[i,:])*n_units / integrate(lnzs, hp_m[i,:])
+
+
+
+        #print(g3_me_p)
+
         lw = 0.5
         axs[2,0].plot(hh, me_p, color="C0", lw=lw, linestyle="solid")
         axs[2,0].plot(hh, me_m, color="C0", lw=lw, linestyle="dashed")
@@ -249,6 +304,20 @@ if __name__ == "__main__":
         axs[2,0].plot(hh, mx_m, color="C2", lw=lw, linestyle="dashed")
 
 
+        axs[3,0].plot(hh, gam_me_p, color="C0", lw=lw, linestyle="solid")
+        axs[3,0].plot(hh, gam_me_m, color="C0", lw=lw, linestyle="dashed")
+
+        axs[3,0].plot(hh, gam_mp_p, color="C1", lw=lw, linestyle="solid")
+        axs[3,0].plot(hh, gam_mp_m, color="C1", lw=lw, linestyle="dashed")
+
+        axs[3,0].plot(hh, gam_mx_p, color="C2", lw=lw, linestyle="solid")
+        axs[3,0].plot(hh, gam_mx_m, color="C2", lw=lw, linestyle="dashed")
+
+
+        axs[4,0].plot(hh, g3_me_p/gam_me_p**(-3), color="C0", lw=lw, linestyle="solid")
+        axs[4,0].plot(hh, g3_me_m/gam_me_m**(-3), color="C0", lw=lw, linestyle="dashed")
+        axs[4,0].plot(hh, g3_mp_p/gam_mp_p**(-3), color="C1", lw=lw, linestyle="solid")
+        axs[4,0].plot(hh, g3_mp_m/gam_mp_m**(-3), color="C1", lw=lw, linestyle="dashed")
 
 
         #--------------------------------------------------
@@ -399,7 +468,7 @@ if __name__ == "__main__":
 
     #print('r_pc:', conf.rad_pcap)
     print('t:', args.lap/conf.t_norm)
-    stitle = r"$t c/R_\mathrm{pc}$ = " + "{:3.1f}".format(args.lap/conf.t_norm)
+    stitle = r"$t c/H_\mathrm{pc}$ = " + "{:3.1f}".format(args.lap/conf.t_norm)
     axs[0,0].set_title(stitle, fontsize=10)
 
 
