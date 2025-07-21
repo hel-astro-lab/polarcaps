@@ -31,7 +31,7 @@ if __name__ == "__main__":
     #--------------------------------------------------
     # command line driven version
     args = pytools.parse_args()
-    conf = Configuration(args.conf_filename, do_print=True)#False)
+    conf = Configuration(args.conf_filename, do_print=False)#False)
     fdir = conf.outdir + "/"
 
     print("reading {}".format(fdir))
@@ -411,6 +411,8 @@ if __name__ == "__main__":
     pos = axs[0,0].get_position()
     print('ax pos:', pos)
     fig.subplots_adjust(left=axleft, bottom=axbottom, right=axright, top=axtop)
+
+    print('-----lap:', args.lap, " tc/H:", args.lap/conf.t_norm)
 
 
     slap = str(args.lap).rjust(8, '0')
