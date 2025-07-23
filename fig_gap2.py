@@ -596,11 +596,11 @@ if __name__ == "__main__":
 
     slap = str(args.lap).rjust(8, '0')
 
-    fname = fdir + 'fig_gap2_' + slap + '.pdf' 
-    plt.savefig(fname)
+    #fname = fdir + 'fig_gap2_' + slap + '.pdf' 
+    #plt.savefig(fname)
 
-    #fname = fdir + 'fig_gap2_' + slap + '.png' 
-    #plt.savefig(fname, dpi=300)
+    fname = fdir + 'fig_gap2_' + slap + '.png' 
+    plt.savefig(fname, dpi=300)
 
 
 
