@@ -50,7 +50,7 @@ if __name__ == "__main__":
     plt.rc('ytick', right = True)
 
     plt.rc('font',  family='serif',)
-    plt.rc('text',  usetex=True)
+    plt.rc('text',  usetex=False)
 
     plt.rc('xtick', labelsize=6)
     plt.rc('ytick', labelsize=6)
