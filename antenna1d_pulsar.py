@@ -33,8 +33,6 @@ class Antenna:
         ly = conf.Ny*self.NyMesh #/ conf.c_omp
         lz = conf.Nz*self.NzMesh #/ conf.c_omp
 
-        self.b0 = conf.binit
-
         self.jnorm = conf.jm_scaling*conf.qe*conf.ppc*conf.cfl
 
         # physical timer inside the antenna to track measured time
