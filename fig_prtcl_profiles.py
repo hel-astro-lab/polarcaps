@@ -451,8 +451,8 @@ if __name__ == "__main__":
             axs[0,0].axhline(y=xvals[i2], linestyle='solid', color='C0', lw=0.4)
 
         for xref in [conf.xsyn]:
-            i1 = find_arg_nearest(xarr, -gref)
-            i2 = find_arg_nearest(xarr, +gref)
+            i1 = find_arg_nearest(xarr, -xref)
+            i2 = find_arg_nearest(xarr, +xref)
 
             print('i1:', i1, 'x', xarr[i1], 'xref', -xref)
             print('i2:', i2, 'x', xarr[i2], 'xref', +xref)
