@@ -161,6 +161,7 @@ class Configuration_Pulsar(Configuration):
         self.height_atms = 1 #3 # add padding; this is the height of the atmosphere at r=Rpc in units of cells
         self.wph = self.wph
 
+        self.surface_location = 10; # location of the star's surface in the gap
 
         # normalization coefficient for internal dipole coordinate system
         # defined so that we have B_* at the star's surface

@@ -411,11 +411,6 @@ if __name__ == "__main__":
 
     if sch.is_master: print("load balancing grid..."); sys.stdout.flush()
 
-    ######################################
-    from antenna1d_pulsar import Antenna
-    sch.antenna = Antenna(1.0, 1.0, conf)
-    ######################################
-
     # update boundaries
     grid.analyze_boundaries()
     grid.send_tiles()
@@ -577,6 +572,7 @@ if __name__ == "__main__":
         mc.use_vir_curvature = True
         mc.vir_pitch_ang  = conf.rg/conf.rad_curv # r_g/R_curv
         mc.r_curv = conf.rad_curv
+        mc.r_gap  = conf.Lx # cutoff distance for pair creation
 
 
     # --------------------------------------------------
@@ -644,63 +640,80 @@ if __name__ == "__main__":
 
 
     # --------------------------------------------------
-    height_atms = conf.height_atms #0.005*conf.rad_star
+    gap = pypic.Gap()
+    gap.B0          = conf.bstar # background magnetic field
+    gap.E0          = conf.bstar*conf.vrot # E_rot
+    gap.j_ext       = conf.jm_scaling*conf.qe*conf.ppc*conf.cfl # strength of the external current
 
-    #star = pyfld.Conductor()
-    star = pypic.Star()
-    #for obj in [star, sch.pusher]:
-    for obj in [star]: # NOTE omitting pusher if it is not pulsarpusher
-        obj.radius    = conf.rad_star
-        obj.radius_pc = conf.rad_pcap
-        obj.period    = conf.period_star # NOTE should be period_star for normal runs 
+    gap.gap_length  = conf.rad_pcap # polar cap length in dx
+    gap.Nx          = conf.Lx # box length
+    gap.x_left      = conf.surface_location #5.0 #conf.rad_star
+    gap.x_right     = conf.Lx - 0.5*conf.NxMesh
+    gap.delta_left  = 2 # left (star) smoothing length 
+    gap.delta_right = 4 # right (vacuum) smoothing length
 
-        if conf.oneD:
-            obj.cenx   = -conf.rad_star + conf.rad_curv_shift
-            obj.ceny   = 0
-            obj.cenz   = 0 
-        elif conf.twoD:
-            obj.cenx   = conf.Lx//2 + 0.5
-            obj.ceny   = -conf.rad_star + conf.rad_curv_shift
-            obj.cenz   = 0 
-        elif conf.threeD:
-            obj.cenx   = conf.Lx//2 #+ 0.5
-            obj.ceny   = conf.Ly//2 #+ 0.5
-            obj.cenz   = -conf.rad_star + conf.rad_curv_shift
-
-        # NOTE omitting pusher if it is not pulsarpusher
-        #sch.pusher.grav_const = conf.delgam**2/(2*height_atms)
-
-    star.B0       = conf.b_dipole_norm    # TODO normalization here?
-    star.chi_om   = np.deg2rad(conf.chi)  # rotation axis inclination
-    star.phase_mu = 0.0
-    star.phase_om = 0.0
-    star.delta    = 0.5*conf.height_atms #4.0 #1  # in units of cells; radial smoothing function sharpness; 2x delta = about tanh limit
+    gap.inj_rate_pairs = conf.ninj_pairs*conf.ppc # num of e^- e^+ pairs injected per dt
+    gap.inj_rate_phots = conf.ninj_phots          # num of photons injected per dt
+    gap.temp_pairs     = conf.delgam # injection (Maxwell-Juttner) temperature for pairs
+    gap.temp_phots     = conf.wph    # injection (black-body) temperature for photons
+    gap.wph            = conf.wph # initial weight of the injected photons
     
-    if conf.oneD: star.set_const_b = True # make background B constant (set to be dipole value at r=R)
+    sch.lwall = gap # lastly, add to scheduler
 
-    star.Nx = conf.Lx
-    star.Ny = conf.Ly
-    star.Nz = conf.Lz
-    
-    star.delta_pc  = 2 # transverse polar cap smoothing (g(x) function)
 
-    star.temp_pairs = conf.delgam
-    star.temp_phots = conf.delgam_x
-    star.ninj_pairs = conf.ninj_pairs*conf.ppc 
-    star.ninj_phots = conf.ninj_phots*conf.xpc
-    star.ninj_min_pairs = conf.ninj_min_pairs*conf.ppc
-    star.ninj_min_phots = conf.ninj_min_phots*conf.xpc 
+    #star = pypic.Star()
+    #for obj in [star]: # NOTE omitting pusher if it is not pulsarpusher
+    #    obj.radius    = conf.rad_star
+    #    obj.radius_pc = conf.rad_pcap
+    #    obj.period    = conf.period_star # NOTE should be period_star for normal runs 
 
-    star.height_atms = conf.height_atms
-    star.wph = conf.wph
+    #    if conf.oneD:
+    #        obj.cenx   = -conf.rad_star + conf.rad_curv_shift
+    #        obj.ceny   = 0
+    #        obj.cenz   = 0 
+    #    elif conf.twoD:
+    #        obj.cenx   = conf.Lx//2 + 0.5
+    #        obj.ceny   = -conf.rad_star + conf.rad_curv_shift
+    #        obj.cenz   = 0 
+    #    elif conf.threeD:
+    #        obj.cenx   = conf.Lx//2 #+ 0.5
+    #        obj.ceny   = conf.Ly//2 #+ 0.5
+    #        obj.cenz   = -conf.rad_star + conf.rad_curv_shift
 
-    sch.lwall = star # add to scheduler
+    #    # NOTE omitting pusher if it is not pulsarpusher
+    #    #sch.pusher.grav_const = conf.delgam**2/(2*height_atms)
+
+    #star.B0       = conf.b_dipole_norm    # TODO normalization here?
+    #star.chi_om   = np.deg2rad(conf.chi)  # rotation axis inclination
+    #star.phase_mu = 0.0
+    #star.phase_om = 0.0
+    #star.delta    = 0.5*conf.height_atms #4.0 #1  # in units of cells; radial smoothing function sharpness; 2x delta = about tanh limit
+    #
+    #if conf.oneD: star.set_const_b = True # make background B constant (set to be dipole value at r=R)
+
+    #star.Nx = conf.Lx
+    #star.Ny = conf.Ly
+    #star.Nz = conf.Lz
+    #
+    #star.delta_pc  = 2 # transverse polar cap smoothing (g(x) function)
+
+    #star.temp_pairs = conf.delgam
+    #star.temp_phots = conf.delgam_x
+    #star.ninj_pairs = conf.ninj_pairs*conf.ppc 
+    #star.ninj_phots = conf.ninj_phots*conf.xpc
+    #star.ninj_min_pairs = conf.ninj_min_pairs*conf.ppc
+    #star.ninj_min_phots = conf.ninj_min_phots*conf.xpc 
+
+    #star.height_atms = conf.height_atms
+    #star.wph = conf.wph
+
+    #sch.lwall = star # add to scheduler
 
 
     # induce initial magnetic and electric field from the star
     if io_stat["do_initialization"]:
         for tile in pytools.tiles_all(grid):
-            star.insert_em(tile)
+            sch.lwall.insert_em(tile)
 
     # --------------------------------------------------
     # --------------------------------------------------
@@ -730,7 +743,7 @@ if __name__ == "__main__":
         #star.period = 1/pc_freq
 
         # rotate star's Omega vector with the period
-        sch.lwall.phase_om += conf.Om_star
+        #sch.lwall.phase_om += conf.Om_star
 
         # --------------------------------------------------
         # 2-body QED reactions 
@@ -888,32 +901,30 @@ if __name__ == "__main__":
                 sch.operate( dict(name='mpi_cur_flt', solver='mpi', method='j', ) )
                 sch.operate( dict(name='upd_bc',      solver='tile',method='update_boundaries',args=[grid, [0,] ], nhood='local', ) )
                 MPI.COMM_WORLD.barrier()
-            sch.operate( dict(name='filter', solver='flt', method='solve', nhood='local', ) )
-
+            sch.operate( dict(name='filter',   solver='flt',   method='solve',    nhood='local', ) )
+            #sch.operate( dict(name='update_j', solver='lwall', method='update_j', nhood='local', ) )
 
         # --------------------------------------------------
-        # add antenna
-        #sch.antenna.update_rnd_phases()
-        #antenna.get_brms(grid)
-        if lap > conf.rad_pcap/conf.cfl: # add external current for t > H_pc/c
-            sch.operate( dict(name='add_antenna', solver='antenna', method='add_ext_cur', nhood='local', ) )
-
         if conf.oneD and qed_mode_rp: # rotating frame current (TODO does not work)
-            #update bcs
-            sch.operate( dict(name='mpi_b3', solver='mpi', method='b', ) )
-            sch.operate( dict(name='mpi_e3', solver='mpi', method='e', ) )
-            sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid,[1,2] ], nhood='local', ) )
-            sch.operate( dict(name='add_jm', solver='lwall', method='update_j',                           nhood='local', ) )
+            sch.operate( dict(name='mpi_b3',   solver='mpi',   method='b', ) )
+            sch.operate( dict(name='mpi_e3',   solver='mpi',   method='e', ) )
+            sch.operate( dict(name='upd_bc',   solver='tile',  method='update_boundaries', args=[grid,[1,2] ], nhood='local', ) )
+            sch.operate( dict(name='add_jrot', solver='lwall', method='add_jrot',                            nhood='local', ) )
+
+        # add external current
+        if lap > conf.rad_pcap/conf.cfl: # add external current for t > H_pc/c
+            sch.operate( dict(name='add_jext', solver='lwall', method='add_jext', nhood='local', ) )
+
 
         # --------------------------------------------------
         # add current to E
-        sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current',       nhood='local', ) )
-        sch.operate( dict(name='wall_bc_e', solver='lwall', method='update_e',              nhood='local', ) )
+        sch.operate( dict(name='update_j',  solver='lwall', method='update_j',        nhood='local', ) )
+        sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current', nhood='local', ) )
+        sch.operate( dict(name='wall_bc_e', solver='lwall', method='update_e',        nhood='local', ) )
 
 
         ##################################################
         # data reduction and I/O
-
 
         timer.lap("step")
         if lap % conf.interval == 0:
