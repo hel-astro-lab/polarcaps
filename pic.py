@@ -523,8 +523,8 @@ if __name__ == "__main__":
 
 
     # Different run-time modes for automating the MC interaction selection
-    qed_mode_msp = False
-    qed_mode_rp  = True
+    qed_mode_msp = conf.qed_mode_msp
+    qed_mode_rp  = conf.qed_mode_rp
     
     # Set 2-body MC processes 
     if qed_mode_msp:

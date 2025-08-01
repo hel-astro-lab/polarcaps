@@ -101,7 +101,11 @@ if __name__ == "__main__":
     axs[3,0].set_yscale("log")
     axs[4,0].set_yscale("log")
 
-    axs[2,0].set_ylim((1e-1, 1e3))
+    if conf.qed_mode_msp:
+        axs[2,0].set_ylim((1e-1, 1e5))
+    else:
+        axs[2,0].set_ylim((1e-1, 1e3))
+
     axs[3,0].set_ylim((1e0, 1e8))
 
     axs[4,0].set_ylim((1e0, 1e12))
@@ -186,9 +190,11 @@ if __name__ == "__main__":
 
         #debugging mask for low-energy photon cut
         xlow_mask2 = np.ones_like(xs2)
-        for i in range(len(xs2)):
-            if np.abs(xs2[i]) < 2.0:
-                xlow_mask2[i] = 0
+
+        if conf.qed_mode_rp:
+            for i in range(len(xs2)):
+                if np.abs(xs2[i]) < 2.0:
+                    xlow_mask2[i] = 0
 
         #--------------------------------------------------
         def integrate(xs, ys):
