@@ -219,25 +219,13 @@ class Configuration_Pulsar(Configuration):
 
         #--------------------------------------------------
         # Calculation of 2-photon pair creation mean free path
-
-        hplanck = 6.6261e-27 #erg s
-        c = 2.9979e10 #cm/s
-        kev2erg = 1.602176633e-9
-        mec2_inkev = 511.0
-        Tkev = 0.5
-        kTperhc = kev2erg*Tkev/(hplanck*c)
-        nBB = 16.0*np.pi*1.202*kTperhc**3
-        x2_av_ene = 2.7*Tkev/mec2_inkev
-
+        x2 = 2.7*self.delgam_x
         comp_scale = 6.0*np.pi*self.cfl**5*self.Nmp/(max(ninj_phots_per_cell,1)*self.h_pcap)
-        x1 = 1e5
-        x2 = x2_av_ene
+        x1 = x2+x2*(4.0/3.0)*self.gam_rad_comp**2
         xpr = x1*x2
         efac = 0.652*(xpr**2-1.0)*np.log(xpr)*np.heaviside(xpr-1.0,1.0)/xpr**3
         efac = 1.0/efac
         lmfp2_per_h = comp_scale*efac
-        #print("comp_scale: ", comp_scale)
-        #print("lmfp2_per_h:", lmfp2_per_h)
 
         #--------------------------------------------------
         # extra undefined parameters
