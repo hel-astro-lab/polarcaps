@@ -58,7 +58,7 @@ class QEDToolset:
         self.tau_tile_min = 1e7
         self.tau_tile_max = 0
 
-        self.types = ["e-", "e+", "ph"]
+        self.types = ["e-", "e+", "ph", "p"]
 
         # normalizations
         #self.N_ene = conf.N_w*conf.t_c/conf.dt # units of luminosity compactness
@@ -111,7 +111,7 @@ class QEDToolset:
                 uz = np.array( container.vel(2) )
                 w = np.array( container.wgt() )
 
-                mass = 1.0 if t in ["e-", "e+"] else 0.0
+                mass = 1.0 if t in ["e-", "e+", "p"] else 0.0
 
                 ene = np.sqrt(mass*mass + ux**2 + uy**2 + uz**2) 
                 enes[t] += np.sum( ene*w )*self.N_wgt/self.N_time/self.N_box # total energy carried by LP # TODO
@@ -133,14 +133,17 @@ class QEDToolset:
         lp_nums["e-"] = MPI.COMM_WORLD.reduce(lp_nums['e-'], op=MPI.SUM, root=0)
         lp_nums["e+"] = MPI.COMM_WORLD.reduce(lp_nums['e+'], op=MPI.SUM, root=0)
         lp_nums["ph"] = MPI.COMM_WORLD.reduce(lp_nums['ph'], op=MPI.SUM, root=0)
+        lp_nums["p" ] = MPI.COMM_WORLD.reduce(lp_nums['p' ], op=MPI.SUM, root=0)
 
         enes["e-"]    = MPI.COMM_WORLD.reduce(enes['e-'], op=MPI.SUM, root=0)
         enes["e+"]    = MPI.COMM_WORLD.reduce(enes['e+'], op=MPI.SUM, root=0)
         enes["ph"]    = MPI.COMM_WORLD.reduce(enes['ph'], op=MPI.SUM, root=0)
+        enes["p" ]    = MPI.COMM_WORLD.reduce(enes['p' ], op=MPI.SUM, root=0)
 
         nums["e-"]    = MPI.COMM_WORLD.reduce(nums['e-'], op=MPI.SUM, root=0)
         nums["e+"]    = MPI.COMM_WORLD.reduce(nums['e+'], op=MPI.SUM, root=0)
         nums["ph"]    = MPI.COMM_WORLD.reduce(nums['ph'], op=MPI.SUM, root=0)
+        nums["p" ]    = MPI.COMM_WORLD.reduce(nums['p' ], op=MPI.SUM, root=0)
 
         #--------------------------------------------------
         if self.root:
@@ -152,14 +155,17 @@ class QEDToolset:
             self.storage.append('lp_num_e-', lp_nums['e-'])
             self.storage.append('lp_num_e+', lp_nums['e+'])
             self.storage.append('lp_num_ph', lp_nums['ph'])
+            self.storage.append('lp_num_p' , lp_nums['p' ])
 
             self.storage.append('ene_e-', enes['e-'])
             self.storage.append('ene_e+', enes['e+'])
             self.storage.append('ene_ph', enes['ph'])
+            self.storage.append('ene_p' , enes['p' ])
 
             self.storage.append('num_e-', nums['e-'])
             self.storage.append('num_e+', nums['e+'])
             self.storage.append('num_ph', nums['ph'])
+            self.storage.append('num_p' , nums['p' ])
 
         return
 
@@ -259,7 +265,7 @@ class QEDToolset:
         self.h1_enes = {}
         self.h1_nums = {}
         self.h1_ws   = {}
-        for t in ['e-', 'e+']:
+        for t in ['e-', 'e+', 'p']:
             self.h1_enes[t] = np.zeros(len(self.lnzs), dtype='d')
             self.h1_nums[t] = np.zeros(len(self.lnzs), dtype='d')
             self.h1_ws[  t] = np.zeros(len(self.lnzs), dtype='d')
@@ -275,7 +281,7 @@ class QEDToolset:
         # height dependent momentum histogram
 
         self.h2_enes = {}
-        for t in ['e-', 'e+']:
+        for t in ['e-', 'e+', 'p']:
             self.h2_enes[t] = np.zeros( (len(self.hs), 2*len(self.lnzs)), dtype='d')
 
         for t in ['ph']:
@@ -287,7 +293,7 @@ class QEDToolset:
         h1_enes = {}
         h1_nums = {}
         h1_ws   = {}
-        for t in ['e-', 'e+', 'ph']:
+        for t in ['e-', 'e+', 'ph', 'p']:
             h1_enes[t] = np.zeros_like( self.h1_enes[t] ) #(len(self.lnzs), dtype='d')
             h1_nums[t] = np.zeros_like( self.h1_nums[t] ) #(len(self.lnzs), dtype='d')
             h1_ws[  t] = np.zeros_like( self.h1_ws[t]   ) #(len(self.lnzs), dtype='d')
@@ -295,7 +301,7 @@ class QEDToolset:
         h2_nums = np.zeros((self.Nhist, self.Nhist), dtype='d')
 
         h2_enes = {}
-        for t in ['e-', 'e+', 'ph']:
+        for t in ['e-', 'e+', 'ph', 'p']:
             h2_enes[t] = np.zeros_like(self.h2_enes[t])
 
         #--------------------------------------------------
@@ -307,7 +313,7 @@ class QEDToolset:
                 t = container.type
 
                 # choose bins depending on type
-                if t in ["e-", "e+"]:
+                if t in ["e-", "e+", "p"]:
                     bins = self.zs_bin
                 elif t in ["ph"]:
                     bins = self.xs_bin
@@ -330,7 +336,7 @@ class QEDToolset:
                 uz = np.array( container.vel(2) )
                 w  = np.array( container.wgt() )
 
-                mass = 1.0 if t in ["e-", "e+"] else 0.0
+                #mass = 1.0 if t in ["e-", "e+"] else 0.0
 
                 #ene = self.N_ene*np.sqrt(mass*mass + ux**2 + uy**2 + uz**2) 
                 mom = np.sqrt(ux**2 + uy**2 + uz**2) # p = \gamma \beta OR x 
@@ -385,7 +391,7 @@ class QEDToolset:
         # MPI
         # reduce globally
 
-        for t in ['e-', 'e+', 'ph']:
+        for t in ['e-', 'e+', 'ph', 'p']:
             ncnts = len(h1_enes[t])
             MPI.COMM_WORLD.Reduce(
                 [     h1_enes[t], ncnts, MPI.DOUBLE],
@@ -429,12 +435,14 @@ class QEDToolset:
             dz = self.dlnz*self.zs
             self.h1_enes['e-'][:] *= self.N_wgt/dz/self.N_box
             self.h1_enes['e+'][:] *= self.N_wgt/dz/self.N_box
+            self.h1_enes['p' ][:] *= self.N_wgt/dz/self.N_box
 
             # make into units of p d\tau/\dp (note that this differs from h1_ene)
             # multiply both halfs of the spatial array with the same unit conversion factor
             dz2 = np.array( [np.flip(dz/self.zs), dz/self.zs ] ).flatten()
             self.h2_enes['e+'][:,:] *= self.N_wgt/dz2/self.N_box
             self.h2_enes['e-'][:,:] *= self.N_wgt/dz2/self.N_box
+            self.h2_enes['p' ][:,:] *= self.N_wgt/dz2/self.N_box
 
             # make into units of compactness; x d(x n_x) / dx from original d(n_x)/dlnx
             dx = self.dlnx*self.xs
@@ -454,6 +462,7 @@ class QEDToolset:
             self.h1_nums['e-'][:] *= 1.0/ppc_tot/dw
             self.h1_nums['e+'][:] *= 1.0/ppc_tot/dw 
             self.h1_nums['ph'][:] *= 1.0/ppc_tot/dw 
+            self.h1_nums['p' ][:] *= 1.0/ppc_tot/dw 
 
             # normalize 2d histogram of photons as well
             xx = (self.N_wgt/self.N_time)*self.xs**2/dx/self.N_box
@@ -464,6 +473,7 @@ class QEDToolset:
             # same slope as regular energy specs; normalization to total prtcl num
             self.h1_ws['e-'][:] *= 1.0/ppc_tot/dz 
             self.h1_ws['e+'][:] *= 1.0/ppc_tot/dz 
+            self.h1_ws['p' ][:] *= 1.0/ppc_tot/dz 
             self.h1_ws['ph'][:] *= ppc_tot*self.xs**2/dx
 
         return
@@ -479,19 +489,23 @@ class QEDToolset:
             f5.create_dataset('h1_ene_e-', data=self.h1_enes['e-' ][:] )
             f5.create_dataset('h1_ene_e+', data=self.h1_enes['e+' ][:] )
             f5.create_dataset('h1_ene_ph', data=self.h1_enes['ph' ][:] )
+            f5.create_dataset('h1_ene_p' , data=self.h1_enes['p'  ][:] )
             f5.create_dataset('h1_ene_esc',data=self.h1_enes['esc'][:] )
 
             f5.create_dataset('h1_nums_e-', data=self.h1_nums['e-' ][:] )
             f5.create_dataset('h1_nums_e+', data=self.h1_nums['e+' ][:] )
             f5.create_dataset('h1_nums_ph', data=self.h1_nums['ph' ][:] )
+            f5.create_dataset('h1_nums_p' , data=self.h1_nums['p'  ][:] )
 
             f5.create_dataset('h1_ws_e-', data=self.h1_ws['e-' ][:] )
             f5.create_dataset('h1_ws_e+', data=self.h1_ws['e+' ][:] )
             f5.create_dataset('h1_ws_ph', data=self.h1_ws['ph' ][:] )
+            f5.create_dataset('h1_ws_p',  data=self.h1_ws['p'  ][:] )
 
             f5.create_dataset('h2_ene_e-', data=self.h2_enes['e-' ][:,:] )
             f5.create_dataset('h2_ene_e+', data=self.h2_enes['e+' ][:,:] )
             f5.create_dataset('h2_ene_ph', data=self.h2_enes['ph' ][:,:] )
+            f5.create_dataset('h2_ene_p',  data=self.h2_enes['p'  ][:,:] )
 
             #--------------------------------------------------
             for key in ['lap_sparse',
@@ -509,12 +523,15 @@ class QEDToolset:
                         'num_e-',
                         'num_e+',
                         'num_ph',
+                        'num_p',
                         'lp_num_e-',
                         'lp_num_e+',
                         'lp_num_ph',
+                        'lp_num_p',
                         'ene_e-',
                         'ene_e+',
                         'ene_ph',
+                        'ene_p',
                         ]:
                 f5.create_dataset(key, data=self.storage.data[key][:] )
             #--------------------------------------------------

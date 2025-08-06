@@ -80,7 +80,7 @@ class Configuration_Pulsar(Configuration):
         self.Lz = self.Nz*self.NzMesh
 
         # re-name particle types
-        self.prtcl_types = ['e-', 'e+', 'ph'] 
+        self.prtcl_types = ['e-', 'e+', 'ph', 'p'] 
 
         #--------------------------------------------------
         #required cgs constants
@@ -128,17 +128,21 @@ class Configuration_Pulsar(Configuration):
         # n_GJ = v B_*/e H = nppc 
         # with this definition, user-given ppc per species corresponds to n_GJ
         self.qe = -self.vrot*self.bstar/(self.ppc*self.rad_pcap)
-        self.qi = -self.qe # positron charge
+        #self.qi = -self.qe # positron charge
 
         # NOTE: local definitions of me and mi, the code initialiation uses a different definition
         me = np.abs(self.me)
         mi = np.abs(self.mi)
         me *= abs(self.qe) # update electron mass to right units
-        mi *= abs(self.qe) # update electron mass to right units
+        mi *= abs(self.qe) # update proton mass to right units
 
         # photons
-        self.qp = 0.0 # dummy charge; NOTE: needs to be 0 for photons to avoid charge deposit
-        self.mp = 0.0 # dummy mass
+        #self.qx = 0.0 # dummy charge; NOTE: needs to be 0 for photons to avoid charge deposit
+        #self.mx = 0.0 # dummy mass
+
+        #protons
+        #self.qp = -self.qe
+        #self.mp = xxx
 
         # temperatures
         self.delgam_e = self.delgam
@@ -287,9 +291,8 @@ class Configuration_Pulsar(Configuration):
             print("init:            B_*:", self.bstar)
             print("init:            nGJ:", self.nGJ)
             print("init:             qe:", self.qe, me)
-            print("init:             qi:", self.qi, mi)
+            print("init:             qi:", self.qe, mi)
             print("init:          m-/me:", self.me)
-            print("init:          m+-me:", self.mi)
             print("init:        omega_p:", self.omp)
             print("init:    R = c/omega:", self.c_omp, " dx")
             print("init: R_pc / c/omega:", self.rad_pcap/self.c_omp)
@@ -343,17 +346,14 @@ class Configuration_Pulsar(Configuration):
 #
 def velocity_profile(xloc, ispcs, conf):
 
-    # electrons
-    if ispcs == 0:
+    if ispcs == 0: # electrons
         delgam = conf.delgam_e  # * np.abs(conf.mi / conf.me) * conf.temp_ratio
-
-    # positrons/ions/second species
-    elif ispcs == 1:
-        delgam = conf.delgam_i
-
-    # photons
-    elif ispcs == 2:
+    elif ispcs == 1: # positrons/ions/second species
+        delgam = conf.delgam_e
+    elif ispcs == 2: # photons
         delgam = conf.delgam_x
+    elif ispcs == 3: # protons
+        delgam = conf.delgam_i
 
     # perturb position between x0 + RUnif[0,1)
     xx = xloc[0] + np.random.rand()
@@ -361,7 +361,7 @@ def velocity_profile(xloc, ispcs, conf):
     zz = xloc[2] + np.random.rand()
 
     # velocity sampling from Maxwell-Juttner
-    if ispcs in [0,1]:
+    if ispcs in [0,1,3]:
         gamma = 0 # no bulk motion
         direction = +1
         ux, uy, uz, uu = pytools.sample_boosted_maxwellian(
@@ -389,8 +389,7 @@ def velocity_profile(xloc, ispcs, conf):
 #       to conf.ppc only.
 #
 def density_profile(xloc, ispcs, conf):
-
-    return 0 # NOTE no injection in the beginning of the simulation
+    #return 0 # NOTE no injection in the beginning of the simulation
     
     # TODO debug
     #if xloc[0] > conf.height_atms + 11:
@@ -398,10 +397,14 @@ def density_profile(xloc, ispcs, conf):
     #if xloc[0] < conf.height_atms + 10:
     #    return 0
 
-    if ispcs in [0,1]:
+    if ispcs == 0: # electrons
         return conf.ppc
-    if ispcs == 2:
+    elif ispcs == 1: # positrons
+        return conf.ppc
+    elif ispcs == 2: # photons
         return conf.xpc
+    elif ispcs == 3: # protons
+        return 0
 
 # Particle weight that is added to cell at location 'xloc'
 def weigth_profile(xloc, ispcs, conf):
