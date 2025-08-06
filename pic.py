@@ -649,13 +649,14 @@ if __name__ == "__main__":
     gap.Nx          = conf.Lx # box length
     gap.x_left      = conf.surface_location #5.0 #conf.rad_star
     gap.x_right     = conf.Lx - 0.5*conf.NxMesh
-    gap.delta_left  = 2 # left (star) smoothing length 
+    gap.delta_left  = 4 # left (star) smoothing length 
     gap.delta_right = 4 # right (vacuum) smoothing length
+    gap.enable_surface_inj = False # SCLF (on) or Ruderman-type gap (off)
 
     gap.inj_rate_pairs = conf.ninj_pairs*conf.ppc # num of e^- e^+ pairs injected per dt
     gap.inj_rate_phots = conf.ninj_phots          # num of photons injected per dt
     gap.temp_pairs     = conf.delgam # injection (Maxwell-Juttner) temperature for pairs
-    gap.temp_phots     = conf.wph    # injection (black-body) temperature for photons
+    gap.temp_phots     = conf.delgam_x    # injection (black-body) temperature for photons
     gap.wph            = conf.wph # initial weight of the injected photons
     
     sch.lwall = gap # lastly, add to scheduler
@@ -912,8 +913,8 @@ if __name__ == "__main__":
             sch.operate( dict(name='add_jrot', solver='lwall', method='add_jrot',                            nhood='local', ) )
 
         # add external current
-        if lap > conf.rad_pcap/conf.cfl: # add external current for t > H_pc/c
-            sch.operate( dict(name='add_jext', solver='lwall', method='add_jext', nhood='local', ) )
+        #if lap > conf.rad_pcap/conf.cfl: # add external current for t > H_pc/c
+        sch.operate( dict(name='add_jext', solver='lwall', method='add_jext', nhood='local', ) )
 
 
         # --------------------------------------------------
