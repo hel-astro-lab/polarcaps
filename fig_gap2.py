@@ -104,17 +104,22 @@ if __name__ == "__main__":
         for i in range(nrow_fig):
             axs[i,j].set_xlim((hmin, hmax))
 
-
     #for j in range(ncol_fig):
     #    for i in range(nrow_fig):
     #        axs[i,j].set_xlim((0, 0.1))
     #        #axs[i,j].set_xlim((0, 100*1.0/conf.Lx))
     #        #axs[i,j].set_xlim((1.0- 100*1.0/conf.Lx, 1.01))
 
+    #axs[4,0].set_ylim((1e-1, 1e3))
+    if conf.qed_mode_msp:
+        axs[4,0].set_ylim((1e-1, 1e5))
+    else:
+        axs[4,0].set_ylim((1e-1, 1e3))
 
-    axs[4,0].set_ylim((1e-1, 1e3))
     axs[5,0].set_ylim((1.0, 1e8))
     axs[6,0].set_ylim((-1.1, 1.1))
+
+
     #axs[5,0].set_ylim((-0.00005, 0.00005))
 
     #axs[5,0].set_ylim((-1, 1))
@@ -258,9 +263,11 @@ if __name__ == "__main__":
 
         #debugging mask for low-energy photon cut
         xlow_mask2 = np.ones_like(xs2)
-        for i in range(len(xs2)):
-            if np.abs(xs2[i]) < 2.0:
-                xlow_mask2[i] = 0
+
+        if conf.qed_mode_rp:
+            for i in range(len(xs2)):
+                if np.abs(xs2[i]) < 2.0:
+                    xlow_mask2[i] = 0
 
         #--------------------------------------------------
         def integrate(xs, ys): # trapedzoidal
