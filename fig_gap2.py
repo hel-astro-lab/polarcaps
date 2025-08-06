@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
 
     #--------------------------------------------------
-    fig = plt.figure(1, figsize=(2.2, 7.0)) # narrow figure
+    fig = plt.figure(1, figsize=(2.0, 8.0)) # narrow figure
 
     #fig = plt.figure(1, figsize=(3.25, 8.0)) # single figure
     #fig = plt.figure(1, figsize=(7.0,  5.5)) # two-column figure
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     #--------------------------------------------------
     if True: # regular gridspec
-        nrow_fig = 6
+        nrow_fig = 7
         ncol_fig = 1
 
         gs = plt.GridSpec(nrow_fig, ncol_fig)
@@ -84,40 +84,46 @@ if __name__ == "__main__":
 
     axs[0,0].set_ylabel(r"$p_-$ ($m_e c$)")
     axs[1,0].set_ylabel(r"$p_+$ ($m_e c$)")
-    axs[2,0].set_ylabel(r"$x$ ($m_e c^2$)")
-    axs[3,0].set_ylabel(r"$\mathrm{d} m/\mathrm{d} x$")
+    axs[2,0].set_ylabel(r"$p_i$ ($m_e c$)")
+    axs[3,0].set_ylabel(r"$x$ ($m_e c^2$)")
+
+    axs[4,0].set_ylabel(r"$\mathrm{d} m/\mathrm{d} x$")
     #axs[3,0].set_ylabel(r"$m(x)/ \Delta x$")
 
-    axs[4,0].set_ylabel(r"$\langle \gamma \rangle$")
-    axs[5,0].set_ylabel(r"$E/E_\mathrm{rot}$")
+    axs[5,0].set_ylabel(r"$\langle \gamma \rangle$")
+    axs[6,0].set_ylabel(r"$E/E_\mathrm{rot}$")
 
     #axs[4,0].set_ylabel(r"$j/j_m$")
     #axs[5,0].set_ylabel(r"$B/B_0 - 1$")
     #axs[5,0].set_ylabel(r"$\langle E \rangle_\mathrm{LF}/E_\mathrm{rot}$")
 
 
-    hmin = -0.1
+    hmin = 0.0
     hmax = 1.0 #7.0
     for j in range(ncol_fig):
         for i in range(nrow_fig):
             axs[i,j].set_xlim((hmin, hmax))
 
-    axs[3,0].set_ylim((1e-1, 1e3))
-    axs[4,0].set_ylim((1.0, 1e8))
-    axs[5,0].set_ylim((-0.1, 1.0))
+
+    #for j in range(ncol_fig):
+    #    for i in range(nrow_fig):
+    #        axs[i,j].set_xlim((0, 0.1))
+    #        #axs[i,j].set_xlim((0, 100*1.0/conf.Lx))
+    #        #axs[i,j].set_xlim((1.0- 100*1.0/conf.Lx, 1.01))
+
+
+    axs[4,0].set_ylim((1e-1, 1e3))
+    axs[5,0].set_ylim((1.0, 1e8))
+    axs[6,0].set_ylim((-1.1, 1.1))
     #axs[5,0].set_ylim((-0.00005, 0.00005))
 
     #axs[5,0].set_ylim((-1, 1))
     #axs[5,0].set_yscale("symlog", linthresh=1e-7)
 
-    axs[3,0].set_yscale("log")
     axs[4,0].set_yscale("log")
-    axs[5,0].set_xlabel(r"$x/H_\mathrm{gap}$")
+    axs[5,0].set_yscale("log")
+    axs[6,0].set_xlabel(r"$x/H_\mathrm{gap}$")
 
-
-    for j in range(ncol_fig):
-        for i in range(nrow_fig):
-            axs[i,j].fill_between([-0.5, 0.0], -100, 1e20, color='gray', alpha=0.4, edgecolor=None) 
 
 
     # grid configuration
@@ -147,6 +153,7 @@ if __name__ == "__main__":
 
         hem = f5['h2_ene_e-'][()]
         hep = f5['h2_ene_e+'][()]
+        hip = f5['h2_ene_p'] [()]
         hph = f5['h2_ene_ph'][()]
 
         f5.close()
@@ -154,7 +161,7 @@ if __name__ == "__main__":
         #--------------------------------------------------
 
         hhlims = [1,1]
-        hhlims[0] = -(conf.rad_curv_shift + conf.height_atms)/conf.rad_pcap #(0 - ceny)/conf.rad_pcap
+        hhlims[0] = 0 #-(conf.rad_curv_shift + conf.height_atms)/conf.rad_pcap #(0 - ceny)/conf.rad_pcap
         hhlims[1] = Lh/conf.rad_pcap
 
         hh = np.linspace(hhlims[0], hhlims[1], toolset.Nhist) # height grid for the histogram data
@@ -164,13 +171,14 @@ if __name__ == "__main__":
         px_log_extent = toolset.pxlims[1] - toolset.pxlims[0] 
         print('px_log_extent:', px_log_extent)
 
-        for i in range(0,3): 
+        for i in range(0,4): 
             axs[i,0].set_ylim((-px_log_extent, px_log_extent))
 
         print(toolset.xxlims[1],  toolset.xxlims[0] )
         xx_log_extent = toolset.xxlims[1] - toolset.xxlims[0] 
         print('xx_log_extent:', xx_log_extent)
 
+        #electrons
         imem = axs[0,0].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
                          extent=[hhlims[0], hhlims[1], 
                                  -px_log_extent, px_log_extent], 
@@ -184,6 +192,7 @@ if __name__ == "__main__":
                          rasterized=True,
                          )
 
+        #positrons
         imep = axs[1,0].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
                          extent=[hhlims[0], hhlims[1], 
                                  -px_log_extent, px_log_extent], 
@@ -197,8 +206,23 @@ if __name__ == "__main__":
                          rasterized=True,
                          )
 
+        #protons
+        imip = axs[2,0].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
+                         extent=[hhlims[0], hhlims[1], 
+                                 -px_log_extent, px_log_extent], 
+                         origin='lower',
+                         cmap='turbo',
+                         aspect='auto',
+                         interpolation='nearest',
+                         vmin=np.log10(toolset.pylims[0]),
+                         vmax=np.log10(toolset.pylims[1]),
+                         zorder=1,
+                         rasterized=True,
+                         )
+
+
         # height vs ene; photons
-        imph = axs[2,0].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
+        imph = axs[3,0].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
                          extent=[hhlims[0], hhlims[1], 
                                  -xx_log_extent, xx_log_extent], 
                           origin='lower',
@@ -213,6 +237,7 @@ if __name__ == "__main__":
 
         imem.set_data(np.log10( hem.T)) 
         imep.set_data(np.log10( hep.T)) 
+        imip.set_data(np.log10( hip.T)) 
         imph.set_data(np.log10( hph.T)) 
 
 
@@ -266,6 +291,8 @@ if __name__ == "__main__":
         hp_p =          hep[:, N:]  # positive velocities
         hp_m = np.flip( hep[:, :N], axis=1) # negative velocities
 
+        hi_p =          hip[:, N:]  # positive velocities
+        hi_m = np.flip( hip[:, :N], axis=1) # negative velocities
 
         # NOTE: we also mask x < 2 values out from the count
         #hx = np.sum(hph[hmin2:hmax2,:], axis=0)
@@ -280,6 +307,8 @@ if __name__ == "__main__":
         me_m = np.zeros(N)
         mp_p = np.zeros(N)
         mp_m = np.zeros(N)
+        mi_p = np.zeros(N)
+        mi_m = np.zeros(N)
         mx_p = np.zeros(N)
         mx_m = np.zeros(N)
 
@@ -290,6 +319,8 @@ if __name__ == "__main__":
         gam_me_m = np.zeros(N)
         gam_mp_p = np.zeros(N)
         gam_mp_m = np.zeros(N)
+        gam_mi_p = np.zeros(N)
+        gam_mi_m = np.zeros(N)
         gam_mx_p = np.zeros(N)
         gam_mx_m = np.zeros(N)
 
@@ -299,6 +330,8 @@ if __name__ == "__main__":
         g3_me_m = np.zeros(N)
         g3_mp_p = np.zeros(N)
         g3_mp_m = np.zeros(N)
+        g3_mi_p = np.zeros(N)
+        g3_mi_m = np.zeros(N)
 
 
         # loop over spatial coordinate
@@ -309,6 +342,9 @@ if __name__ == "__main__":
             mp_p[i] = integrate(lnzs, hp_p[i,:])*n_units
             mp_m[i] = integrate(lnzs, hp_m[i,:])*n_units
 
+            mi_p[i] = integrate(lnzs, hi_p[i,:])*n_units
+            mi_m[i] = integrate(lnzs, hi_m[i,:])*n_units
+
             mx_p[i] = integrate(lnxs, hx_p[i,:])*nx_units
             mx_m[i] = integrate(lnxs, hx_m[i,:])*nx_units
 
@@ -317,6 +353,9 @@ if __name__ == "__main__":
 
             gam_mp_p[i] = integrate(lnzs, zs*hp_p[i,:])/integrate(lnzs, hp_p[i,:])
             gam_mp_m[i] = integrate(lnzs, zs*hp_m[i,:])/integrate(lnzs, hp_m[i,:])
+
+            gam_mi_p[i] = integrate(lnzs, zs*hi_p[i,:])/integrate(lnzs, hi_p[i,:])
+            gam_mi_m[i] = integrate(lnzs, zs*hi_m[i,:])/integrate(lnzs, hi_m[i,:])
 
             gam_mx_p[i] = integrate(lnzs, xs*hx_p[i,:])/integrate(lnzs, hx_p[i,:])
             gam_mx_m[i] = integrate(lnzs, xs*hx_m[i,:])/integrate(lnzs, hx_m[i,:])
@@ -331,27 +370,36 @@ if __name__ == "__main__":
             g3_me_m[i] = integrate(lnzs, (gs**(-3))*he_m[i,:])*n_units / integrate(lnzs, he_m[i,:])
             g3_mp_p[i] = integrate(lnzs, (gs**(-3))*hp_p[i,:])*n_units / integrate(lnzs, hp_p[i,:])
             g3_mp_m[i] = integrate(lnzs, (gs**(-3))*hp_m[i,:])*n_units / integrate(lnzs, hp_m[i,:])
+            g3_mi_p[i] = integrate(lnzs, (gs**(-3))*hi_p[i,:])*n_units / integrate(lnzs, hi_p[i,:])
+            g3_mi_m[i] = integrate(lnzs, (gs**(-3))*hi_m[i,:])*n_units / integrate(lnzs, hi_m[i,:])
 
 
 
         #print(g3_me_p)
 
         lw = 0.8
-        axs[3,0].plot(hh, me_p, color="C0", alpha=0.8, lw=lw, linestyle="solid")
-        axs[3,0].plot(hh, me_m, color="C0", alpha=0.8, lw=lw, linestyle="dotted")
+        axs[4,0].plot(hh, me_p, color="C0", alpha=0.8, lw=lw, linestyle="solid")
+        axs[4,0].plot(hh, me_m, color="C0", alpha=0.8, lw=lw, linestyle="dotted")
 
-        axs[3,0].plot(hh, mp_p, color="C1", alpha=0.8, lw=lw, linestyle="solid")
-        axs[3,0].plot(hh, mp_m, color="C1", alpha=0.8, lw=lw, linestyle="dotted")
+        axs[4,0].plot(hh, mp_p, color="C1", alpha=0.8, lw=lw, linestyle="solid")
+        axs[4,0].plot(hh, mp_m, color="C1", alpha=0.8, lw=lw, linestyle="dotted")
 
-        axs[3,0].plot(hh, mx_p, color="C2", alpha=0.8, lw=lw, linestyle="solid")
-        axs[3,0].plot(hh, mx_m, color="C2", alpha=0.8, lw=lw, linestyle="dotted")
+        axs[4,0].plot(hh, mx_p, color="C2", alpha=0.8, lw=lw, linestyle="solid")
+        axs[4,0].plot(hh, mx_m, color="C2", alpha=0.8, lw=lw, linestyle="dotted")
+
+        axs[4,0].plot(hh, mi_p, color="C3", alpha=0.8, lw=lw, linestyle="solid")
+        axs[4,0].plot(hh, mi_m, color="C3", alpha=0.8, lw=lw, linestyle="dotted")
 
 
-        axs[4,0].plot(hh, gam_me_p, color="C0", lw=lw, linestyle="solid")
-        axs[4,0].plot(hh, gam_me_m, color="C0", lw=lw, linestyle="dashed")
 
-        axs[4,0].plot(hh, gam_mp_p, color="C1", lw=lw, linestyle="solid")
-        axs[4,0].plot(hh, gam_mp_m, color="C1", lw=lw, linestyle="dashed")
+        axs[5,0].plot(hh, gam_me_p, color="C0", lw=lw, linestyle="solid")
+        axs[5,0].plot(hh, gam_me_m, color="C0", lw=lw, linestyle="dashed")
+
+        axs[5,0].plot(hh, gam_mp_p, color="C1", lw=lw, linestyle="solid")
+        axs[5,0].plot(hh, gam_mp_m, color="C1", lw=lw, linestyle="dashed")
+
+        axs[5,0].plot(hh, gam_mi_p, color="C3", lw=lw, linestyle="solid")
+        axs[5,0].plot(hh, gam_mi_m, color="C3", lw=lw, linestyle="dashed")
 
         #axs[3,0].plot(hh, gam_mx_p, color="C2", lw=lw, linestyle="solid")
         #axs[3,0].plot(hh, gam_mx_m, color="C2", lw=lw, linestyle="dashed")
@@ -403,7 +451,8 @@ if __name__ == "__main__":
 
     axs[0,0].set_ylim((-px_log_extent, px_log_extent))
     axs[1,0].set_ylim((-px_log_extent, px_log_extent))
-    axs[2,0].set_ylim((-xx_log_extent, xx_log_extent))
+    axs[2,0].set_ylim((-px_log_extent, px_log_extent))
+    axs[3,0].set_ylim((-xx_log_extent, xx_log_extent))
 
     #yticks = [-10, -6, -2, 2, 6, 10] # narrower grid for previous pxlims (-2, 6)
     #yticks = [-10, -6, -2, 2, 6, 10] # expanded grid for pxlims (-2, -7)
@@ -411,20 +460,23 @@ if __name__ == "__main__":
 
     axs[0,0].set_yticks(yticks)
     axs[1,0].set_yticks(yticks)
+    axs[2,0].set_yticks(yticks)
 
     majorformatter = CustomScalarFormatter()
     axs[0,0].yaxis.set_major_formatter(majorformatter)
     axs[1,0].yaxis.set_major_formatter(majorformatter)
+    axs[2,0].yaxis.set_major_formatter(majorformatter)
 
 
     yticks = [-8, -6, -4, -2, 2, 4, 6, 8] # expanded grid for pxlims (-2, -12)
-    axs[2,0].set_yticks(yticks)
-    axs[2,0].yaxis.set_major_formatter(majorformatter)
+    axs[3,0].set_yticks(yticks)
+    axs[3,0].yaxis.set_major_formatter(majorformatter)
 
 
     axs[0,0].axhline(y=0, linestyle='dashed', color='k', lw=0.4)
     axs[1,0].axhline(y=0, linestyle='dashed', color='k', lw=0.4)
     axs[2,0].axhline(y=0, linestyle='dashed', color='k', lw=0.4)
+    axs[3,0].axhline(y=0, linestyle='dashed', color='k', lw=0.4)
 
 
     #--------------------------------------------------
@@ -474,6 +526,8 @@ if __name__ == "__main__":
             axs[1,0].axhline(y=xvals[i1], linestyle='solid', color='k', lw=0.4)
             axs[1,0].axhline(y=xvals[i2], linestyle='solid', color='k', lw=0.4)
 
+            axs[2,0].axhline(y=xvals[i1], linestyle='solid', color='k', lw=0.4)
+            axs[2,0].axhline(y=xvals[i2], linestyle='solid', color='k', lw=0.4)
         for xref in [conf.xsyn]:
             i1 = find_arg_nearest(xarr, -xref)
             i2 = find_arg_nearest(xarr, +xref)
@@ -481,12 +535,12 @@ if __name__ == "__main__":
             print('i1:', i1, 'x', xarr[i1], 'xref', -xref, np.log10(xref))
             print('i2:', i2, 'x', xarr[i2], 'xref', +xref, np.log10(xref))
 
-            axs[2,0].axhline(y=xvals[i1], linestyle='solid', color='k', lw=0.4)
-            axs[2,0].axhline(y=xvals[i2], linestyle='solid', color='k', lw=0.4)
+            axs[3,0].axhline(y=xvals[i1], linestyle='solid', color='k', lw=0.4)
+            axs[3,0].axhline(y=xvals[i2], linestyle='solid', color='k', lw=0.4)
 
 
-    axs[4,0].axhline(y=conf.gam_gap, linestyle='solid', color='k', lw=0.4)
-    axs[4,0].axhline(y=conf.gam_rad, linestyle='solid', color='k', lw=0.4)
+    axs[5,0].axhline(y=conf.gam_gap, linestyle='solid', color='k', lw=0.4)
+    axs[5,0].axhline(y=conf.gam_rad, linestyle='solid', color='k', lw=0.4)
 
 
     #--------------------------------------------------
@@ -537,31 +591,40 @@ if __name__ == "__main__":
         print('b', b)
 
         # smooth current 
-        if True:
-            jx = savgol_filter(jx, 300, 2)
-
+        #if True:
+        #    jx = savgol_filter(jx, 300, 2)
         
-        axs[5,0].plot(hh, ex, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
-        #axs[5,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
-        #axs[5,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
+        axs[6,0].plot(hh, ex, lw=0.8, linestyle='solid',  color='C0', alpha=0.8)
+        #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid',  color='C1', alpha=0.8)
+        #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid',  color='C2', alpha=0.8)
+        #axs[6,0].plot(hh, bx, lw=0.8, linestyle='dotted', color='C3', alpha=0.8)
 
-        #axs[4,0].plot(hh, jx, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
-        #axs[4,0].plot(hh, jy, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
-        #axs[4,0].plot(hh, jz, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
+        #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
+        #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
+
+        axs[6,0].plot(hh, jx, lw=0.3, linestyle='solid', color='C0', alpha=0.8)
+        #axs[6,0].plot(hh, jy, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
+        #axs[6,0].plot(hh, jz, lw=0.3, linestyle='solid', color='C2', alpha=0.8)
 
         #ex_flt = savgol_filter(ex, 300, 1)
-        #axs[5,0].plot(hh, ex_flt, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
-        #axs[5,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
-        #axs[5,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
-        #axs[5,0].plot(hh, bx-1.0, lw=0.8, linestyle='dashed', color='C0', alpha=0.8)
+        #axs[6,0].plot(hh, ex_flt, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
+        #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
+        #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
+        #axs[6,0].plot(hh, bx-1.0, lw=0.8, linestyle='dashed', color='C0', alpha=0.8)
 
+
+
+    #--------------------------------------------------
+    for j in range(ncol_fig):
+        for i in range(nrow_fig):
+            axs[i,j].fill_between([-0.5, 0.0], -100, 1e20, color='gray', alpha=0.4, edgecolor=None) 
 
     #--------------------------------------------------
     # time stamp
 
     #print('r_pc:', conf.rad_pcap)
     print('t:', args.lap/conf.t_norm)
-    stitle = r"$t c/H_\mathrm{gap}$ = " + "{:3.1f}".format(args.lap/conf.t_norm)
+    stitle = r"$t/t_\mathrm{esc}$ = " + "{:3.1f}".format(args.lap/conf.t_norm)
     axs[0,0].set_title(stitle, fontsize=10)
 
 
