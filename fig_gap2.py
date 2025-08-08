@@ -106,9 +106,8 @@ if __name__ == "__main__":
 
     #for j in range(ncol_fig):
     #    for i in range(nrow_fig):
-    #        axs[i,j].set_xlim((0, 0.1))
-    #        #axs[i,j].set_xlim((0, 100*1.0/conf.Lx))
-    #        #axs[i,j].set_xlim((1.0- 100*1.0/conf.Lx, 1.01))
+    #        #axs[i,j].set_xlim((0, 0.1)) # left start
+    #        axs[i,j].set_xlim((0.9, 1.0)) #right end
 
     #axs[4,0].set_ylim((1e-1, 1e3))
     if conf.qed_mode_msp:
@@ -355,14 +354,14 @@ if __name__ == "__main__":
             mx_p[i] = integrate(lnxs, hx_p[i,:])*nx_units
             mx_m[i] = integrate(lnxs, hx_m[i,:])*nx_units
 
-            gam_me_p[i] = integrate(lnzs, zs*he_p[i,:])/integrate(lnzs, he_p[i,:])
-            gam_me_m[i] = integrate(lnzs, zs*he_m[i,:])/integrate(lnzs, he_m[i,:])
+            gam_me_p[i] = integrate(lnzs, gs*he_p[i,:])/integrate(lnzs, he_p[i,:])
+            gam_me_m[i] = integrate(lnzs, gs*he_m[i,:])/integrate(lnzs, he_m[i,:])
 
-            gam_mp_p[i] = integrate(lnzs, zs*hp_p[i,:])/integrate(lnzs, hp_p[i,:])
-            gam_mp_m[i] = integrate(lnzs, zs*hp_m[i,:])/integrate(lnzs, hp_m[i,:])
+            gam_mp_p[i] = integrate(lnzs, gs*hp_p[i,:])/integrate(lnzs, hp_p[i,:])
+            gam_mp_m[i] = integrate(lnzs, gs*hp_m[i,:])/integrate(lnzs, hp_m[i,:])
 
-            gam_mi_p[i] = integrate(lnzs, zs*hi_p[i,:])/integrate(lnzs, hi_p[i,:])
-            gam_mi_m[i] = integrate(lnzs, zs*hi_m[i,:])/integrate(lnzs, hi_m[i,:])
+            gam_mi_p[i] = integrate(lnzs, gs*hi_p[i,:])/integrate(lnzs, hi_p[i,:])
+            gam_mi_m[i] = integrate(lnzs, gs*hi_m[i,:])/integrate(lnzs, hi_m[i,:])
 
             gam_mx_p[i] = integrate(lnzs, xs*hx_p[i,:])/integrate(lnzs, hx_p[i,:])
             gam_mx_m[i] = integrate(lnzs, xs*hx_m[i,:])/integrate(lnzs, hx_m[i,:])
@@ -407,6 +406,9 @@ if __name__ == "__main__":
 
         axs[5,0].plot(hh, gam_mi_p, color="C3", lw=lw, linestyle="solid")
         axs[5,0].plot(hh, gam_mi_m, color="C3", lw=lw, linestyle="dashed")
+
+        print("gam+", gam_mi_p)
+        print("gam-", gam_mi_m)
 
         #axs[3,0].plot(hh, gam_mx_p, color="C2", lw=lw, linestyle="solid")
         #axs[3,0].plot(hh, gam_mx_m, color="C2", lw=lw, linestyle="dashed")
@@ -609,7 +611,7 @@ if __name__ == "__main__":
         #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
         #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
 
-        axs[6,0].plot(hh, jx, lw=0.3, linestyle='solid', color='C0', alpha=0.8)
+        #axs[6,0].plot(hh, jx, lw=0.3, linestyle='solid', color='C0', alpha=0.8)
         #axs[6,0].plot(hh, jy, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
         #axs[6,0].plot(hh, jz, lw=0.3, linestyle='solid', color='C2', alpha=0.8)
 
