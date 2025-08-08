@@ -386,9 +386,9 @@ def density_profile(xloc, ispcs, conf):
     #    return 0
 
     if ispcs == 0: # electrons
-        return conf.ppc
+        return 0 #conf.ppc
     elif ispcs == 1: # positrons
-        return conf.ppc
+        return 0 #conf.ppc
     elif ispcs == 2: # photons
         return conf.xpc
     elif ispcs == 3: # protons

@@ -648,10 +648,11 @@ if __name__ == "__main__":
     gap.gap_length  = conf.rad_pcap # polar cap length in dx
     gap.Nx          = conf.Lx # box length
     gap.x_left      = conf.surface_location #5.0 #conf.rad_star
-    gap.x_right     = conf.Lx - 0.5*conf.NxMesh
-    gap.delta_left  = 4 # left (star) smoothing length 
-    gap.delta_right = 4 # right (vacuum) smoothing length
-    gap.enable_surface_inj = False # SCLF (on) or Ruderman-type gap (off)
+    gap.x_right     = conf.Lx - 1.0*conf.NxMesh
+    gap.delta_left  = 2 # left (star) smoothing length 
+    gap.delta_right = 10 # right (vacuum) smoothing length
+
+    gap.set_e_zero_inside = True # SCLF (on) or Ruderman-type gap (off)
 
     gap.inj_rate_pairs = conf.ninj_pairs*conf.ppc # num of e^- e^+ pairs injected per dt
     gap.inj_rate_phots = conf.ninj_phots          # num of photons injected per dt
@@ -832,25 +833,20 @@ if __name__ == "__main__":
                 mc.solve_onebody(tile)
             timer.stop_comp("qed1")
 
+        # apply moving/reflecting/injecting walls
+        #if lap*conf.cfl > 1.0*conf.rad_pcap: # apply after a fraction of the disk light crossing time 
+        sch.operate( dict(name='star',      solver='lwall', method='inject_prtcls', nhood='local', ) )
+
         # --------------------------------------------------
         # move particles (only locals tiles)
-
-        # NOTE need to recalculate the interpolation step since new particles dont have up-to-date Bpart and Epart; 
-        #      this is clearly a design error in mc.solve_onebody...
-        # DONE new PulsarPusher calculates the fields inside the prtcl loop so this is fixed
-        #      for every other pusher, need to uncomment this
         sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
-
         sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[0]) ) # e^-        
         sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[1]) ) # e^+
         sch.operate( dict(name='push',      solver='pusherx',method='solve', nhood='local', args=[2]) ) # x
+        sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[3]) ) # p
 
         # clear currents; need to call this before wall operations since they can deposit currents too 
         sch.operate( dict(name='clear_cur', solver='tile',   method='clear_current', nhood='all', ) )
-
-        # apply moving/reflecting/injecting walls
-        #if lap*conf.cfl > 1.0*conf.rad_pcap: # apply after a fraction of the disk light crossing time 
-        sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
 
         # --------------------------------------------------
         # advance half B 
@@ -893,6 +889,9 @@ if __name__ == "__main__":
         sch.operate( dict(name='mpi_cur',       solver='mpi',     method='j',                 nhood='all', ) )
         sch.operate( dict(name='cur_exchange',  solver='tile',    method='exchange_currents', nhood='local', args=[grid,], ) )
 
+        # BC: delete in/outflowing particles
+        sch.operate( dict(name='star',          solver='lwall', method='delete_prtcls', nhood='local', ) )
+
         # --------------------------------------------------
         # filter
         for fj in range(conf.npasses):
@@ -913,7 +912,7 @@ if __name__ == "__main__":
             sch.operate( dict(name='add_jrot', solver='lwall', method='add_jrot',                            nhood='local', ) )
 
         # add external current
-        #if lap > conf.rad_pcap/conf.cfl: # add external current for t > H_pc/c
+        #if lap > 1.0*conf.rad_pcap/conf.cfl: # add external current for t > H_pc/c
         sch.operate( dict(name='add_jext', solver='lwall', method='add_jext', nhood='local', ) )
 
 
