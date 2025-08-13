@@ -648,9 +648,11 @@ if __name__ == "__main__":
     gap.gap_length  = conf.rad_pcap # polar cap length in dx
     gap.Nx          = conf.Lx # box length
     gap.x_left      = conf.surface_location #5.0 #conf.rad_star
-    gap.x_right     = conf.Lx - 1.0*conf.NxMesh
+
+    r_buffer        = 0.05*conf.rad_pcap # length of rightmost buffer zone
+    gap.x_right     = conf.Lx - r_buffer #0.95*conf.Lx #conf.rad_pcap + 0.5*(conf.Lx - conf.rad_pcap)
     gap.delta_left  = 2 # left (star) smoothing length 
-    gap.delta_right = 10 # right (vacuum) smoothing length
+    gap.delta_right = 0.5*r_buffer # right (vacuum) smoothing length
 
     gap.set_e_zero_inside = True # SCLF (on) or Ruderman-type gap (off)
 

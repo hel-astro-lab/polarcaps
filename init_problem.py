@@ -109,16 +109,18 @@ class Configuration_Pulsar(Configuration):
         #Schwinger field: b = B_*/B_Q
         self.B_QED = self.bstar/self.bratio
 
+        self.surface_location = 10; # location of the star's surface in the gap
+
         # set polarcap and star size in cells
         if self.oneD:
             #self.rad_pcap = 0.6*self.Lx//4 #same size as would be for 3D sim (since there Nz = Nx/2)
             #self.rad_star = 10*self.rad_pcap
 
             # medium gap setup
-            #self.rad_pcap = 0.8*self.Lx
+            self.rad_pcap = 0.5*self.Lx - self.surface_location
 
             # large gap setup
-            self.rad_pcap = 1.0*self.Lx
+            #self.rad_pcap = 1.0*self.Lx
             self.rad_star = 2*self.rad_pcap #3*self.rad_pcap #10*self.rad_pcap
         else:
             sys.error() # not implemented
@@ -164,8 +166,6 @@ class Configuration_Pulsar(Configuration):
 
         self.height_atms = 1 #3 # add padding; this is the height of the atmosphere at r=Rpc in units of cells
         self.wph = self.wph
-
-        self.surface_location = 10; # location of the star's surface in the gap
 
         # normalization coefficient for internal dipole coordinate system
         # defined so that we have B_* at the star's surface
