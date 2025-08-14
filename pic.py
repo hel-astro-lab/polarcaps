@@ -654,7 +654,8 @@ if __name__ == "__main__":
     gap.delta_left  = 2 # left (star) smoothing length 
     gap.delta_right = 0.5*r_buffer # right (vacuum) smoothing length
 
-    gap.set_e_zero_inside = True # SCLF (on) or Ruderman-type gap (off)
+    gap.e_profile_mode = 1
+    gap.b_profile_mode = 2
 
     gap.inj_rate_pairs = conf.ninj_pairs*conf.ppc # num of e^- e^+ pairs injected per dt
     gap.inj_rate_phots = conf.ninj_phots          # num of photons injected per dt
@@ -887,6 +888,10 @@ if __name__ == "__main__":
         # clear virtual current arrays for boundary addition after mpi, send currents, and exchange between tiles
         sch.operate( dict(name='comp_curr',     solver='currint', method='solve',             nhood='local', ) )
         
+        # add external current
+        #if lap > 1.0*conf.rad_pcap/conf.cfl: # add external current for t > H_pc/c
+        sch.operate( dict(name='add_jext', solver='lwall', method='add_jext', nhood='local', ) )
+
         sch.operate( dict(name='clear_vir_cur', solver='tile',    method='clear_current',     nhood='virtual', ) )
         sch.operate( dict(name='mpi_cur',       solver='mpi',     method='j',                 nhood='all', ) )
         sch.operate( dict(name='cur_exchange',  solver='tile',    method='exchange_currents', nhood='local', args=[grid,], ) )
@@ -900,7 +905,7 @@ if __name__ == "__main__":
 
             # flt uses halo=2 padding so only every 3rd (0,1,2) pass needs update
             if fj % 2 == 0:
-                sch.operate( dict(name='mpi_cur_flt', solver='mpi', method='j', ) )
+                sch.operate( dict(name='mpi_cur_flt', solver='mpi', method='j',                                    nhood='all',   ) )
                 sch.operate( dict(name='upd_bc',      solver='tile',method='update_boundaries',args=[grid, [0,] ], nhood='local', ) )
                 MPI.COMM_WORLD.barrier()
             sch.operate( dict(name='filter',   solver='flt',   method='solve',    nhood='local', ) )
@@ -913,14 +918,9 @@ if __name__ == "__main__":
             sch.operate( dict(name='upd_bc',   solver='tile',  method='update_boundaries', args=[grid,[1,2] ], nhood='local', ) )
             sch.operate( dict(name='add_jrot', solver='lwall', method='add_jrot',                            nhood='local', ) )
 
-        # add external current
-        #if lap > 1.0*conf.rad_pcap/conf.cfl: # add external current for t > H_pc/c
-        sch.operate( dict(name='add_jext', solver='lwall', method='add_jext', nhood='local', ) )
-
-
         # --------------------------------------------------
         # add current to E
-        sch.operate( dict(name='update_j',  solver='lwall', method='update_j',        nhood='local', ) )
+        #sch.operate( dict(name='update_j',  solver='lwall', method='update_j',        nhood='local', ) )
         sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current', nhood='local', ) )
         sch.operate( dict(name='wall_bc_e', solver='lwall', method='update_e',        nhood='local', ) )
 
