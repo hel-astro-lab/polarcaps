@@ -654,8 +654,8 @@ if __name__ == "__main__":
     gap.delta_left  = 2 # left (star) smoothing length 
     gap.delta_right = 0.5*r_buffer # right (vacuum) smoothing length
 
-    gap.e_profile_mode = 1
-    gap.b_profile_mode = 2
+    gap.e_profile_mode = 1 
+    gap.b_profile_mode = 0
 
     gap.inj_rate_pairs = conf.ninj_pairs*conf.ppc # num of e^- e^+ pairs injected per dt
     gap.inj_rate_phots = conf.ninj_phots          # num of photons injected per dt
@@ -709,19 +709,19 @@ if __name__ == "__main__":
 
             #--------------------------------------------------
             # 1-to-2 processes
-            timer.start_comp("qed1")
-            for tile in pytools.tiles_local(grid):
-                mc.solve_onebody(tile)
-            timer.stop_comp("qed1")
+            if qed_mode_rp:
+                timer.start_comp("qed1")
+                for tile in pytools.tiles_local(grid):
+                    mc.solve_onebody(tile)
+                timer.stop_comp("qed1")
 
             #--------------------------------------------------
             # 2-to-2 processes
-            timer.start_comp("qed2")
-            for tile in pytools.tiles_local(grid):
-                i,j,k = pytools.get_index(tile, conf)
-                mc.solve_twobody(tile)
-            timer.stop_comp("qed2")
-
+            if qed_mode_msp:
+                timer.start_comp("qed2")
+                for tile in pytools.tiles_local(grid):
+                    mc.solve_twobody(tile)
+                timer.stop_comp("qed2")
 
             #--------------------------------------------------
             # optical depth in tiles (for IO only)

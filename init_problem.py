@@ -386,13 +386,16 @@ def density_profile(xloc, ispcs, conf):
     #    return 0
 
     if ispcs == 0: # electrons
-        return 0 #conf.ppc
+        return conf.ppc
     elif ispcs == 1: # positrons
         return 0 #conf.ppc
     elif ispcs == 2: # photons
         return conf.xpc
     elif ispcs == 3: # protons
-        return 0
+        if xloc[0] < conf.rad_pcap:
+            return conf.ppc
+        else:
+            return 0
 
 # Particle weight that is added to cell at location 'xloc'
 def weigth_profile(xloc, ispcs, conf):
