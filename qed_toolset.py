@@ -34,7 +34,7 @@ class QEDToolset:
         self.wxlims = (-1, 7) # pair wlim
         self.hhlims = (0, self.nh) # spatial box height limits
 
-        self.Nhist = 1024 #256 #128
+        self.Nhist = 256 #1024 #256 #128
 
         self.zs = np.logspace(self.pxlims[0], self.pxlims[1], self.Nhist, endpoint=False) # momenta
         self.xs = np.logspace(self.xxlims[0], self.xxlims[1], self.Nhist, endpoint=False) # energy
