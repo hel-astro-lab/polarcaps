@@ -650,7 +650,7 @@ if __name__ == "__main__":
     gap.x_left      = conf.surface_location #5.0 #conf.rad_star
 
     r_buffer        = 0.05*conf.rad_pcap # length of rightmost buffer zone
-    gap.x_right     = conf.Lx - r_buffer #0.95*conf.Lx #conf.rad_pcap + 0.5*(conf.Lx - conf.rad_pcap)
+    gap.x_right     = conf.Lx - r_buffer 
     gap.delta_left  = 2 # left (star) smoothing length 
     gap.delta_right = 0.5*r_buffer # right (vacuum) smoothing length
 

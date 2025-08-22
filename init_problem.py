@@ -112,19 +112,18 @@ class Configuration_Pulsar(Configuration):
         self.surface_location = 10; # location of the star's surface in the gap
 
         # set polarcap and star size in cells
-        if self.oneD:
+        if self.oneD and hasattr(self, 'rad_pcap'):
+            self.rad_pcap = self.rad_pcap*self.Lx  # set user-given gap height
+        else:
             #self.rad_pcap = 0.6*self.Lx//4 #same size as would be for 3D sim (since there Nz = Nx/2)
             #self.rad_star = 10*self.rad_pcap
 
             # medium gap setup
-            self.rad_pcap = 0.5*self.Lx - self.surface_location
+            self.rad_pcap = 0.5*self.Lx 
+        
+        self.rad_pcap -= self.surface_location # correct with surface location
 
-            # large gap setup
-            #self.rad_pcap = 1.0*self.Lx
-            self.rad_star = 2*self.rad_pcap #3*self.rad_pcap #10*self.rad_pcap
-        else:
-            sys.error() # not implemented
-
+        self.rad_star = 2*self.rad_pcap # set star radius (NOTE: NOT USED ANYWHERE)
 
         # get electron charge from Goldreich-Julian number density
         # n_GJ = v B_*/e H = nppc 
