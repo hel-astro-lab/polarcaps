@@ -87,7 +87,8 @@ if __name__ == "__main__":
     axs[2,0].set_ylabel(r"$p_i$ ($m_e c$)")
     axs[3,0].set_ylabel(r"$x$ ($m_e c^2$)")
 
-    axs[4,0].set_ylabel(r"$\mathrm{d} m/\mathrm{d} x$")
+    axs[4,0].set_ylabel(r"$m_{\pm/x}$")
+    #axs[4,0].set_ylabel(r"$\mathrm{d} m/\mathrm{d} x$")
     #axs[3,0].set_ylabel(r"$m(x)/ \Delta x$")
 
     axs[5,0].set_ylabel(r"$\langle \gamma \rangle$")
@@ -99,7 +100,7 @@ if __name__ == "__main__":
 
 
     hmin = 0.0
-    hmax = 1.0 #7.0
+    hmax = 2.0 #0.05 #0.05 #7.0
     for j in range(ncol_fig):
         for i in range(nrow_fig):
             axs[i,j].set_xlim((hmin, hmax))
@@ -110,10 +111,7 @@ if __name__ == "__main__":
     #        axs[i,j].set_xlim((0.9, 1.0)) #right end
 
     #axs[4,0].set_ylim((1e-1, 1e3))
-    if conf.qed_mode_msp:
-        axs[4,0].set_ylim((1e-1, 1e5))
-    else:
-        axs[4,0].set_ylim((1e-1, 1e3))
+    axs[4,0].set_ylim((1e-1, 1e6))
 
     axs[5,0].set_ylim((1.0, 1e8))
     axs[6,0].set_ylim((-1.1, 1.1))
@@ -277,12 +275,12 @@ if __name__ == "__main__":
         # histogram into units of n_GJ
         n_units = toolset.N_box/toolset.N_wgt # de-unitize what we have in the qed_toolset
         n_units *= 1.0/conf.ppc # normalize to n_GJ
-        n_units *= 1.0/toolset.Nhist # normalize to per histogram cell 
+        n_units *= toolset.Nhist/conf.Lx # normalize to per cell 
 
         # conversion factor into units of n_GJ
         nx_units = toolset.N_box*toolset.N_time/toolset.N_wgt # de-unitize what we have in qed_toolset
         nx_units *= 1/conf.ppc      # normalize to n_GJ
-        nx_units *= 1/toolset.Nhist # normalize by area into xx per cell
+        nx_units *= conf.Lx/toolset.Nhist # normalize to per cell 
 
         #NOTE: after these units, integral over the x axis gives total number of particles in units of multiplicity
 
@@ -381,6 +379,36 @@ if __name__ == "__main__":
 
 
 
+
+
+        if True: # smooth values 
+            def smooth(v): # smooth and mask nan's away
+                m = np.argwhere(np.isnan(v))
+                v1 = np.array(v, copy=True)
+                v1[m] = 0.0
+                v1 = savgol_filter(v1, int(0.05*len(v)), 1)
+                v1[m] = np.nan
+                return v1
+
+            me_p = smooth(me_p)
+            me_m = smooth(me_m)
+
+            mp_m = smooth(mp_m)
+            mp_p = smooth(mp_p)
+
+            mi_m = smooth(mi_m)
+            mi_p = smooth(mi_p)
+
+            mx_m = smooth(mx_m)
+            mx_p = smooth(mx_p)
+
+            gam_me_m = smooth(gam_me_m)
+            gam_me_p = smooth(gam_me_p)
+            gam_mp_m = smooth(gam_mp_m)
+            gam_mp_p = smooth(gam_mp_p)
+            gam_mi_m = smooth(gam_mi_m)
+            gam_mi_p = smooth(gam_mi_p)
+
         #print(g3_me_p)
 
         lw = 0.8
@@ -407,8 +435,8 @@ if __name__ == "__main__":
         axs[5,0].plot(hh, gam_mi_p, color="C3", lw=lw, linestyle="solid")
         axs[5,0].plot(hh, gam_mi_m, color="C3", lw=lw, linestyle="dashed")
 
-        print("gam+", gam_mi_p)
-        print("gam-", gam_mi_m)
+        #print("gam+", gam_mi_p)
+        #print("gam-", gam_mi_m)
 
         #axs[3,0].plot(hh, gam_mx_p, color="C2", lw=lw, linestyle="solid")
         #axs[3,0].plot(hh, gam_mx_m, color="C2", lw=lw, linestyle="dashed")
@@ -601,12 +629,13 @@ if __name__ == "__main__":
 
         # smooth current 
         #if True:
+        #    #jx = savgol_filter(jx, 300, 2)
         #    jx = savgol_filter(jx, 300, 2)
         
         axs[6,0].plot(hh, ex, lw=0.8, linestyle='solid',  color='C0', alpha=0.8)
         #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid',  color='C1', alpha=0.8)
         #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid',  color='C2', alpha=0.8)
-        #axs[6,0].plot(hh, bx, lw=0.8, linestyle='dotted', color='C3', alpha=0.8)
+        axs[6,0].plot(hh, bx, lw=0.8, linestyle='dotted', color='C3', alpha=0.8)
 
         #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
         #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
@@ -671,6 +700,7 @@ if __name__ == "__main__":
     #fname = fdir + 'fig_gap2_' + slap + '.pdf' 
     #plt.savefig(fname)
 
+    #fname = fdir + 'fig_zoom_gap2_' + slap + '.png' 
     fname = fdir + 'fig_gap2_' + slap + '.png' 
     plt.savefig(fname, dpi=300)
 
