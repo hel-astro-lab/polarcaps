@@ -429,11 +429,11 @@ if __name__ == "__main__":
     if sch.is_master: print("loading solvers..."); sys.stdout.flush()
 
 
-    #sch.fldpropE = pyfld.FDTD2_pml()
-    #sch.fldpropB = pyfld.FDTD2_pml()
+    sch.fldpropE = pyfld.FDTD2_pml()
+    sch.fldpropB = pyfld.FDTD2_pml()
 
-    sch.fldpropE = pyfld.FDTD2()
-    sch.fldpropB = pyfld.FDTD2()
+    #sch.fldpropE = pyfld.FDTD2()
+    #sch.fldpropB = pyfld.FDTD2()
 
     #sch.fldpropE = pyfld.FDTD4()
     #sch.fldpropB = pyfld.FDTD4()
@@ -446,17 +446,17 @@ if __name__ == "__main__":
     # set PML absorption region into the pusher
  
     # setup perfectly matching layer; vacuum outside boundaries
-    #for prop in [ sch.fldpropE, sch.fldpropB]:
-    #    prop.cenx = conf.Lx//2
-    #    prop.ceny = conf.Ly//2 
-    #    prop.cenz = 0
+    for prop in [ sch.fldpropE, sch.fldpropB]:
+        prop.cenx = 0 
+        prop.ceny = 0
+        prop.cenz = 0
 
-    #    prop.radx = conf.Lx//2 # box x half length
-    #    prop.rady = conf.Ly//2 # box y half length
-    #    prop.radz = 1;        # box z half length
+        prop.radx = 0.98*conf.Lx # box x length
+        prop.rady = 1       # box y length
+        prop.radz = 1;      # box z half length
 
-    #    prop.norm_abs = conf.cfl/3.0 # PML coefficient
-    #    prop.rad_lim = 0.80 # PML sphere damping radius
+        prop.norm_abs = conf.cfl/3.0 # PML coefficient
+        prop.rad_lim = 0.90 # PML sphere damping radius
 
 
     # --------------------------------------------------
