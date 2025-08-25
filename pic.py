@@ -785,12 +785,14 @@ if __name__ == "__main__":
         # --------------------------------------------------
         # filter
         for fj in range(conf.npasses):
+            sch.operate( dict(name='upd_bc',       solver='tile',  method='update_boundaries',args=[grid, [0,] ], nhood='local', ) ) 
             sch.operate( dict(name='filter',       solver='flt',   method='solve',    nhood='local', ) )
             sch.operate( dict(name='wall_bc_j',    solver='lwall', method='update_j',                             nhood='local', ) )
-            sch.operate( dict(name='clear_vir_cur',solver='tile',  method='clear_current',                        nhood='virtual', ) )
-            sch.operate( dict(name='mpi_cur_flt',  solver='mpi',   method='j',                                    nhood='all',   ) ) 
-            sch.operate( dict(name='upd_bc',       solver='tile',  method='update_boundaries',args=[grid, [0,] ], nhood='local', ) ) 
-            MPI.COMM_WORLD.barrier()
+
+            if fj < conf.npasses -1: # sync bc's except for the last round
+                sch.operate( dict(name='clear_vir_cur',solver='tile',  method='clear_current',                        nhood='virtual', ) )
+                sch.operate( dict(name='mpi_cur_flt',  solver='mpi',   method='j',                                    nhood='all',   ) ) 
+                MPI.COMM_WORLD.barrier()
 
         # --------------------------------------------------
         # add current to E
