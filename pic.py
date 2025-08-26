@@ -768,33 +768,28 @@ if __name__ == "__main__":
         sch.operate( dict(name='upd_bc_b',     solver='tile',     method='update_boundaries', args=[grid, [2,] ], nhood='local',) )
         sch.operate( dict(name='wall_bc_b',    solver='lwall',    method='update_b',    nhood='local',) ) # dynamic B
 
-
         # --------------------------------------------------
         # push E
         sch.operate( dict(name='push_e',    solver='fldpropE', method='push_e',  nhood='local', ) )
-        sch.operate( dict(name='wall_bc_e', solver='lwall',    method='update_e',nhood='local', ) )
 
         # --------------------------------------------------
         # current calculation; charge conserving current deposition
         sch.operate( dict(name='comp_curr',     solver='currint', method='solve',             nhood='local', ) )
         sch.operate( dict(name='add_jext',      solver='lwall',   method='add_jext',          nhood='local', ) )
         sch.operate( dict(name='mpi_cur',       solver='mpi',     method='j',                 nhood='all', ) )
-        sch.operate( dict(name='cur_exchange',  solver='tile',    method='exchange_currents', nhood='local', args=[grid,], ) )
-
+        sch.operate( dict(name='cur_exchange',  solver='tile',    method='exchange_currents', nhood='all', args=[grid,], ) )
 
         # --------------------------------------------------
         # filter
         for fj in range(conf.npasses):
             sch.operate( dict(name='upd_bc_j',     solver='tile',  method='update_boundaries',args=[grid, [0,] ], nhood='local', ) ) 
-            sch.operate( dict(name='filter',       solver='flt',   method='solve',    nhood='local', ) )
+            sch.operate( dict(name='wall_bc_j',    solver='lwall', method='update_j',         nhood='local', ) )
+            sch.operate( dict(name='filter',       solver='flt',   method='solve',            nhood='local', ) )
 
-            if fj < conf.npasses -1: # sync bc's except for the last round
+            if fj % 2 == 0 and fj < conf.npasses - 1: # sync mpi every 2nd pass; do not sync on the last cycle
                 sch.operate( dict(name='clear_vir_cur',solver='tile',  method='clear_current',nhood='virtual', ) )
                 sch.operate( dict(name='mpi_cur_flt',  solver='mpi',   method='j',            nhood='all',   ) ) 
                 MPI.COMM_WORLD.barrier()
-
-            # always enforce user-given boundaries
-            sch.operate( dict(name='wall_bc_j',    solver='lwall', method='update_j',         nhood='local', ) )
 
         # --------------------------------------------------
         # add current to E
