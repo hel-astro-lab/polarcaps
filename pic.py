@@ -702,9 +702,9 @@ if __name__ == "__main__":
         #--------------------------------------------------
         # advance first half of b
         sch.operate( dict(name='push_half_b1', solver='fldpropB', method='push_half_b', nhood='local',) )
+        sch.operate( dict(name='mpi_b1',       solver='mpi',      method='b', ) )
+        sch.operate( dict(name='upd_bc_b',     solver='tile',     method='update_boundaries',args=[grid, [2,] ], nhood='local',) )
         sch.operate( dict(name='wall_bc_b',    solver='lwall',    method='update_b',    nhood='local',) )
-        sch.operate( dict(name='mpi_b1',  solver='mpi', method='b',                 ) )
-        sch.operate( dict(name='upd_bc ', solver='tile',method='update_boundaries',args=[grid, [2,] ], nhood='local',) )
 
         # --------------------------------------------------
         # QED
@@ -754,19 +754,19 @@ if __name__ == "__main__":
 
         # --------------------------------------------------
         # move particles 
-        sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
-        sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[0]) ) # e^-        
-        sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[1]) ) # e^+
-        sch.operate( dict(name='push',      solver='pusherx',method='solve', nhood='local', args=[2]) ) # x
-        sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[3]) ) # p
+        sch.operate( dict(name='interp', solver='fintp',  method='solve', nhood='local', ) )
+        sch.operate( dict(name='push',   solver='pusher', method='solve', nhood='local', args=[0]) ) # e^-        
+        sch.operate( dict(name='push',   solver='pusher', method='solve', nhood='local', args=[1]) ) # e^+
+        sch.operate( dict(name='push',   solver='pusherx',method='solve', nhood='local', args=[2]) ) # x
+        sch.operate( dict(name='push',   solver='pusher', method='solve', nhood='local', args=[3]) ) # p
         # NOTE: external particle driving here 
 
         # --------------------------------------------------
         # advance second half of B 
         sch.operate( dict(name='push_half_b2', solver='fldpropB', method='push_half_b', nhood='local', ) )
+        sch.operate( dict(name='mpi_b2',       solver='mpi',      method='b',                 ) )
+        sch.operate( dict(name='upd_bc_b',     solver='tile',     method='update_boundaries', args=[grid, [2,] ], nhood='local',) )
         sch.operate( dict(name='wall_bc_b',    solver='lwall',    method='update_b',    nhood='local',) ) # dynamic B
-        sch.operate( dict(name='mpi_b2', solver='mpi', method='b',                 ) )
-        sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid, [2,] ], nhood='local',) )
 
 
         # --------------------------------------------------
@@ -776,8 +776,8 @@ if __name__ == "__main__":
 
         # --------------------------------------------------
         # current calculation; charge conserving current deposition
-        sch.operate( dict(name='comp_curr',     solver='currint', method='solve',    nhood='local', ) )
-        sch.operate( dict(name='add_jext',      solver='lwall',  method='add_jext',  nhood='local', ) )
+        sch.operate( dict(name='comp_curr',     solver='currint', method='solve',             nhood='local', ) )
+        sch.operate( dict(name='add_jext',      solver='lwall',   method='add_jext',          nhood='local', ) )
         sch.operate( dict(name='mpi_cur',       solver='mpi',     method='j',                 nhood='all', ) )
         sch.operate( dict(name='cur_exchange',  solver='tile',    method='exchange_currents', nhood='local', args=[grid,], ) )
 
@@ -785,34 +785,35 @@ if __name__ == "__main__":
         # --------------------------------------------------
         # filter
         for fj in range(conf.npasses):
-            sch.operate( dict(name='upd_bc',       solver='tile',  method='update_boundaries',args=[grid, [0,] ], nhood='local', ) ) 
+            sch.operate( dict(name='upd_bc_j',     solver='tile',  method='update_boundaries',args=[grid, [0,] ], nhood='local', ) ) 
             sch.operate( dict(name='filter',       solver='flt',   method='solve',    nhood='local', ) )
-            sch.operate( dict(name='wall_bc_j',    solver='lwall', method='update_j',                             nhood='local', ) )
 
             if fj < conf.npasses -1: # sync bc's except for the last round
-                sch.operate( dict(name='clear_vir_cur',solver='tile',  method='clear_current',                        nhood='virtual', ) )
-                sch.operate( dict(name='mpi_cur_flt',  solver='mpi',   method='j',                                    nhood='all',   ) ) 
+                sch.operate( dict(name='clear_vir_cur',solver='tile',  method='clear_current',nhood='virtual', ) )
+                sch.operate( dict(name='mpi_cur_flt',  solver='mpi',   method='j',            nhood='all',   ) ) 
                 MPI.COMM_WORLD.barrier()
+
+            # always enforce user-given boundaries
+            sch.operate( dict(name='wall_bc_j',    solver='lwall', method='update_j',         nhood='local', ) )
 
         # --------------------------------------------------
         # add current to E
         sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current', nhood='local', ) )
-        sch.operate( dict(name='wall_bc_e', solver='lwall', method='update_e',        nhood='local', ) )
         sch.operate( dict(name='mpi_e0',    solver='mpi',   method='e', ) )
-        sch.operate( dict(name='upd_bc',    solver='tile',  method='update_boundaries', args=[grid,[1,] ], nhood='local', ) )
-
+        sch.operate( dict(name='upd_bc_e',  solver='tile',  method='update_boundaries', args=[grid,[1,] ], nhood='local', ) )
+        sch.operate( dict(name='wall_bc_e', solver='lwall', method='update_e',        nhood='local', ) )
 
         # --------------------------------------------------
         # particle communication (only local/boundary tiles)
-        sch.operate( dict(name='check_outg_prtcls',     solver='tile',  method='check_outgoing_particles',     nhood='local', ) )
-        sch.operate( dict(name='pack_outg_prtcls',      solver='tile',  method='pack_outgoing_particles',      nhood='boundary', ) )
-        sch.operate( dict(name='mpi_prtcls',            solver='mpi',   method='p1',                           nhood='all', ) )
-        sch.operate( dict(name='mpi_prtcls',            solver='mpi',   method='p2',                           nhood='all', ) )
-        sch.operate( dict(name='unpack_vir_prtcls',     solver='tile',  method='unpack_incoming_particles',    nhood='virtual', ) )
-        sch.operate( dict(name='check_outg_vir_prtcls', solver='tile',  method='check_outgoing_particles',     nhood='virtual', ) )
-        sch.operate( dict(name='get_inc_prtcls',        solver='tile',  method='get_incoming_particles',       nhood='local', args=[grid,]) )
-        sch.operate( dict(name='del_trnsfrd_prtcls',    solver='tile',  method='delete_transferred_particles', nhood='local', ) )
-        sch.operate( dict(name='del_vir_prtcls',        solver='tile',  method='delete_all_particles',         nhood='virtual', ) )
+        sch.operate( dict(name='check_outg_prtcls',    solver='tile',method='check_outgoing_particles',    nhood='local', ) )
+        sch.operate( dict(name='pack_outg_prtcls',     solver='tile',method='pack_outgoing_particles',     nhood='boundary', ) )
+        sch.operate( dict(name='mpi_prtcls',           solver='mpi', method='p1',                          nhood='all', ) )
+        sch.operate( dict(name='mpi_prtcls',           solver='mpi', method='p2',                          nhood='all', ) )
+        sch.operate( dict(name='unpack_vir_prtcls',    solver='tile',method='unpack_incoming_particles',   nhood='virtual', ) )
+        sch.operate( dict(name='check_outg_vir_prtcls',solver='tile',method='check_outgoing_particles',    nhood='virtual', ) )
+        sch.operate( dict(name='get_inc_prtcls',       solver='tile',method='get_incoming_particles',      nhood='local', args=[grid,]))
+        sch.operate( dict(name='del_trnsfrd_prtcls',   solver='tile',method='delete_transferred_particles',nhood='local', ) )
+        sch.operate( dict(name='del_vir_prtcls',       solver='tile',method='delete_all_particles',        nhood='virtual', ) )
 
         # external particle boundaries
         sch.operate( dict(name='star', solver='lwall', method='delete_prtcls', nhood='local', ) )
