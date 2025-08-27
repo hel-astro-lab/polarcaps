@@ -699,6 +699,11 @@ if __name__ == "__main__":
     time = lap * (conf.cfl / conf.c_omp)
     for lap in range(lap, conf.Nt + 1):
 
+        # switch prtcl cap off after about one discharge
+        #if lap/conf.t_norm > 2.0:
+        #    mc.max_tile_prtcl_num = conf.ppc*conf.NxMesh*10000000
+        #    mc.max_tile_phot_num  = conf.ppc*conf.NxMesh*10000000
+
         # clear currents 
         sch.operate( dict(name='clear_cur', solver='tile', method='clear_current', nhood='all', ) )
 
