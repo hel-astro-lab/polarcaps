@@ -666,6 +666,9 @@ if __name__ == "__main__":
     gap.temp_phots     = conf.delgam_x    # injection (black-body) temperature for photons
     gap.wph            = conf.wph # initial weight of the injected photons
     
+    atmos_height       = 0.05*conf.rad_pcap  # make nominal atmospheric scale height 5% of gap
+    gap.grav_const     = conf.delgam**2/(2*atmos_height) # surface gravity constant
+
     sch.lwall = gap # lastly, add to scheduler
 
 
@@ -759,7 +762,7 @@ if __name__ == "__main__":
         sch.operate( dict(name='push',   solver='pusher', method='solve', nhood='local', args=[1]) ) # e^+
         sch.operate( dict(name='push',   solver='pusherx',method='solve', nhood='local', args=[2]) ) # x
         sch.operate( dict(name='push',   solver='pusher', method='solve', nhood='local', args=[3]) ) # p
-        # NOTE: external particle driving here 
+        sch.operate( dict(name='ext_driving',solver='lwall', method='drive_prtcls', nhood='local',) ) # external driving
 
         # --------------------------------------------------
         # advance second half of B 
