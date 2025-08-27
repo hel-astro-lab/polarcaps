@@ -99,8 +99,14 @@ if __name__ == "__main__":
     #axs[5,0].set_ylabel(r"$\langle E \rangle_\mathrm{LF}/E_\mathrm{rot}$")
 
 
-    hmin = 0.0
-    hmax = 2.0 #0.05 #0.05 #7.0
+    hmin = -0.05  #0.0
+    hmax = 1.30 #1.2 #0.05 #0.05 #7.0
+    #hmin = 0.0
+    #hmax = 0.2 #1.2 #0.05 #0.05 #7.0
+    #hmin = 0.55
+    #hmax = 0.65 
+    #hmin = 1.15
+    #hmax = 1.30
     for j in range(ncol_fig):
         for i in range(nrow_fig):
             axs[i,j].set_xlim((hmin, hmax))
@@ -112,9 +118,11 @@ if __name__ == "__main__":
 
     #axs[4,0].set_ylim((1e-1, 1e3))
     axs[4,0].set_ylim((1e-1, 1e6))
-
     axs[5,0].set_ylim((1.0, 1e8))
+
     axs[6,0].set_ylim((-1.1, 1.1))
+    #axs[6,0].set_ylim((0.0, 0.2))
+    #axs[6,0].set_ylim((-0.01, 0.01))
 
 
     #axs[5,0].set_ylim((-0.00005, 0.00005))
@@ -640,6 +648,11 @@ if __name__ == "__main__":
         #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
         #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
 
+
+        #v = jx - jx[0]
+        #print("dj:", v)
+        #axs[6,0].plot(hh, v, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
+
         #axs[6,0].plot(hh, jx, lw=0.3, linestyle='solid', color='C0', alpha=0.8)
         #axs[6,0].plot(hh, jy, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
         #axs[6,0].plot(hh, jz, lw=0.3, linestyle='solid', color='C2', alpha=0.8)
@@ -649,7 +662,6 @@ if __name__ == "__main__":
         #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
         #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
         #axs[6,0].plot(hh, bx-1.0, lw=0.8, linestyle='dashed', color='C0', alpha=0.8)
-
 
 
     #--------------------------------------------------
