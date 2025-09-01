@@ -391,7 +391,7 @@ def density_profile(xloc, ispcs, conf):
     elif ispcs == 2: # photons
         return conf.xpc
     elif ispcs == 3: # protons
-        if xloc[0] < conf.rad_pcap:
+        if xloc[0] < conf.rad_pcap + conf.surface_location:
             return conf.ppc
         else:
             return 0
