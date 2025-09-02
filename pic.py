@@ -639,7 +639,7 @@ if __name__ == "__main__":
         slice_yz_writer = pyfld.FieldSliceWriter( conf.outdir, 
                 conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, st, 2, 1)
 
-        slice_xy_writer.ind = int(0.8*conf.Lz) # bottom slice; z = 8 slice through atmosphere
+        slice_xy_writer.ind = int(0.8*conf.Lz) # bottom slice; z = 8 slice 
         slice_xz_writer.ind = int(0.5*conf.Ly) # mid slice 
         slice_yz_writer.ind = int(0.5*conf.Lx) # mid slice 
 
@@ -700,6 +700,10 @@ if __name__ == "__main__":
     # simulation loop
     time = lap * (conf.cfl / conf.c_omp)
     for lap in range(lap, conf.Nt + 1):
+
+        # ramp up j_ext gradually
+        #j_ramp = min(1.0, max(0.0, lap/conf.t_norm - 1.0))
+        #sch.lwall.j_ext = j_ramp*conf.jm_scaling*conf.qe*conf.ppc*conf.cfl 
 
         # switch prtcl cap off after about one discharge
         #if lap/conf.t_norm > 2.0:

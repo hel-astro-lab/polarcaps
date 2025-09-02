@@ -395,8 +395,7 @@ def density_profile(xloc, ispcs, conf):
         ninj = conf.ninj_phots*conf.xpc # photon bkg num density required for gam_rad_comp
         return ninj #conf.xpc
     elif ispcs == 3: # protons
-        #return ninj
-        if xloc[0] < conf.rad_pcap:
+        if xloc[0] < conf.rad_pcap + conf.surface_location:
             return conf.ppc
         else:
             return 0
