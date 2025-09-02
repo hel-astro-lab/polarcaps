@@ -205,7 +205,9 @@ class Configuration_Pulsar(Configuration):
         ninj_phots_per_cell = self.ninj_phots*self.xpc*self.wph
         self.gam_rad_comp = self.gam_gap**0.5
         self.gam_rad_comp *= self.delgam_x**-0.5 #m_e c^2 / kT = 1.0 / delgam_x
-        self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp/(max(ninj_phots_per_cell,1)*self.h_pcap))**0.5
+        
+        n_phot = max(ninj_phots_per_cell, 1) # target number density of the photon gas 
+        self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp/(n_phot*self.h_pcap))**0.5
 
         # radiation length (distance that the particle travels before reaching the radiation limit)
         self.len_rad = (self.gam_rad_synch/self.gam_gap)*self.h_pcap # simpler v2
@@ -223,8 +225,8 @@ class Configuration_Pulsar(Configuration):
         #--------------------------------------------------
         # Calculation of 2-photon pair creation mean free path
         x2 = 2.7*self.delgam_x
-        comp_scale = 6.0*np.pi*self.cfl**5*self.Nmp/(max(ninj_phots_per_cell,1)*self.h_pcap)
-        x1 = x2+x2*(4.0/3.0)*self.gam_rad_comp**2
+        comp_scale = 6.0*np.pi*self.cfl**5*self.Nmp/(n_phot*self.h_pcap)
+        x1 = x2 + x2*(4.0/3.0)*self.gam_rad_comp**2
         xpr = x1*x2
         efac = 0.652*(xpr**2-1.0)*np.log(xpr)*np.heaviside(xpr-1.0,1.0)/xpr**3
         efac = 1.0/efac
@@ -360,8 +362,7 @@ def velocity_profile(xloc, ispcs, conf):
         #if np.isnan(ux) or np.isnan(uy) or np.isnan(uz) or np.isnan(uu):
         #    sys.exit()
 
-    # TODO debug
-    #ux = 1e3
+    #ux = 1e3 # TODO debug
 
     x0 = [xx, yy, zz]
     u0 = [ux, uy, uz]
@@ -384,13 +385,17 @@ def density_profile(xloc, ispcs, conf):
     #if xloc[0] < conf.height_atms + 10:
     #    return 0
 
+    #ninj = 1000 #if int(xloc[0]/400) % 2 == 0 else 1000
+
     if ispcs == 0: # electrons
         return conf.ppc
     elif ispcs == 1: # positrons
-        return 0 #conf.ppc
+        return 0 
     elif ispcs == 2: # photons
-        return conf.xpc
+        ninj = conf.ninj_phots*conf.xpc # photon bkg num density required for gam_rad_comp
+        return ninj #conf.xpc
     elif ispcs == 3: # protons
+        #return ninj
         if xloc[0] < conf.rad_pcap:
             return conf.ppc
         else:

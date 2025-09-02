@@ -536,14 +536,16 @@ if __name__ == "__main__":
         mc.add_interaction(a) # ON                      # phot-ann
         #mc.add_interaction(b) # ON                      # pair-ann
         #mc.add_interaction(c) # off for double counting # pair-ann
-        mc.add_interaction(d) # ON
-        mc.add_interaction(e) # ON
+        mc.add_interaction(d) # ON                      # Compton
+        mc.add_interaction(e) # ON                      # Compton
         #mc.add_interaction(f) # off for double counting
         #mc.add_interaction(g) # off for double counting
 
     elif qed_mode_rp:
         if sch.is_master: print("loading RP 2-body QED processes..."); sys.stdout.flush()
         #none
+        #mc.add_interaction(d) # ON
+        #mc.add_interaction(e) # ON
 
     #--------------------------------------------------
     mc.prob_norm_onebody = conf.N_onebody/conf.N_qdt # units of [TODO]
@@ -657,7 +659,7 @@ if __name__ == "__main__":
     gap.delta_left  = 2 # left (star) smoothing length 
     gap.delta_right = 0.5*r_buffer # right (vacuum) smoothing length
 
-    gap.e_profile_mode = 1 
+    gap.e_profile_mode = 1
     gap.b_profile_mode = 0
 
     gap.inj_rate_pairs = conf.ninj_pairs*conf.ppc # num of e^- e^+ pairs injected per dt
