@@ -656,7 +656,7 @@ if __name__ == "__main__":
     gap.delta_left  = conf.delta_left # 0.1 # left (star) smoothing length; small value gives a sharp surface
 
     #r_buffer        = 0.05*conf.rad_pcap # length of rightmost buffer zone
-    gap.x_right     = conf.Lx #- r_buffer 
+    gap.x_right     = conf.Lx - 1 #- r_buffer 
     gap.delta_right = conf.delta_right #0.1 #0.5*r_buffer # right (vacuum) smoothing length
 
     gap.e_profile_mode = 1
