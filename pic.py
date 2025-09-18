@@ -374,7 +374,14 @@ if __name__ == "__main__":
         # injecting plasma particles
         # NOTE: we still need to call injector to set the container types; density_profile ensure = 0
         if not(conf.use_injector): 
-            prtcl_stat = pytools.pic.inject(grid, velocity_profile, density_profile, conf)
+
+            def unit_w(xloc, ispcs, conf):
+                if ispcs == 2: 
+                    return conf.wph
+                else:
+                    return 1
+
+            prtcl_stat = pytools.pic.inject(grid, velocity_profile, density_profile, w_func=unit_w, conf)
             if sch.is_example_worker: 
                 print("injected:")
                 print("     e- prtcls: {}".format(prtcl_stat[0]))
