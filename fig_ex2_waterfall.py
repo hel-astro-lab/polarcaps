@@ -88,22 +88,26 @@ if __name__ == "__main__":
     xmin = 0
     xmax = Lh/conf.rad_pcap
 
-    axs[0,0].set_xlim((0.0, 1.25))
-    #axs[0,0].set_ylim((6.0, 8.0))
 
-    #laps = np.array( list( range(0, conf.Nt, conf.interval) ) )
-    laps = np.array( list( range(0, 1280000, conf.interval) ) )
+    laps = np.array( list( range(0, conf.Nt, conf.interval) ) )
     tt = laps/conf.t_norm
 
     nx = int( conf.Nx*conf.NxMesh/conf.stride )
     ny = int( len(laps) )
     data = np.zeros((ny,nx))
 
+    tmax = 0.0 # monitor maxium time 
+
     for i, lap in enumerate(laps):
-        print(lap)
 
         # read from output file
         fname = conf.outdir + '/flds_{}.h5'.format(str(lap))
+        if not(os.path.isfile(fname)): continue
+
+        tmax = tt[i] # update max time
+
+        print(lap)
+
         f5 = h5.File(fname,'r')
 
         ex = pytools.read_h5_array(f5, 'ex')/conf.e_norm
@@ -146,6 +150,13 @@ if __name__ == "__main__":
         #data[i, :] = ex
         data[i, :] = ex**2
 
+    #--------------------------------------------------
+    # done reading files
+
+
+    # scale plot to visible area
+    axs[0,0].set_xlim((0.0, 1.25))
+    axs[0,0].set_ylim((0.0, tmax))
 
     #--------------------------------------------------
     # now plot
