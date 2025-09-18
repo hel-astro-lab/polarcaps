@@ -202,7 +202,7 @@ class Configuration_Pulsar(Configuration):
         self.gam_rad_synch *= self.bratio**-0.5
         self.gam_rad_synch *= ( 1.5*self.lamC/self.h_pcap/alphaf)**0.25
 
-        ninj_phots_per_cell = self.ninj_phots*self.xpc*self.wph
+        ninj_phots_per_cell = self.ninj_phots*self.wph
         self.gam_rad_comp = self.gam_gap**0.5
         self.gam_rad_comp *= self.delgam_x**-0.5 #m_e c^2 / kT = 1.0 / delgam_x
         
@@ -392,7 +392,7 @@ def density_profile(xloc, ispcs, conf):
     elif ispcs == 1: # positrons
         return 0 
     elif ispcs == 2: # photons
-        ninj = int(conf.ninj_phots*conf.xpc) # photon bkg num density required for gam_rad_comp
+        ninj = int(conf.ninj_phots) # photon bkg num density required for gam_rad_comp
         return ninj #conf.xpc
     elif ispcs == 3: # protons
         if xloc[0] < conf.rad_pcap + conf.surface_location:
