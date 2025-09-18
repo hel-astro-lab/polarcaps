@@ -381,7 +381,7 @@ if __name__ == "__main__":
                 else:
                     return 1
 
-            prtcl_stat = pytools.pic.inject(grid, velocity_profile, density_profile, w_func=unit_w, conf)
+            prtcl_stat = pytools.pic.inject(grid, velocity_profile, density_profile, conf, w_func=unit_w)
             if sch.is_example_worker: 
                 print("injected:")
                 print("     e- prtcls: {}".format(prtcl_stat[0]))
