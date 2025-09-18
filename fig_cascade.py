@@ -98,8 +98,8 @@ if __name__ == "__main__":
         axs[0,0].set_yscale('log')
         axs[0,1].set_yscale('log')
 
-        #axs[0,0].set_ylim((1e-8, 1e-2))
-        #axs[0,1].set_ylim((1e-8, 1e-2))
+        axs[0,0].set_ylim((1e-2, 1e6))
+        axs[0,1].set_ylim((1e-2, 1e6))
 
         axs[0,0].set_ylabel(r"$p_\pm \, \mathrm{d} \tau/\mathrm{d}p_\pm$")
         axs[0,1].set_ylabel(r"$p_\pm \, \mathrm{d} \tau/\mathrm{d}p_\pm$")
@@ -137,8 +137,8 @@ if __name__ == "__main__":
 
 
     if True:
-        hmin = -0.1
-        hmax =  2.5
+        hmin = -0.05
+        hmax =  1.3
 
         #for j in range(ncol_fig):
         #for i in range(nrow_fig):
@@ -250,8 +250,8 @@ if __name__ == "__main__":
                           )
 
 
-        xs1 = int(0.2*toolset.Nhist)
-        xs2 = int(0.65*toolset.Nhist)
+        xs1 = 0 #int(0.0*toolset.Nhist)
+        xs2 = int(0.5*toolset.Nhist)
 
         #hem[xs1, :] = 10
         #hem[xs2, :] = 10
@@ -269,6 +269,11 @@ if __name__ == "__main__":
         h1_em_2 = np.sum(hem[xs2-w:xs2+w,:], axis=0)
         h1_ep_2 = np.sum(hep[xs2-w:xs2+w,:], axis=0)
 
+        # photon slices
+        h1_xm_1 = np.sum(hph[xs1-w:xs1+w,:], axis=0)
+        h1_xm_2 = np.sum(hph[xs2-w:xs2+w,:], axis=0)
+
+
         xvals = np.linspace(-px_log_extent, px_log_extent, 2*toolset.Nhist)
         hvals = np.linspace(hhlims[0], hhlims[1], toolset.Nhist)
 
@@ -278,6 +283,7 @@ if __name__ == "__main__":
         axs[1,0].axvline(hvals[xs2], lw=0.7, color='C0', linestyle='dashed', zorder=0)
         axs[2,0].axvline(hvals[xs2], lw=0.7, color='C1', linestyle='dashed', zorder=0)
 
+        #pair slices
         axs[0,0].plot(xvals, h1_em_1,
                       drawstyle='steps-pre',
                       color='C0',
@@ -309,10 +315,49 @@ if __name__ == "__main__":
                       ) 
 
 
+        #photon slices
+        axs[0,0].plot(xvals, h1_xm_1,
+                      drawstyle='steps-pre',
+                      color='C2',
+                      alpha=1.0,
+                      lw = 0.5,
+                      linestyle='solid',
+                      ) 
+        axs[0,1].plot(xvals, h1_xm_2,
+                      drawstyle='steps-pre',
+                      color='C2',
+                      alpha=1.0,
+                      lw = 0.5,
+                      linestyle='solid',
+                      ) 
+
         axs[1,0].fill_between([-0.5, 0.0], -100, 100, color='gray', alpha=0.4, edgecolor=None) 
         axs[2,0].fill_between([-0.5, 0.0], -100, 100, color='gray', alpha=0.4, edgecolor=None) 
         axs[3,0].fill_between([-0.5, 0.0], -100, 100, color='gray', alpha=0.4, edgecolor=None) 
 
+        # analytical curves
+        if True:
+            x = np.logspace(1, 7, 100)
+            Uw = 1e14
+            theta = 1e4
+            Ue = (Uw/6/theta**4)*(x**3)*exp(-x/theta)
+            print(Ue/x)
+            axs[0,1].plot(-np.log10(x)-2, Ue/x, color='C3', alpha=1.0, lw=0.5, linestyle = 'solid')
+            axs[0,1].plot(+np.log10(x)+2, Ue/x, color='C3', alpha=1.0, lw=0.5, linestyle = 'solid')
+
+            
+            x = np.logspace(0, 7, 100)
+            th = 3e3
+            fMJ = 1e-1*(x**2)*exp(-x/th)
+            axs[0,1].plot(-np.log10(x)-2, fMJ/x, color='C4', alpha=1.0, lw=0.5, linestyle = 'solid')
+            axs[0,1].plot(+np.log10(x)+2, fMJ/x, color='C4', alpha=1.0, lw=0.5, linestyle = 'solid')
+
+
+            print('xvals', xvals)
+
+            print('x', x)
+            y = 1e3*np.ones_like(x)
+            axs[0,1].plot(-np.log10(x)-2, y, color='r')
 
 
     # custom tick formatter to manipulate the mangled values back to real values
@@ -344,14 +389,16 @@ if __name__ == "__main__":
                     xps = -xp - 2
                     return f"-$10^{int(xps)}$"
 
-    xticks = [-6, -2, 2, 6]
+    #xticks = [-6, -2, 2, 6]
+    xticks = [-10, -6, -2, 2, 6, 10] # expanded grid for pxlims (-2, -12)
     axs[0,0].set_xticks(xticks)
     axs[0,1].set_xticks(xticks)
-
-    xticks2 = [-6, -2, 2, 6]
     axs[1,0].set_yticks(xticks)
     axs[2,0].set_yticks(xticks)
-    axs[3,0].set_yticks(xticks)
+
+
+    xticks2 = [-8, -6, -4, -2, 2, 4, 6, 8] # expanded grid for pxlims (-2, -12)
+    axs[3,0].set_yticks(xticks2)
 
 
     majorformatter = CustomScalarFormatter()
@@ -407,23 +454,25 @@ if __name__ == "__main__":
             print('i1:', i1, 'g', garr[i1], 'ggap', -gref)
             print('i2:', i2, 'g', garr[i2], 'ggap', +gref)
 
-            axs[0,0].axvline(xvals[i1], ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
-            axs[0,0].axvline(xvals[i2], ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
+            #axs[0,0].axvline(xvals[i1]-2, ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
+            #axs[0,0].axvline(xvals[i2]+2, ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
+            axs[0,0].axvline(-np.log10(gref)-2, ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
+            axs[0,0].axvline(+np.log10(gref)+2, ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
 
-            axs[0,1].axvline(xvals[i1], ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
-            axs[0,1].axvline(xvals[i2], ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
+            axs[0,1].axvline(xvals[i1]-2, ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
+            axs[0,1].axvline(xvals[i2]+2, ymin=1e-6, ymax=1e2, linestyle='solid', color='C0',   lw=0.4)
 
-            axs[1,0].axhline(y=xvals[i1], linestyle='solid', color='C0', lw=0.4)
-            axs[1,0].axhline(y=xvals[i2], linestyle='solid', color='C0', lw=0.4)
+            axs[1,0].axhline(y=xvals[i1]-2, linestyle='solid', color='C0', lw=0.4)
+            axs[1,0].axhline(y=xvals[i2]+2, linestyle='solid', color='C0', lw=0.4)
         
-            axs[2,0].axhline(y=xvals[i1], linestyle='solid', color='C0', lw=0.4)
-            axs[2,0].axhline(y=xvals[i2], linestyle='solid', color='C0', lw=0.4)
+            axs[2,0].axhline(y=xvals[i1]-2, linestyle='solid', color='C0', lw=0.4)
+            axs[2,0].axhline(y=xvals[i2]+2, linestyle='solid', color='C0', lw=0.4)
 
 
 
         for xref in [conf.xsyn]:
-            i1 = find_arg_nearest(xarr, -gref)
-            i2 = find_arg_nearest(xarr, +gref)
+            i1 = find_arg_nearest(xarr, -xref)
+            i2 = find_arg_nearest(xarr, +xref)
 
             print('i1:', i1, 'x', xarr[i1], 'xref', -xref)
             print('i2:', i2, 'x', xarr[i2], 'xref', +xref)
