@@ -110,6 +110,8 @@ if __name__ == "__main__":
 
         f5 = h5.File(fname,'r')
 
+        nn = pytools.read_h5_array(f5, 'rho')/conf.p_norm
+
         ex = pytools.read_h5_array(f5, 'ex')/conf.e_norm
         ey = pytools.read_h5_array(f5, 'ey')/conf.e_norm
         ez = pytools.read_h5_array(f5, 'ez')/conf.e_norm
@@ -128,6 +130,8 @@ if __name__ == "__main__":
 
         # reduce dimensions
         if conf.oneD:
+            nn = np.mean(nn, axis=(1,2))
+
             ex = np.mean(ex, axis=(1,2))
             ey = np.mean(ey, axis=(1,2))
             ez = np.mean(ez, axis=(1,2))
@@ -147,12 +151,18 @@ if __name__ == "__main__":
         #j = jx + jy + jz
         #hh = np.linspace(xmin, xmax, Lh)
 
-        #data[i, :] = ex
-        data[i, :] = ex**2
+        if args.var == 'ex':
+            data[i, :] = ex
+        if args.var == 'ex2':
+            data[i, :] = ex**2
+        if args.var == 'dens':
+            data[i, :] = nn
 
     #--------------------------------------------------
     # done reading files
-
+    print('-------------------------------------------------- ')
+    print('data min/max:', np.min(data), np.max(data))
+    print('data mean:', np.mean(data) )
 
     # scale plot to visible area
     axs[0,0].set_xlim((0.0, 1.25))
@@ -170,8 +180,22 @@ if __name__ == "__main__":
     #norm = matplotlib.colors.SymLogNorm(1e-4, linscale=1, vmin=-1.0, vmax=1.0)
     #cmap = matplotlib.colormaps['RdBu']
 
-    norm = matplotlib.colors.LogNorm(vmin=1e-7, vmax=1)
-    cmap = matplotlib.colormaps['magma']
+    #norm = matplotlib.colors.LogNorm(vmin=1e-7, vmax=1)
+
+
+    if args.var == 'ex':
+        norm = matplotlib.colors.SymLogNorm(1e-4, linscale=1, vmin=-1.0, vmax=1.0)
+        cmap = matplotlib.colormaps['RdBu']
+        clabel = r'$E_x$'
+    if args.var == 'ex2':
+        data[i, :] = ex**2
+        norm = matplotlib.colors.LogNorm(vmin=1e-7, vmax=1e0)
+        cmap = matplotlib.colormaps['magma']
+        clabel = r'$E_x^2$'
+    if args.var == 'dens':
+        norm = matplotlib.colors.LogNorm(vmin=1e0, vmax=1e4)
+        cmap = matplotlib.colormaps['viridis']
+        clabel = r'$m_\pm$'
 
     extent = [ xmin, xmax, ymin, ymax ]
 
@@ -207,7 +231,7 @@ if __name__ == "__main__":
                 norm=norm,
                 orientation='horizontal',
                 ticklocation='top')
-        cb1.set_label(r'$E_x^2$')
+        cb1.set_label(clabel)
 
     pos = axs[0,0].get_position()
     print('ax pos:', pos)
@@ -217,5 +241,6 @@ if __name__ == "__main__":
     #fname = fdir + 'fig_casc_' + slap + '.pdf' 
     #plt.savefig(fname)
 
-    fname = fdir + 'fig_ex2_waterfall.pdf'
+    fname = fdir + 'fig_' + args.var + '_waterfall.pdf'
     plt.savefig(fname, dpi=300)
+
