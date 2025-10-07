@@ -117,7 +117,7 @@ if __name__ == "__main__":
     #        axs[i,j].set_xlim((0.9, 1.0)) #right end
 
     #axs[4,0].set_ylim((1e-1, 1e3))
-    axs[4,0].set_ylim((1e-1, 1e6))
+    axs[4,0].set_ylim((1e-3, 1e8))
     axs[5,0].set_ylim((1.0, 1e8))
 
     axs[6,0].set_ylim((-1.1, 1.1))
@@ -535,16 +535,16 @@ if __name__ == "__main__":
             return i
 
         # real momenta array for pairs
-        xvals = np.linspace(-px_log_extent, px_log_extent, 2*toolset.Nhist)
-        garr = np.zeros_like(xvals)
+        pvals = np.linspace(-px_log_extent, px_log_extent, 2*toolset.Nhist)
+        garr = np.zeros_like(pvals)
 
         n = len(garr)
-        print('mid-1', xvals[n//2-1]) # neg values
-        print('mid  ', xvals[n//2])   # pos values
+        print('mid-1', pvals[n//2-1]) # neg values
+        print('mid  ', pvals[n//2])   # pos values
 
         # create a real energy array from the mangled xarr
-        garr[0:n//2] = -10**(-xvals[0:n//2 ] - 2)
-        garr[n//2:]  = +10**(+xvals[n//2:] - 2  )
+        garr[0:n//2] = -10**(-pvals[0:n//2 ] - 2)
+        garr[n//2:]  = +10**(+pvals[n//2:] - 2  )
 
         #print('garr:', garr)
         print('mid-1', garr[n//2-1]) # neg values
@@ -565,14 +565,14 @@ if __name__ == "__main__":
             print('i1:', i1, 'g', garr[i1], 'ggap', -gref, np.log10(gref))
             print('i2:', i2, 'g', garr[i2], 'ggap', +gref, np.log10(gref))
 
-            axs[0,0].axhline(y=xvals[i1], linestyle='solid', color='k', lw=0.4)
-            axs[0,0].axhline(y=xvals[i2], linestyle='solid', color='k', lw=0.4)
-        
-            axs[1,0].axhline(y=xvals[i1], linestyle='solid', color='k', lw=0.4)
-            axs[1,0].axhline(y=xvals[i2], linestyle='solid', color='k', lw=0.4)
+            axs[0,0].axhline(y=pvals[i1], linestyle='solid', color='k', lw=0.4)
+            axs[0,0].axhline(y=pvals[i2], linestyle='solid', color='k', lw=0.4)
 
-            axs[2,0].axhline(y=xvals[i1], linestyle='solid', color='k', lw=0.4)
-            axs[2,0].axhline(y=xvals[i2], linestyle='solid', color='k', lw=0.4)
+            axs[1,0].axhline(y=pvals[i1], linestyle='solid', color='k', lw=0.4)
+            axs[1,0].axhline(y=pvals[i2], linestyle='solid', color='k', lw=0.4)
+
+            axs[2,0].axhline(y=pvals[i1], linestyle='solid', color='k', lw=0.4)
+            axs[2,0].axhline(y=pvals[i2], linestyle='solid', color='k', lw=0.4)
         for xref in [conf.xsyn]:
             i1 = find_arg_nearest(xarr, -xref)
             i2 = find_arg_nearest(xarr, +xref)
