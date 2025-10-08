@@ -50,7 +50,7 @@ if __name__ == "__main__":
     plt.rc('ytick', right = True)
 
     plt.rc('font',  family='serif',)
-    plt.rc('text',  usetex=False)
+    plt.rc('text',  usetex=True)
 
     plt.rc('xtick', labelsize=6)
     plt.rc('ytick', labelsize=6)
@@ -100,13 +100,19 @@ if __name__ == "__main__":
 
 
     hmin = -0.05  #0.0
-    hmax = 1.30 #1.2 #0.05 #0.05 #7.0
-    #hmin = 0.0
-    #hmax = 0.2 #1.2 #0.05 #0.05 #7.0
+    hmax = 1.25 #1.2 #0.05 #0.05 #7.0
+    #hmin = -0.001
+    #hmax = 0.005 #1.2 #0.05 #0.05 #7.0
     #hmin = 0.55
     #hmax = 0.65 
     #hmin = 1.15
     #hmax = 1.30
+
+    #hmin = -0.01
+    #hmax = +0.01
+    #hmin = 1.25-0.01
+    #hmax = 1.25+0.01
+
     for j in range(ncol_fig):
         for i in range(nrow_fig):
             axs[i,j].set_xlim((hmin, hmax))
@@ -120,7 +126,8 @@ if __name__ == "__main__":
     axs[4,0].set_ylim((1e-1, 1e6))
     axs[5,0].set_ylim((1.0, 1e8))
 
-    axs[6,0].set_ylim((-1.1, 1.1))
+    axs[6,0].set_ylim((-0.1, 0.6))
+    #axs[6,0].set_ylim((-1.1, 1.1))
     #axs[6,0].set_ylim((0.0, 0.2))
     #axs[6,0].set_ylim((-0.01, 0.01))
 
@@ -337,7 +344,7 @@ if __name__ == "__main__":
         gam_mx_m = np.zeros(N)
 
 
-        # <\gamma^-3>/<\gamma>^-3
+        # <\gamma^-3>
         g3_me_p = np.zeros(N)
         g3_me_m = np.zeros(N)
         g3_mp_p = np.zeros(N)
@@ -378,14 +385,12 @@ if __name__ == "__main__":
             #print(i, g3, g**-3, g3**(-1/3), g)
 
             #g3_me_p[i] = ( integrate(lnzs, (zs**(-3))*he_p[i,:])*n_units ) / ( integrate(lnzs, zs*he_p[i,:])*n_units )
-            g3_me_p[i] = integrate(lnzs, (gs**(-3))*he_p[i,:])*n_units / integrate(lnzs, he_p[i,:])
-            g3_me_m[i] = integrate(lnzs, (gs**(-3))*he_m[i,:])*n_units / integrate(lnzs, he_m[i,:])
-            g3_mp_p[i] = integrate(lnzs, (gs**(-3))*hp_p[i,:])*n_units / integrate(lnzs, hp_p[i,:])
-            g3_mp_m[i] = integrate(lnzs, (gs**(-3))*hp_m[i,:])*n_units / integrate(lnzs, hp_m[i,:])
-            g3_mi_p[i] = integrate(lnzs, (gs**(-3))*hi_p[i,:])*n_units / integrate(lnzs, hi_p[i,:])
-            g3_mi_m[i] = integrate(lnzs, (gs**(-3))*hi_m[i,:])*n_units / integrate(lnzs, hi_m[i,:])
-
-
+            g3_me_p[i] = integrate(lnzs, (gs**(-3))*he_p[i,:]) / integrate(lnzs, he_p[i,:])
+            g3_me_m[i] = integrate(lnzs, (gs**(-3))*he_m[i,:]) / integrate(lnzs, he_m[i,:])
+            g3_mp_p[i] = integrate(lnzs, (gs**(-3))*hp_p[i,:]) / integrate(lnzs, hp_p[i,:])
+            g3_mp_m[i] = integrate(lnzs, (gs**(-3))*hp_m[i,:]) / integrate(lnzs, hp_m[i,:])
+            g3_mi_p[i] = integrate(lnzs, (gs**(-3))*hi_p[i,:]) / integrate(lnzs, hi_p[i,:])
+            g3_mi_m[i] = integrate(lnzs, (gs**(-3))*hi_m[i,:]) / integrate(lnzs, hi_m[i,:])
 
 
 
@@ -636,14 +641,17 @@ if __name__ == "__main__":
         print('b', b)
 
         # smooth current 
-        #if True:
-        #    #jx = savgol_filter(jx, 300, 2)
-        #    jx = savgol_filter(jx, 300, 2)
+        if True:
+            #jx = savgol_filter(jx, 300, 2)
+            #jx = savgol_filter(jx, 300, 2)
+            ex_flt = savgol_filter(ex, 2000, 1)
+            ex[15000:18000] = ex_flt[15000:18000]
+            #ex[16000:17000] = 1.0
         
         axs[6,0].plot(hh, ex, lw=0.8, linestyle='solid',  color='C0', alpha=0.8)
         #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid',  color='C1', alpha=0.8)
         #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid',  color='C2', alpha=0.8)
-        axs[6,0].plot(hh, bx, lw=0.8, linestyle='dotted', color='C3', alpha=0.8)
+        #axs[6,0].plot(hh, bx, lw=0.8, linestyle='dotted', color='C3', alpha=0.8)
 
         #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
         #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
@@ -653,7 +661,7 @@ if __name__ == "__main__":
         #print("dj:", v)
         #axs[6,0].plot(hh, v, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
 
-        #axs[6,0].plot(hh, jx, lw=0.3, linestyle='solid', color='C0', alpha=0.8)
+        #axs[6,0].plot(hh, jx, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
         #axs[6,0].plot(hh, jy, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
         #axs[6,0].plot(hh, jz, lw=0.3, linestyle='solid', color='C2', alpha=0.8)
 
@@ -663,6 +671,8 @@ if __name__ == "__main__":
         #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
         #axs[6,0].plot(hh, bx-1.0, lw=0.8, linestyle='dashed', color='C0', alpha=0.8)
 
+        print("jx L:", jx[0:15])
+        print("jx R:", jx[-15:-1])
 
     #--------------------------------------------------
     for j in range(ncol_fig):
@@ -709,11 +719,11 @@ if __name__ == "__main__":
 
     slap = str(args.lap).rjust(8, '0')
 
-    #fname = fdir + 'fig_gap2_' + slap + '.pdf' 
-    #plt.savefig(fname)
+    fname = fdir + 'fig_gap2_' + slap + '_v2.pdf' 
+    plt.savefig(fname)
 
     #fname = fdir + 'fig_zoom_gap2_' + slap + '.png' 
-    fname = fdir + 'fig_gap2_' + slap + '.png' 
+    #fname = fdir + 'fig_gap2_' + slap + '.png' 
     plt.savefig(fname, dpi=300)
 
 
