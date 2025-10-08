@@ -641,7 +641,7 @@ if __name__ == "__main__":
         print('b', b)
 
         # smooth current 
-        if True:
+        if False:
             #jx = savgol_filter(jx, 300, 2)
             #jx = savgol_filter(jx, 300, 2)
             ex_flt = savgol_filter(ex, 2000, 1)
@@ -719,7 +719,7 @@ if __name__ == "__main__":
 
     slap = str(args.lap).rjust(8, '0')
 
-    fname = fdir + 'fig_gap2_' + slap + '_v2.pdf' 
+    fname = fdir + 'fig_gap2_' + slap + '.pdf' 
     plt.savefig(fname)
 
     #fname = fdir + 'fig_zoom_gap2_' + slap + '.png' 
