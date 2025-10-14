@@ -83,13 +83,13 @@ if __name__ == "__main__":
 
     axs[0,0].set_ylabel(r"$E/E_\mathrm{rot}$")
     #axs[1,0].set_ylabel(r"$k \hat{S}_{k} (k)$")
-    axs[1,0].set_ylabel(r"$\hat{E}_{k}^2$")
+    axs[1,0].set_ylabel(r"$|\hat{E}_{k}^2|$")
 
     axs[0,0].set_xlabel(r"$h/H_\mathrm{pc}$")
     axs[1,0].set_xlabel(r"$k H_\mathrm{pc}$")
 
     hmin = 0.0
-    hmax = 1.0 #7.0
+    hmax = 1.2 #7.0
     axs[0,0].set_xlim((hmin, hmax))
 
     #axs[i,j].set_xlim((hmin, hmax))
@@ -100,9 +100,8 @@ if __name__ == "__main__":
 
     axs[1,0].set_xscale("log")
     axs[1,0].set_yscale("log")
-    axs[1,0].set_xlim((1.0, 1e4))
-    axs[1,0].set_ylim((1e-2, 1e3))
-
+    axs[1,0].set_xlim((0.1, 1e5))
+    #axs[1,0].set_ylim((1e-4, 1e4))
 
 
     # grid configuration
@@ -177,14 +176,15 @@ if __name__ == "__main__":
         lw = 0.5
 
         ex_flt = savgol_filter(ex, 1000, 1)
-        axs[0,0].plot(hh, ex_flt, lw=lw, linestyle='solid', color='C0', alpha=0.8)
-        axs[0,0].plot(hh, ey, lw=lw, linestyle='solid', color='C1', alpha=0.8)
-        axs[0,0].plot(hh, ez, lw=lw, linestyle='solid', color='C2', alpha=0.8)
+        axs[0,0].plot(hh, ex_flt, lw=lw, linestyle='dashed', color='C0', alpha=0.8)
+        axs[0,0].plot(hh, ex, lw=lw, linestyle='solid', color='C0', alpha=0.8)
+        #axs[0,0].plot(hh, ey, lw=lw, linestyle='solid', color='C1', alpha=0.8)
+        #axs[0,0].plot(hh, ez, lw=lw, linestyle='solid', color='C2', alpha=0.8)
 
 
-        axs[0,0].plot(hh, bx-bx[0], lw=lw, linestyle='dashed', color='C0', alpha=0.8)
-        axs[0,0].plot(hh, by, lw=lw, linestyle='dashed', color='C1', alpha=0.8)
-        axs[0,0].plot(hh, bz, lw=lw, linestyle='dashed', color='C2', alpha=0.8)
+        #axs[0,0].plot(hh, bx-bx[0], lw=lw, linestyle='dashed', color='C0', alpha=0.8)
+        #axs[0,0].plot(hh, by, lw=lw, linestyle='dashed', color='C1', alpha=0.8)
+        #axs[0,0].plot(hh, bz, lw=lw, linestyle='dashed', color='C2', alpha=0.8)
 
 
         #--------------------------------------------------
@@ -212,15 +212,18 @@ if __name__ == "__main__":
         #ez_s  = np.abs( np.fft.rfft(ez*bx) )
         #ex_s2 = np.abs( np.fft.rfft(ex_flt*bx) )
 
-        # E field energy
-        ex_s  = np.fft.rfft(ex)**2
-        ey_s  = np.fft.rfft(ey)**2
-        ez_s  = np.fft.rfft(ez)**2
-        ex_s2 = np.fft.rfft(ex_flt)**2
+        hwin = np.hamming(len(ex)) # add Hamming window to the data since this is not a periodic function in x
 
-        axs[1,0].plot(ks, ex_s, lw=lw, linestyle='solid', color='C0', alpha=0.8)
-        axs[1,0].plot(ks, ey_s*1e6, lw=lw, linestyle='solid', color='C1', alpha=0.8)
-        axs[1,0].plot(ks, ez_s, lw=lw, linestyle='solid', color='C2', alpha=0.8)
+        # E field energy
+        ex_s  = np.fft.rfft(hwin*ex)**2
+        ey_s  = np.fft.rfft(hwin*ey)**2
+        ez_s  = np.fft.rfft(hwin*ez)**2
+        ex_s2 = np.fft.rfft(hwin*ex_flt)**2
+
+        axs[1,0].plot(ks, np.abs(ex_s), lw=lw, linestyle='solid', color='C0', alpha=0.8)
+
+        #axs[1,0].plot(ks, ey_s*1e6, lw=lw, linestyle='solid', color='C1', alpha=0.8)
+        #axs[1,0].plot(ks, ez_s, lw=lw, linestyle='solid', color='C2', alpha=0.8)
         #axs[1,0].plot(ks, ex_s2, lw=lw,linestyle='solid', color='C3', alpha=0.8)
 
 
@@ -231,8 +234,6 @@ if __name__ == "__main__":
     print('t:', args.lap/conf.t_norm)
     stitle = r"$t c/H_\mathrm{pc}$ = " + "{:3.1f}".format(args.lap/conf.t_norm)
     axs[0,0].set_title(stitle, fontsize=10)
-
-
 
 
     #--------------------------------------------------
