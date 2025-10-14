@@ -65,7 +65,7 @@ if __name__ == "__main__":
         gs = plt.GridSpec(nrow_fig, ncol_fig)
 
         gs.update(wspace = 0.2)
-        gs.update(hspace = 0.2)
+        gs.update(hspace = 0.33)
 
         axs = np.empty( (nrow_fig,ncol_fig), dtype=object)
 
@@ -76,20 +76,21 @@ if __name__ == "__main__":
 
                 #axs[i,j].set_yscale('log')
 
-                if i <= nrow_fig-2:
-                    axs[i,j].tick_params(labelbottom=False)
+                #if i <= nrow_fig-2:
+                #    axs[i,j].tick_params(labelbottom=False)
 
             #axs[0,0].tick_params(labeltop=True)
 
     axs[0,0].set_ylabel(r"$E/E_\mathrm{rot}$")
     #axs[1,0].set_ylabel(r"$k \hat{S}_{k} (k)$")
-    axs[1,0].set_ylabel(r"$\hat{E}_{k}^2$")
+    #axs[1,0].set_ylabel(r"$\hat{E}_{k}^2$")
+    axs[1,0].set_ylabel(r"$|\hat{E}_{k}|^2$")
 
     axs[0,0].set_xlabel(r"$h/H_\mathrm{pc}$")
     axs[1,0].set_xlabel(r"$k H_\mathrm{pc}$")
 
     hmin = 0.0
-    hmax = 1.0 #7.0
+    hmax = 1.3
     axs[0,0].set_xlim((hmin, hmax))
 
     #axs[i,j].set_xlim((hmin, hmax))
@@ -101,7 +102,7 @@ if __name__ == "__main__":
     axs[1,0].set_xscale("log")
     axs[1,0].set_yscale("log")
     axs[1,0].set_xlim((1.0, 1e4))
-    axs[1,0].set_ylim((1e-2, 1e3))
+    axs[1,0].set_ylim((1e-8, 1e8))
 
 
 
@@ -125,7 +126,6 @@ if __name__ == "__main__":
     hhlims = [1,1]
     hhlims[0] = -(conf.rad_curv_shift + conf.height_atms)/conf.rad_pcap #(0 - ceny)/conf.rad_pcap
     hhlims[1] = Lh/conf.rad_pcap
-
 
     #--------------------------------------------------
     # field values
@@ -177,15 +177,15 @@ if __name__ == "__main__":
         lw = 0.5
 
         ex_flt = savgol_filter(ex, 1000, 1)
-        axs[0,0].plot(hh, ex_flt, lw=lw, linestyle='solid', color='C0', alpha=0.8)
+
         axs[0,0].plot(hh, ey, lw=lw, linestyle='solid', color='C1', alpha=0.8)
         axs[0,0].plot(hh, ez, lw=lw, linestyle='solid', color='C2', alpha=0.8)
 
-
-        axs[0,0].plot(hh, bx-bx[0], lw=lw, linestyle='dashed', color='C0', alpha=0.8)
         axs[0,0].plot(hh, by, lw=lw, linestyle='dashed', color='C1', alpha=0.8)
         axs[0,0].plot(hh, bz, lw=lw, linestyle='dashed', color='C2', alpha=0.8)
 
+        axs[0,0].plot(hh, ex_flt, lw=lw, linestyle='solid', color='C0', alpha=0.8)
+        axs[0,0].plot(hh, bx-bx[0], lw=lw, linestyle='dashed', color='C0', alpha=0.8)
 
         #--------------------------------------------------
         # spec
@@ -213,17 +213,22 @@ if __name__ == "__main__":
         #ex_s2 = np.abs( np.fft.rfft(ex_flt*bx) )
 
         # E field energy
-        ex_s  = np.fft.rfft(ex)**2
-        ey_s  = np.fft.rfft(ey)**2
-        ez_s  = np.fft.rfft(ez)**2
+
+        #ex_s  = np.fft.rfft(ex)**2
+        #ey_s  = np.fft.rfft(ey)**2
+        #ez_s  = np.fft.rfft(ez)**2
+
+        ex_s  = np.abs(np.fft.rfft(ex))**2
+        ey_s  = np.abs(np.fft.rfft(ey))**2
+        ez_s  = np.abs(np.fft.rfft(ez))**2
+
         ex_s2 = np.fft.rfft(ex_flt)**2
 
-        axs[1,0].plot(ks, ex_s, lw=lw, linestyle='solid', color='C0', alpha=0.8)
+        axs[1,0].plot(ks, ez_s*1e6, lw=lw, linestyle='solid', color='C2', alpha=0.8)
         axs[1,0].plot(ks, ey_s*1e6, lw=lw, linestyle='solid', color='C1', alpha=0.8)
-        axs[1,0].plot(ks, ez_s, lw=lw, linestyle='solid', color='C2', alpha=0.8)
         #axs[1,0].plot(ks, ex_s2, lw=lw,linestyle='solid', color='C3', alpha=0.8)
 
-
+        axs[1,0].plot(ks, ex_s, lw=lw, linestyle='solid', color='C0', alpha=0.8)
     #--------------------------------------------------
     # time stamp
 
