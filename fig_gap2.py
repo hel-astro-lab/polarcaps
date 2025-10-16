@@ -50,7 +50,7 @@ if __name__ == "__main__":
     plt.rc('ytick', right = True)
 
     plt.rc('font',  family='serif',)
-    plt.rc('text',  usetex=True)
+    plt.rc('text',  usetex=False)
 
     plt.rc('xtick', labelsize=6)
     plt.rc('ytick', labelsize=6)
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     #--------------------------------------------------
     if True: # regular gridspec
-        nrow_fig = 7
+        nrow_fig = 8
         ncol_fig = 1
 
         gs = plt.GridSpec(nrow_fig, ncol_fig)
@@ -92,7 +92,8 @@ if __name__ == "__main__":
     #axs[3,0].set_ylabel(r"$m(x)/ \Delta x$")
 
     axs[5,0].set_ylabel(r"$\langle \gamma \rangle$")
-    axs[6,0].set_ylabel(r"$E/E_\mathrm{rot}$")
+    axs[6,0].set_ylabel(r"$\langle \gamma^{-3} \rangle$")
+    axs[7,0].set_ylabel(r"$E/E_\mathrm{rot}$")
 
     #axs[4,0].set_ylabel(r"$j/j_m$")
     #axs[5,0].set_ylabel(r"$B/B_0 - 1$")
@@ -125,11 +126,8 @@ if __name__ == "__main__":
     #axs[4,0].set_ylim((1e-1, 1e3))
     axs[4,0].set_ylim((1e-3, 1e8))
     axs[5,0].set_ylim((1.0, 1e8))
-
-    axs[6,0].set_ylim((-0.1, 0.6))
-    #axs[6,0].set_ylim((-1.1, 1.1))
-    #axs[6,0].set_ylim((0.0, 0.2))
-    #axs[6,0].set_ylim((-0.01, 0.01))
+    axs[6,0].set_ylim((1e-6, 1.0)) # TODO
+    axs[7,0].set_ylim((-1.2, 0.2))
 
 
     #axs[5,0].set_ylim((-0.00005, 0.00005))
@@ -139,7 +137,8 @@ if __name__ == "__main__":
 
     axs[4,0].set_yscale("log")
     axs[5,0].set_yscale("log")
-    axs[6,0].set_xlabel(r"$x/H_\mathrm{gap}$")
+    axs[6,0].set_yscale("log")
+    axs[7,0].set_xlabel(r"$x/H_\mathrm{gap}$")
 
 
 
@@ -448,6 +447,17 @@ if __name__ == "__main__":
         axs[5,0].plot(hh, gam_mi_p, color="C3", lw=lw, linestyle="solid")
         axs[5,0].plot(hh, gam_mi_m, color="C3", lw=lw, linestyle="dashed")
 
+
+        axs[6,0].plot(hh, g3_me_p, color="C0", lw=lw, linestyle="solid")
+        axs[6,0].plot(hh, g3_me_m, color="C0", lw=lw, linestyle="dashed")
+
+        axs[6,0].plot(hh, g3_mp_p, color="C1", lw=lw, linestyle="solid")
+        axs[6,0].plot(hh, g3_mp_m, color="C1", lw=lw, linestyle="dashed")
+
+        #axs[6,0].plot(hh, g3_mi_p, color="C3", lw=lw, linestyle="solid")
+        #axs[6,0].plot(hh, g3_mi_m, color="C3", lw=lw, linestyle="dashed")
+
+
         #print("gam+", gam_mi_p)
         #print("gam-", gam_mi_m)
 
@@ -648,28 +658,28 @@ if __name__ == "__main__":
             ex[15000:18000] = ex_flt[15000:18000]
             #ex[16000:17000] = 1.0
         
-        axs[6,0].plot(hh, ex, lw=0.8, linestyle='solid',  color='C0', alpha=0.8)
-        #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid',  color='C1', alpha=0.8)
-        #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid',  color='C2', alpha=0.8)
-        #axs[6,0].plot(hh, bx, lw=0.8, linestyle='dotted', color='C3', alpha=0.8)
+        axs[7,0].plot(hh, ex, lw=0.8, linestyle='solid',  color='C0', alpha=0.8)
+        #axs[7,0].plot(hh, ey, lw=0.8, linestyle='solid',  color='C1', alpha=0.8)
+        #axs[7,0].plot(hh, ez, lw=0.8, linestyle='solid',  color='C2', alpha=0.8)
+        #axs[7,0].plot(hh, bx, lw=0.8, linestyle='dotted', color='C3', alpha=0.8)
 
-        #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
-        #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
+        #axs[7,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
+        #axs[7,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
 
 
         #v = jx - jx[0]
         #print("dj:", v)
-        #axs[6,0].plot(hh, v, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
+        #axs[7,0].plot(hh, v, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
 
-        #axs[6,0].plot(hh, jx, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
-        #axs[6,0].plot(hh, jy, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
-        #axs[6,0].plot(hh, jz, lw=0.3, linestyle='solid', color='C2', alpha=0.8)
+        #axs[7,0].plot(hh, jx, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
+        #axs[7,0].plot(hh, jy, lw=0.3, linestyle='solid', color='C1', alpha=0.8)
+        #axs[7,0].plot(hh, jz, lw=0.3, linestyle='solid', color='C2', alpha=0.8)
 
         #ex_flt = savgol_filter(ex, 300, 1)
-        #axs[6,0].plot(hh, ex_flt, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
-        #axs[6,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
-        #axs[6,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
-        #axs[6,0].plot(hh, bx-1.0, lw=0.8, linestyle='dashed', color='C0', alpha=0.8)
+        #axs[7,0].plot(hh, ex_flt, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
+        #axs[7,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
+        #axs[7,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
+        #axs[7,0].plot(hh, bx-1.0, lw=0.8, linestyle='dashed', color='C0', alpha=0.8)
 
         print("jx L:", jx[0:15])
         print("jx R:", jx[-15:-1])
@@ -689,7 +699,7 @@ if __name__ == "__main__":
 
 
     #--------------------------------------------------
-    axleft    = 0.25
+    axleft    = 0.28
     axbottom  = 0.05
     axright   = 0.97
     axtop     = 0.95
@@ -719,11 +729,11 @@ if __name__ == "__main__":
 
     slap = str(args.lap).rjust(8, '0')
 
-    fname = fdir + 'fig_gap2_' + slap + '.pdf' 
-    plt.savefig(fname)
+    #fname = fdir + 'fig_gap2_' + slap + '.pdf' 
+    #plt.savefig(fname)
 
     #fname = fdir + 'fig_zoom_gap2_' + slap + '.png' 
-    #fname = fdir + 'fig_gap2_' + slap + '.png' 
+    fname = fdir + 'fig_gap2_' + slap + '.png' 
     plt.savefig(fname, dpi=300)
 
 
