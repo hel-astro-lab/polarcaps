@@ -36,7 +36,7 @@ if __name__ == "__main__":
     toolset = QEDToolset(conf)
 
     #--------------------------------------------------
-    fig = plt.figure(1, figsize=(3.25, 4.5)) # single figure
+    fig = plt.figure(1, figsize=(3.25, 2.5)) # single figure
 
     #fig = plt.figure(1, figsize=(3.25, 8.0)) # single figure
     #fig = plt.figure(1, figsize=(7.0,  5.5)) # two-column figure
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     #--------------------------------------------------
     if True: # regular gridspec
-        nrow_fig = 2
+        nrow_fig = 1
         ncol_fig = 1
 
         gs = plt.GridSpec(nrow_fig, ncol_fig)
@@ -74,7 +74,7 @@ if __name__ == "__main__":
                 #if i <= nrow_fig-2:
                 #    axs[i,j].tick_params(labelbottom=False)
 
-                axs[i,j].set_xlim((0.0, 5.0))
+                axs[i,j].set_xlim((-1, 8.0))
             #axs[0,0].tick_params(labeltop=True)
 
 
@@ -108,22 +108,26 @@ if __name__ == "__main__":
     #tt = laps/conf.t_norm
 
     # narrow region above the star
-    hmin = int( 2 )
-    hmax = int( 20 )
+    #hmin = int( 2 )
+    #hmax = int( 20 )
 
-    # limits for the height-energy histogram
+    ## limits for the height-energy histogram
     hs = np.linspace(0, Lh, toolset.Nhist)
 
-    for i in range(len(hs)):
-        if hs[i] > hmin: break
-        hmin2 = i
+    #for i in range(len(hs)):
+    #    if hs[i] > hmin: break
+    #    hmin2 = i
 
-    for i in range(len(hs)):
-        if hs[i] > hmax: break
-        hmax2 = i
+    #for i in range(len(hs)):
+    #    if hs[i] > hmax: break
+    #    hmax2 = i
 
-    print("hs", hs)
-    print("hmin/hmax", hmin, hmax)
+    #print("hs", hs)
+    #print("hmin/hmax", hmin, hmax)
+
+
+    hmin2 = 1
+    hmax2 = 5
     print("hmin2/hmax2", hmin2, hmax2, hs[hmin2], hs[hmax2])
 
     # momentum axis
@@ -161,16 +165,16 @@ if __name__ == "__main__":
     norm = matplotlib.colors.Normalize(vmin=0, vmax=tspan)
     cmap = matplotlib.colormaps['turbo_r']
 
-    merge = 6
+    merge = 12
     i = 0
 
 
 
     # total time-integrated spec
     N = toolset.Nhist
-    he_tot = np.zeros(N)
-    hp_tot = np.zeros(N)
-    hx_tot = np.zeros(N)
+    he_int = np.zeros(N)
+    hp_int = np.zeros(N)
+    hx_int = np.zeros(N)
     
 
     for lap in laps:
@@ -259,6 +263,7 @@ if __name__ == "__main__":
         # in units of dN/dlnp 
         he = np.sum(hem[hmin2:hmax2,:], axis=0)*n_units #*zs2
         #he = he[N:] + np.flip(he[:N]) # up and down
+        #he = he[N:]  # up 
         he = np.flip(he[:N]) # down
 
         #axs[0,0].plot(lnzs2, n_units*he, color=col)
@@ -267,6 +272,7 @@ if __name__ == "__main__":
         #--------------------------------------------------
         hp = np.sum(hep[hmin2:hmax2,:], axis=0)*n_units #*zs2
         #hp = hp[N:] + np.flip(hp[:N]) # up and down
+        #hp = hp[N:] # up 
         hp = np.flip(hp[:N]) # down
 
         #numpp = integrate(lnzs2, hp)*n_units # integrate and de-unitize
@@ -284,6 +290,7 @@ if __name__ == "__main__":
 
         hx = np.sum(hph[hmin2:hmax2,:], axis=0)*nx_units #/xs2**2
         #hx = hx[N:] + np.flip(hx[:N]) # up and down
+        #hx = hx[N:] # up 
         hx = np.flip(hx[:N]) #"down
 
         #numpx = integrate(lnxs2, xlow_mask2*hx/xs2**2)*nx_units # integrate and de-unitize
@@ -312,34 +319,34 @@ if __name__ == "__main__":
             #axs[1,0].plot(lnzs, hpM, color=col, lw=0.8)
 
             axs[0,0].plot(lnzs, heM + hpM, color=col, lw=0.8)
-            axs[1,0].plot(lnxs, hxM,       color=col, lw=0.8)
+            #axs[1,0].plot(lnxs, hxM,       color=col, lw=0.8)
             i = 0
 
 
     # plot total spec as well
     axs[0,0].plot(lnzs, he_int + hp_int, color=col, lw=1.5)
-    axs[1,0].plot(lnxs, hx_int,          color=col, lw=1.5)
+    #axs[1,0].plot(lnxs, hx_int,          color=col, lw=1.5)
 
 
     #-------------------------------------------------- 
     axs[0,0].set_xlabel(r"$\log_{10} p$")
-    axs[1,0].set_xlabel(r"$\log_{10} x$")
+    #axs[1,0].set_xlabel(r"$\log_{10} x$")
 
     axs[0,0].set_ylabel(r"$  \mathrm{d} m_\pm/ \mathrm{d} \, \log p $")
-    axs[1,0].set_ylabel(r"$x \mathrm{d}( x m_x )/ \mathrm{d} \, \log x $")
+    #axs[1,0].set_ylabel(r"$x \mathrm{d}( x m_x )/ \mathrm{d} \, \log x $")
 
     axs[0,0].set_yscale("log")
-    axs[1,0].set_yscale("log")
+    #axs[1,0].set_yscale("log")
 
-    axs[0,0].set_ylim((1e-1, 1e3))
-    axs[1,0].set_ylim((1e1,  1e6))
+    axs[0,0].set_ylim((1e0, 1e7))
+    #axs[1,0].set_ylim((1e0, 1e10))
 
 
     #--------------------------------------------------
     axleft    = 0.17
-    axbottom  = 0.08
+    axbottom  = 0.15
     axright   = 0.97
-    axtop     = 0.88
+    axtop     = 0.80
 
     if True:
         pos1 = axs[0,0].get_position()
