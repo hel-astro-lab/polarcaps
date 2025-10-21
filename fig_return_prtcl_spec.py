@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
 
     hmin2 = 1
-    hmax2 = 5
+    hmax2 = 10
     print("hmin2/hmax2", hmin2, hmax2, hs[hmin2], hs[hmax2])
 
     # momentum axis
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     norm = matplotlib.colors.Normalize(vmin=0, vmax=tspan)
     cmap = matplotlib.colormaps['turbo_r']
 
-    merge = 12
+    merge = 12 # use this to tune how many curves are merged together
     i = 0
 
 
@@ -182,8 +182,6 @@ if __name__ == "__main__":
         if not(tmin < lap/conf.t_norm < tmax):
             continue
 
-        print("lap", lap, "t", lap/conf.t_norm)
-
         col = cmap(norm( lap/conf.t_norm - tmin ))
 
         #--------------------------------------------------
@@ -191,6 +189,11 @@ if __name__ == "__main__":
 
         # read from output file
         fname = conf.outdir + '/qed_{}.h5'.format(str(lap))
+
+        if not(os.path.isfile(fname)): continue
+
+        print("lap", lap, "t", lap/conf.t_norm)
+
         f5 = h5.File(fname,'r')
 
         hem = f5['h2_ene_e-'][()]
@@ -198,58 +201,6 @@ if __name__ == "__main__":
         hph = f5['h2_ene_ph'][()]
 
         f5.close()
-
-        #--------------------------------------------------
-
-        #--------------------------------------------------
-        # field values
-
-        ## read from output file
-        #fname = conf.outdir + '/flds_{}.h5'.format(str(lap))
-        #f5 = h5.File(fname,'r')
-
-        #ex = pytools.read_h5_array(f5, 'ex')/conf.e_norm
-        #ey = pytools.read_h5_array(f5, 'ey')/conf.e_norm
-        #ez = pytools.read_h5_array(f5, 'ez')/conf.e_norm
-
-        #jx = pytools.read_h5_array(f5, 'jx')/conf.j_norm
-        #jy = pytools.read_h5_array(f5, 'jy')/conf.j_norm
-        #jz = pytools.read_h5_array(f5, 'jz')/conf.j_norm
-
-        #bx = pytools.read_h5_array(f5, 'bx')/conf.b_norm
-        #by = pytools.read_h5_array(f5, 'by')/conf.b_norm
-        #bz = pytools.read_h5_array(f5, 'bz')/conf.b_norm
-
-        ##print('shape ex', np.shape(ex))
-
-        ## reduce dimensions
-        #if conf.oneD:
-        #    ex = np.mean(ex, axis=(1,2))
-        #    ey = np.mean(ey, axis=(1,2))
-        #    ez = np.mean(ez, axis=(1,2))
-
-        #    jx = np.mean(jx, axis=(1,2))
-        #    jy = np.mean(jy, axis=(1,2))
-        #    jz = np.mean(jz, axis=(1,2))
-
-        #    bx = np.mean(bx, axis=(1,2))
-        #    by = np.mean(by, axis=(1,2))
-        #    bz = np.mean(bz, axis=(1,2))
-        #else:
-        #    print('TODO')
-
-        #e = ex + ey + ez
-        #b = bx + by + bz
-        #j = jx + jy + jz
-
-        ## compensate for external antenna
-        #if lap > conf.rad_pcap/conf.cfl:
-        #    jx[:] += 1.0
-
-        #print('ex', ex[hmin])
-        #print('j', j)
-        #print('b', b)
-
 
         #--------------------------------------------------
         #particles
@@ -327,6 +278,8 @@ if __name__ == "__main__":
     axs[0,0].plot(lnzs, he_int + hp_int, color=col, lw=1.5)
     #axs[1,0].plot(lnxs, hx_int,          color=col, lw=1.5)
 
+    print("integrated he:", he_int)
+    print("integrated hp:", hp_int)
 
     #-------------------------------------------------- 
     axs[0,0].set_xlabel(r"$\log_{10} p$")
