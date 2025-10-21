@@ -232,7 +232,7 @@ if __name__ == "__main__":
 
     #print('r_pc:', conf.rad_pcap)
     print('t:', args.lap/conf.t_norm)
-    stitle = r"$t c/H_\mathrm{pc}$ = " + "{:3.1f}".format(args.lap/conf.t_norm)
+    stitle = r"$t/t_\mathrm{esc}$ = " + "{:3.1f}".format(args.lap/conf.t_norm)
     axs[0,0].set_title(stitle, fontsize=10)
 
 
