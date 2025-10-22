@@ -50,7 +50,7 @@ if __name__ == "__main__":
     plt.rc('ytick', right = True)
 
     plt.rc('font',  family='serif',)
-    plt.rc('text',  usetex=False)
+    plt.rc('text',  usetex=True)
 
     plt.rc('xtick', labelsize=6)
     plt.rc('ytick', labelsize=6)
@@ -85,8 +85,8 @@ if __name__ == "__main__":
     #axs[1,0].set_ylabel(r"$k \hat{S}_{k} (k)$")
     axs[1,0].set_ylabel(r"$|\hat{E}_{k}^2|$")
 
-    axs[0,0].set_xlabel(r"$h/H_\mathrm{pc}$")
-    axs[1,0].set_xlabel(r"$k H_\mathrm{pc}$")
+    axs[0,0].set_xlabel(r"$x/H_\mathrm{gap}$")
+    axs[1,0].set_xlabel(r"$k H_\mathrm{gap}$")
 
     hmin = 0.0
     hmax = 1.2 #7.0
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
     axs[1,0].set_xscale("log")
     axs[1,0].set_yscale("log")
-    axs[1,0].set_xlim((1.0, 1e4))
+    axs[1,0].set_xlim((1.0, 1e6))
     axs[1,0].set_ylim((1e-8, 1e8))
 
 
@@ -225,7 +225,7 @@ if __name__ == "__main__":
         axs[1,0].plot(ks, np.abs(ez_s)*1e6, lw=lw, linestyle='solid', color='C2', alpha=0.8)
         #axs[1,0].plot(ks, np.abs(ex_s2), lw=lw,linestyle='solid', color='C3', alpha=0.8)
 
-        axs[1,0].plot(ks, np.abs(ex_s), lw=lw, linestyle='solid', color='C0', alpha=0.8)
+        axs[1,0].plot(ks, np.abs(ex_s), lw=lw, linestyle='solid', color='C0', alpha=1.0)
 
     #--------------------------------------------------
     # time stamp
@@ -234,6 +234,36 @@ if __name__ == "__main__":
     print('t:', args.lap/conf.t_norm)
     stitle = r"$t/t_\mathrm{esc}$ = " + "{:3.1f}".format(args.lap/conf.t_norm)
     axs[0,0].set_title(stitle, fontsize=10)
+
+
+    #--------------------------------------------------
+    # manual slope
+    ks = np.array([1e3, 1e5])
+    ek = ks**-2.0
+    ek[:] *= 1e4/ek[0]
+    axs[1,0].plot(ks, ek, color="k", linestyle="dashed", lw=1.5)
+
+    #--------------------------------------------------
+    #manual peak
+
+    tacc = conf.cfl/conf.vrot/conf.bstar
+    print("tacc", tacc)
+    tesc = conf.t_norm
+    print("tesc", tesc)
+    print("tesc/tacc", tesc/tacc)
+
+    M = 1e1
+    g3 = 1e-4
+    #M = 1e2
+    #g3 = 1e-3
+
+    wosc = ( M * (tesc/tacc)*g3 )**0.5
+    print("wosc", wosc)
+
+    ks = wosc*np.ones(2)
+    ek = [1e4, 3e7]
+    axs[1,0].plot(ks, ek, color="k", linestyle="dashed", lw=1.5)
+
 
 
     #--------------------------------------------------
@@ -265,11 +295,11 @@ if __name__ == "__main__":
 
     slap = str(args.lap).rjust(8, '0')
 
-    #fname = fdir + 'fig_casc_' + slap + '.pdf' 
-    #plt.savefig(fname)
+    fname = fdir + 'fig_kspec_' + slap + '.pdf' 
+    plt.savefig(fname)
 
-    fname = fdir + 'fig_kspec' + slap + '.png' 
-    plt.savefig(fname, dpi=300)
+    #fname = fdir + 'fig_kspec' + slap + '.png' 
+    #plt.savefig(fname, dpi=300)
 
 
 
