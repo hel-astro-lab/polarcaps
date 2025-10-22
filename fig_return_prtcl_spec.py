@@ -294,6 +294,20 @@ if __name__ == "__main__":
     axs[0,0].set_ylim((1e0, 1e7))
     #axs[1,0].set_ylim((1e0, 1e10))
 
+    #--------------------------------------------------
+    # manual slope
+    gams = np.array([1e4, 8e6])
+    dmdg = gams**-0.3
+    dmdg[:] *= 1e6/dmdg[0]
+    axs[0,0].plot(np.log10(gams), dmdg, color="k", linestyle="dashed", lw=1.5)
+
+    #--------------------------------------------------
+    #manual peak
+    gams = 400.0*np.ones(2)
+    dmdg = [3e5, 5e6]
+    axs[0,0].plot(np.log10(gams), dmdg, color="k", linestyle="dashed", lw=1.5)
+
+
 
     #--------------------------------------------------
     axleft    = 0.17
