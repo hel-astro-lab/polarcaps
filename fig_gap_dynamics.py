@@ -75,7 +75,7 @@ if __name__ == "__main__":
                 if i <= nrow_fig-2:
                     axs[i,j].tick_params(labelbottom=False)
 
-                axs[i,j].set_xlim((0.0, 10.0))
+                axs[i,j].set_xlim((0.0, 5.0))
 
             #axs[0,0].tick_params(labeltop=True)
 
@@ -111,12 +111,14 @@ if __name__ == "__main__":
     laps = np.array( list( range(0, conf.Nt, conf.interval) ) )
     tt = laps/conf.t_norm
 
-    hmin = int( conf.rad_pcap*0.2 )
+    hmin = int( conf.rad_pcap*0.0 )
     hmax = int( conf.rad_pcap*1.0 )
+    hmid = int( conf.rad_pcap*1.0 )
 
 
     epars = []
     epeak = []
+    eall = []
 
     jps   = []
     mpps   = []
@@ -133,6 +135,10 @@ if __name__ == "__main__":
     for i in range(len(hs)):
         if hs[i] > hmax: break
         hmax2 = i
+
+    for i in range(len(hs)):
+        if hs[i] > hmid: break
+        hmid2 = i
 
     print("hs", hs)
     print("hmin/hmax", hmin, hmax)
@@ -299,12 +305,18 @@ if __name__ == "__main__":
         mpps.append(numpp)
         mpxs.append(numpx)
 
-        epeak.append( ex[hmax] )
+        eall.append( ex[hmin:hmax] )
+        epeak.append( ex[hmid] )
         epars.append( np.mean(ex[hmin:hmax]) )
         jps.append( np.mean(jx[hmin:hmax]) )
+        #jps.append( np.max(jx[hmin:hmax]) )
 
 
     #--------------------------------------------------
+
+    eall = np.array(eall)
+    print("shape of eall", np.shape(eall))
+
 
     tt = tt[0:len(mpes)] # cut time array into same length as number of files analyzed
 
@@ -318,14 +330,34 @@ if __name__ == "__main__":
     axs[0,0].plot(tt, mpxs,   color="C0", lw=0.9, linestyle="dashed")
 
     # v1 with field quantities
-    axs[1,0].plot(tt, epeak, color="k",   lw=0.9, linestyle="solid")
+    #axs[1,0].plot(tt, epeak, color="k",   lw=0.9, linestyle="solid")
     #axs[2,0].plot(tt, jps/mpairs,   color="C3", lw=0.9)
 
+    nt, nx = np.shape(eall)
+    emins = np.zeros(nt)
+    emaxs = np.zeros(nt)
+    for i in range(nt):
+        e_tslice = eall[i, :]
+        emin  = np.min(e_tslice)
+        emax  = np.max(e_tslice)
+
+        print(tt[i], emin, emax)
+        #axs[1,0].plot(tt[i], emin, color="C0",   lw=0.9, linestyle="solid")
+        #axs[1,0].plot(tt[i], emax, color="C0",   lw=0.9, linestyle="solid")
+
+        emins[i] = np.min(e_tslice)
+        emaxs[i] = np.max(e_tslice)
+
+    #axs[1,0].plot(tt, emins, color="k",   lw=0.9, linestyle="solid")
+    #axs[1,0].plot(tt, emaxs, color="k",   lw=0.9, linestyle="solid")
+    axs[1,0].fill_between(tt, emins, emaxs, facecolor='k', edgecolor=None, alpha=0.8)
+
+
     #axs[2,0].plot(tt, jps,   color="C3", lw=0.9)
-    axs[2,0].plot(tt, jps/mpairs,     color="C3", lw=0.9)
+    axs[2,0].plot(tt, jps/mpairs,     color="k", lw=0.9)
 
     #axs[2,0].plot(tt, np.array(epeak),   color="C4", lw=0.9)
-    axs[2,0].plot(tt, 0.2*(np.array(epeak)   ),   color="C4", lw=0.9, linestyle="dotted")
+    axs[2,0].plot(tt, -0.003*(np.array(epeak)),   color="C2", lw=0.9, linestyle="dotted")
     #axs[2,0].plot(tt, 0.2*(np.array(epeak)**2),   color="C5", lw=0.9, linestyle="dotted")
 
     #de_dt = -0.1*np.gradient(epeak, tt)
@@ -339,7 +371,8 @@ if __name__ == "__main__":
     #axs[1,0].set_ylabel(r"$\varepsilon = E_\parallel/\beta_\mathrm{rot} B_\star$")
     axs[1,0].set_ylabel(r"$\varepsilon$")
     #axs[2,0].set_ylabel(r"$j_\pm/j_m$")
-    axs[2,0].set_ylabel(r"$\langle \beta \rangle = j_\pm/m_\pm$")
+    axs[2,0].set_ylabel(r"$\langle \beta \rangle$")
+    #axs[2,0].set_ylabel(r"$\langle \beta \rangle = j_\pm/m_\pm$")
 
     axs[2,0].set_xlabel(r"$t/t_\mathrm{esc}$")
 
@@ -347,13 +380,15 @@ if __name__ == "__main__":
 
     axs[0,0].set_ylim((0.1, 1e6))
     axs[1,0].set_ylim((-1.2, 0.2))
-    axs[2,0].set_ylim((-0.05, 0.05))
+
+    axs[2,0].set_ylim((-0.005, 0.005))
+    #axs[2,0].set_ylim((-0.05, 0.05))
     #axs[2,0].set_ylim((-1.0, 1.0))
 
 
     #--------------------------------------------------
 
-    axleft    = 0.17
+    axleft    = 0.20
     axbottom  = 0.10
     axright   = 0.97
     axtop     = 0.98
