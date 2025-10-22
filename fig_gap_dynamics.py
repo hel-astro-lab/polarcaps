@@ -75,7 +75,7 @@ if __name__ == "__main__":
                 if i <= nrow_fig-2:
                     axs[i,j].tick_params(labelbottom=False)
 
-                axs[i,j].set_xlim((0.0, 30.0))
+                axs[i,j].set_xlim((0.0, 10.0))
 
             #axs[0,0].tick_params(labeltop=True)
 
@@ -111,8 +111,8 @@ if __name__ == "__main__":
     laps = np.array( list( range(0, conf.Nt, conf.interval) ) )
     tt = laps/conf.t_norm
 
-    hmin = int( 15 )
-    hmax = int( hmin + conf.rad_pcap*0.5 )
+    hmin = int( conf.rad_pcap*0.2 )
+    hmax = int( conf.rad_pcap*1.0 )
 
 
     epars = []
@@ -176,8 +176,8 @@ if __name__ == "__main__":
 
         # read from output file
         fname = conf.outdir + '/qed_{}.h5'.format(str(lap))
-        if not(os.path.isfile(fname)):
-            continue
+        if not(os.path.isfile(fname)): continue
+        if lap/conf.t_norm > 10.0: continue
         print(lap, fname)
 
         f5 = h5.File(fname,'r')
@@ -232,8 +232,7 @@ if __name__ == "__main__":
         j = jx + jy + jz
 
         # compensate for external antenna
-        if lap > conf.rad_pcap/conf.cfl:
-            jx[:] += 1.0
+        #if lap > conf.rad_pcap/conf.cfl: jx[:] += 1.0
 
         #print('e', e)
         #print('j', j)
@@ -300,7 +299,7 @@ if __name__ == "__main__":
         mpps.append(numpp)
         mpxs.append(numpx)
 
-        epeak.append( ex[hmin] )
+        epeak.append( ex[hmax] )
         epars.append( np.mean(ex[hmin:hmax]) )
         jps.append( np.mean(jx[hmin:hmax]) )
 
@@ -315,11 +314,11 @@ if __name__ == "__main__":
 
     # v2 with pairs and photons
     mpairs = np.array(mpes) + np.array(mpps)
-    axs[0,0].plot(tt, mpairs, color="C0", lw=0.9, linestyle="solid")
-    axs[0,0].plot(tt, mpxs, color="C2", lw=0.9, linestyle="dashed")
+    axs[0,0].plot(tt, mpairs, color="k",  lw=0.9, linestyle="solid")
+    axs[0,0].plot(tt, mpxs,   color="C0", lw=0.9, linestyle="dashed")
 
     # v1 with field quantities
-    axs[1,0].plot(tt, epeak, color="C1", lw=0.9, linestyle="solid")
+    axs[1,0].plot(tt, epeak, color="k",   lw=0.9, linestyle="solid")
     #axs[2,0].plot(tt, jps/mpairs,   color="C3", lw=0.9)
 
     #axs[2,0].plot(tt, jps,   color="C3", lw=0.9)
@@ -337,17 +336,18 @@ if __name__ == "__main__":
 
 
     axs[0,0].set_ylabel(r"$m_\pm$, $m_x$")
-    axs[1,0].set_ylabel(r"$\varepsilon = E_\parallel/\beta_\mathrm{rot} B_\star$")
+    #axs[1,0].set_ylabel(r"$\varepsilon = E_\parallel/\beta_\mathrm{rot} B_\star$")
+    axs[1,0].set_ylabel(r"$\varepsilon$")
     #axs[2,0].set_ylabel(r"$j_\pm/j_m$")
-    axs[2,0].set_ylabel(r"$\langle v \rangle = j_\pm/m_\pm$")
+    axs[2,0].set_ylabel(r"$\langle \beta \rangle = j_\pm/m_\pm$")
 
     axs[2,0].set_xlabel(r"$t/t_\mathrm{esc}$")
 
     axs[0,0].set_yscale("log")
 
     axs[0,0].set_ylim((0.1, 1e6))
-    axs[1,0].set_ylim((-0.1, 1.1))
-    axs[2,0].set_ylim((-0.3, 0.3))
+    axs[1,0].set_ylim((-1.2, 0.2))
+    axs[2,0].set_ylim((-0.05, 0.05))
     #axs[2,0].set_ylim((-1.0, 1.0))
 
 

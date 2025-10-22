@@ -74,7 +74,7 @@ if __name__ == "__main__":
                 #if i <= nrow_fig-2:
                 #    axs[i,j].tick_params(labelbottom=False)
 
-                axs[i,j].set_xlim((0.0, 5.0))
+                axs[i,j].set_xlim((-1.0, 8.0))
             #axs[0,0].tick_params(labeltop=True)
 
 
@@ -107,8 +107,8 @@ if __name__ == "__main__":
     laps = np.array( list( range(0, conf.Nt, conf.interval) ) )
     #tt = laps/conf.t_norm
 
-    hmin = int( 15 )
-    hmax = int( hmin + conf.rad_pcap*0.5 )
+    hmin = int( conf.rad_pcap*0.0 )
+    hmax = int( conf.rad_pcap*1.0 )
 
     # limits for the height-energy histogram
     hs = np.linspace(0, Lh, toolset.Nhist)
@@ -153,8 +153,8 @@ if __name__ == "__main__":
         return np.sum(ys*dxs)
 
 
-    tmin = 10.0
-    tmax = 12.0
+    tmin = 0.0
+    tmax = 2.0
 
     tspan = tmax - tmin
 
@@ -179,6 +179,7 @@ if __name__ == "__main__":
 
         # read from output file
         fname = conf.outdir + '/qed_{}.h5'.format(str(lap))
+        if not(os.path.isfile(fname)): continue
         f5 = h5.File(fname,'r')
 
         hem = f5['h2_ene_e-'][()]
@@ -264,7 +265,7 @@ if __name__ == "__main__":
 
         # histogram into units of n_GJ
         n_units = toolset.N_box/toolset.N_wgt # de-unitize what we have in the qed_toolset
-        n_units *= 1/(hmax2-hmin2) # normalize by area into xx per cell
+        n_units *= 1/(hmax2-hmin2) # normalize by area into xx per cell NOTE: we want total spec in the gap?
         n_units *= 1/conf.ppc # normalize to n_GJ
 
         # in units of dN/dlnp 
@@ -326,11 +327,11 @@ if __name__ == "__main__":
     #axs[2,0].set_ylabel(r"$j_\pm/j_m$")
     #axs[2,0].set_ylabel(r"$\langle v \rangle = j_\pm/m_\pm$")
 
-    axs[0,0].set_xlabel(r"$\log_{10} p$")
+    axs[0,0].set_xlabel(r"$\log_{10} \gamma\beta$")
     axs[1,0].set_xlabel(r"$\log_{10} x$")
 
-    axs[0,0].set_ylabel(r"$  \mathrm{d} m_\pm/ \mathrm{d} \, \log p $")
-    axs[1,0].set_ylabel(r"$x \mathrm{d}( x m_x )/ \mathrm{d} \, \log x $")
+    axs[0,0].set_ylabel(r"$  \mathrm{d} m_\pm/ \mathrm{d} \, \log_{10}(\gamma\beta) $")
+    axs[1,0].set_ylabel(r"$x \mathrm{d}( x m_x )/ \mathrm{d} \, \log_{10} x $")
 
     axs[0,0].set_yscale("log")
     axs[1,0].set_yscale("log")
@@ -338,8 +339,8 @@ if __name__ == "__main__":
 
     #axs[0,0].set_ylim((0.1, 1e2))
 
-    axs[0,0].set_ylim((1e-1, 1e3))
-    axs[1,0].set_ylim((1e1,  1e6))
+    axs[0,0].set_ylim((1e0, 1e6))
+    axs[1,0].set_ylim((1e0, 1e9))
 
 
     #--------------------------------------------------
@@ -362,7 +363,7 @@ if __name__ == "__main__":
                 norm=norm,
                 orientation='horizontal',
                 ticklocation='top')
-        cb1.set_label(r'Time $(t-t_0)/t_\mathrm{esc}$')
+        cb1.set_label(r'$t/t_\mathrm{esc}$')
 
     pos = axs[0,0].get_position()
     print('ax pos:', pos)

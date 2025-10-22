@@ -126,7 +126,7 @@ if __name__ == "__main__":
     #print("hmin/hmax", hmin, hmax)
 
 
-    hmin2 = 1
+    hmin2 = 0
     hmax2 = 10
     print("hmin2/hmax2", hmin2, hmax2, hs[hmin2], hs[hmax2])
 
@@ -282,10 +282,10 @@ if __name__ == "__main__":
     print("integrated hp:", hp_int)
 
     #-------------------------------------------------- 
-    axs[0,0].set_xlabel(r"$\log_{10} p$")
+    axs[0,0].set_xlabel(r"$\log_{10} \gamma\beta$")
     #axs[1,0].set_xlabel(r"$\log_{10} x$")
 
-    axs[0,0].set_ylabel(r"$  \mathrm{d} m_\pm/ \mathrm{d} \, \log p $")
+    axs[0,0].set_ylabel(r"$  \mathrm{d} m_\pm/ \mathrm{d} \, \log_{10}(\gamma\beta) $")
     #axs[1,0].set_ylabel(r"$x \mathrm{d}( x m_x )/ \mathrm{d} \, \log x $")
 
     axs[0,0].set_yscale("log")
@@ -315,7 +315,7 @@ if __name__ == "__main__":
                 norm=norm,
                 orientation='horizontal',
                 ticklocation='top')
-        cb1.set_label(r'Time $(t-t_0)/t_\mathrm{esc}$')
+        cb1.set_label(r'$t/t_\mathrm{esc}$')
 
     pos = axs[0,0].get_position()
     print('ax pos:', pos)

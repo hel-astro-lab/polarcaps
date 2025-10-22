@@ -127,7 +127,9 @@ if __name__ == "__main__":
     axs[4,0].set_ylim((1e-3, 1e8))
     axs[5,0].set_ylim((1.0, 1e8))
     axs[6,0].set_ylim((1e-6, 1.0)) # TODO
+
     axs[7,0].set_ylim((-1.2, 0.2))
+    #axs[7,0].set_ylim((-0.005, 0.005))
 
 
     #axs[5,0].set_ylim((-0.00005, 0.00005))
@@ -420,6 +422,12 @@ if __name__ == "__main__":
             gam_mp_p = smooth(gam_mp_p)
             gam_mi_m = smooth(gam_mi_m)
             gam_mi_p = smooth(gam_mi_p)
+
+            g3_me_p = smooth(g3_me_p)
+            g3_me_m = smooth(g3_me_m)
+            g3_mp_p = smooth(g3_mp_p)
+            g3_mp_m = smooth(g3_mp_m)
+
 
         #print(g3_me_p)
 
