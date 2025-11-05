@@ -74,7 +74,7 @@ if __name__ == "__main__":
                 #if i <= nrow_fig-2:
                 #    axs[i,j].tick_params(labelbottom=False)
 
-                axs[i,j].set_xlim((-1.0, 8.0))
+                axs[i,j].set_xlim((-2.0, 6.0))
             #axs[0,0].tick_params(labeltop=True)
 
 
@@ -153,8 +153,8 @@ if __name__ == "__main__":
         return np.sum(ys*dxs)
 
 
-    tmin = 0.0
-    tmax = 2.0
+    tmin = 6.0 #0.0
+    tmax = 10.0 #2.0
 
     tspan = tmax - tmin
 
@@ -164,6 +164,13 @@ if __name__ == "__main__":
 
     merge = 6
     i = 0
+    Nlaps = 0
+
+    # total time-integrated spec
+    N = toolset.Nhist
+    he_int = np.zeros(N)
+    hp_int = np.zeros(N)
+    hx_int = np.zeros(N)
 
     for lap in laps:
         #print("lap", lap, "t =", lap/conf.t_norm)
@@ -265,7 +272,8 @@ if __name__ == "__main__":
 
         # histogram into units of n_GJ
         n_units = toolset.N_box/toolset.N_wgt # de-unitize what we have in the qed_toolset
-        n_units *= 1/(hmax2-hmin2) # normalize by area into xx per cell NOTE: we want total spec in the gap?
+        n_units *= 1/(hmax2-hmin2) # normalize to per hmax2-hmin2 histrogram bins
+        n_units *= toolset.Nhist/conf.Lx # normalize to per cell
         n_units *= 1/conf.ppc # normalize to n_GJ
 
         # in units of dN/dlnp 
@@ -300,6 +308,12 @@ if __name__ == "__main__":
         hx = hx[N:] + np.flip(hx[:N])
         #axs[2,0].plot(lnxs, nx_units*hx, color=col, lw=0.8)
 
+        # sum for total spec
+        he_int[:] += he
+        hp_int[:] += hp
+        hx_int[:] += hx
+
+        Nlaps = Nlaps + 1
 
         if i == 0:
             heM = he
@@ -316,11 +330,12 @@ if __name__ == "__main__":
             #axs[0,0].plot(lnzs, heM, color=col, lw=0.8)
             #axs[1,0].plot(lnzs, hpM, color=col, lw=0.8)
 
-            axs[0,0].plot(lnzs, heM + hpM, color=col, lw=0.8)
+            axs[0,0].plot(lnzs, (heM + hpM)/merge, color=col, lw=0.8)
             axs[1,0].plot(lnxs, hxM,       color=col, lw=0.8)
             i = 0
 
 
+    print("Energy integrated multiplicity: ",integrate(lnzs, (he_int + hp_int)/Nlaps))
     #--------------------------------------------------
     #axs[0,0].set_ylabel(r"$m_\pm$, $m_x$")
     #axs[1,0].set_ylabel(r"$\varepsilon = E_\parallel/\beta_\mathrm{rot} B_\star$")
@@ -339,7 +354,7 @@ if __name__ == "__main__":
 
     #axs[0,0].set_ylim((0.1, 1e2))
 
-    axs[0,0].set_ylim((1e0, 1e6))
+    axs[0,0].set_ylim((1e-2, 1e3))
     axs[1,0].set_ylim((1e0, 1e9))
 
 
