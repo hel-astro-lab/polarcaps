@@ -74,7 +74,7 @@ if __name__ == "__main__":
                 #if i <= nrow_fig-2:
                 #    axs[i,j].tick_params(labelbottom=False)
 
-                axs[i,j].set_xlim((-1, 8.0))
+                axs[i,j].set_xlim((-2, 6.0))
             #axs[0,0].tick_params(labeltop=True)
 
 
@@ -158,8 +158,8 @@ if __name__ == "__main__":
         return np.sum(ys*dxs)
 
 
-    tmin = 0.0
-    tmax = 2.0
+    tmin = 6.0 #0.0
+    tmax = 10.0 #2.0
     tspan = tmax - tmin
 
     norm = matplotlib.colors.Normalize(vmin=0, vmax=tspan)
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     hp_int = np.zeros(N)
     hx_int = np.zeros(N)
     
-
+    Nlaps = 0
     for lap in laps:
 
         if not(tmin < lap/conf.t_norm < tmax):
@@ -208,7 +208,8 @@ if __name__ == "__main__":
 
         # histogram into units of n_GJ
         n_units = toolset.N_box/toolset.N_wgt # de-unitize what we have in the qed_toolset
-        n_units *= 1/(hmax2-hmin2) # normalize by area into xx per cell
+        n_units *= 1/(hmax2-hmin2) # normalize to per hmax2-hmin2 histrogram bins
+        n_units *= toolset.Nhist/conf.Lx # normalize to per cell
         n_units *= 1/conf.ppc # normalize to n_GJ
 
         # in units of dN/dlnp 
@@ -254,6 +255,8 @@ if __name__ == "__main__":
         hp_int[:] += hp
         hx_int[:] += hx
 
+        Nlaps = Nlaps + 1
+
         # coarse grain spec with every merge step
         if i == 0:
             heM = he
@@ -269,13 +272,16 @@ if __name__ == "__main__":
             #axs[0,0].plot(lnzs, heM, color=col, lw=0.8)
             #axs[1,0].plot(lnzs, hpM, color=col, lw=0.8)
 
-            axs[0,0].plot(lnzs, heM + hpM, color=col, lw=0.8)
+            axs[0,0].plot(lnzs, (heM + hpM)/merge, color=col, lw=0.8)
             #axs[1,0].plot(lnxs, hxM,       color=col, lw=0.8)
             i = 0
 
 
     # plot total spec as well
-    axs[0,0].plot(lnzs, he_int + hp_int, color=col, lw=1.5)
+    axs[0,0].plot(lnzs, (he_int + hp_int)/Nlaps, color=col, lw=1.5)
+
+    print("Energy integrated multiplicity: ",integrate(lnzs, (he_int + hp_int)/Nlaps))
+
     #axs[1,0].plot(lnxs, hx_int,          color=col, lw=1.5)
 
     print("integrated he:", he_int)
@@ -291,20 +297,23 @@ if __name__ == "__main__":
     axs[0,0].set_yscale("log")
     #axs[1,0].set_yscale("log")
 
-    axs[0,0].set_ylim((1e0, 1e7))
-    #axs[1,0].set_ylim((1e0, 1e10))
+    axs[0,0].set_ylim((1e-2, 1e3))
 
     #--------------------------------------------------
     # manual slope
-    gams = np.array([1e4, 8e6])
-    dmdg = gams**-0.3
-    dmdg[:] *= 1e6/dmdg[0]
+    #gams = np.array([1e4, 8e6])
+    #dmdg = gams**-0.3
+    gams = np.array([1e2, 1e5])
+    dmdg = gams**-0.9
+    dmdg[:] *= 1e2/dmdg[0]
     axs[0,0].plot(np.log10(gams), dmdg, color="k", linestyle="dashed", lw=1.5)
 
     #--------------------------------------------------
     #manual peak
-    gams = 400.0*np.ones(2)
-    dmdg = [3e5, 5e6]
+    #gams = 400.0*np.ones(2)
+    #dmdg = [3e5, 5e6]
+    gams = 30.0*np.ones(2)
+    dmdg = [1e2, 1e3]
     axs[0,0].plot(np.log10(gams), dmdg, color="k", linestyle="dashed", lw=1.5)
 
 
