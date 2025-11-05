@@ -175,7 +175,7 @@ if __name__ == "__main__":
     he_int = np.zeros(N)
     hp_int = np.zeros(N)
     hx_int = np.zeros(N)
-    he_thermal = np.zeros(N)
+    he_thermal_int = np.zeros(N)
     
     Nlaps = 0
     for lap in laps:
@@ -261,7 +261,7 @@ if __name__ == "__main__":
         hp_int[:] += hp
         hx_int[:] += hx
 
-        he_thermal[:] += he_thermal
+        he_thermal_int[:] += he_thermal
 
         Nlaps = Nlaps + 1
 
@@ -287,7 +287,7 @@ if __name__ == "__main__":
 
     # plot total spec as well
     axs[0,0].plot(lnzs, (he_int + hp_int)/Nlaps, color=col, lw=1.5)
-    axs[0,0].plot(lnzs, (he_thermal)/Nlaps, color=col, linestyle="dashdot", lw=1.5)
+    axs[0,0].plot(lnzs, (he_thermal_int)/Nlaps, color=col, linestyle="dashdot", lw=1.5)
 
     print("Energy integrated multiplicity: ",integrate(lnzs, (he_int + hp_int)/Nlaps))
 
