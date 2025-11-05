@@ -126,7 +126,7 @@ if __name__ == "__main__":
     #print("hmin/hmax", hmin, hmax)
 
 
-    hmin2 = 0
+    hmin2 = 1
     hmax2 = 10
     print("hmin2/hmax2", hmin2, hmax2, hs[hmin2], hs[hmax2])
 
@@ -175,6 +175,7 @@ if __name__ == "__main__":
     he_int = np.zeros(N)
     hp_int = np.zeros(N)
     hx_int = np.zeros(N)
+    he_thermal = np.zeros(N)
     
     Nlaps = 0
     for lap in laps:
@@ -212,6 +213,8 @@ if __name__ == "__main__":
         n_units *= toolset.Nhist/conf.Lx # normalize to per cell
         n_units *= 1/conf.ppc # normalize to n_GJ
 
+        n_units_thermal = n_units*(hmax2-hmin2)
+
         # in units of dN/dlnp 
         he = np.sum(hem[hmin2:hmax2,:], axis=0)*n_units #*zs2
         #he = he[N:] + np.flip(he[:N]) # up and down
@@ -226,6 +229,9 @@ if __name__ == "__main__":
         #hp = hp[N:] + np.flip(hp[:N]) # up and down
         #hp = hp[N:] # up 
         hp = np.flip(hp[:N]) # down
+
+        he_thermal = np.sum(hem[0:1,:], axis=0)*n_units_thermal
+        he_thermal = he_thermal[N:] # up
 
         #numpp = integrate(lnzs2, hp)*n_units # integrate and de-unitize
         #axs[1,0].plot(lnzs2, n_units*he, color=col)
@@ -255,6 +261,8 @@ if __name__ == "__main__":
         hp_int[:] += hp
         hx_int[:] += hx
 
+        he_thermal[:] += he_thermal
+
         Nlaps = Nlaps + 1
 
         # coarse grain spec with every merge step
@@ -279,6 +287,7 @@ if __name__ == "__main__":
 
     # plot total spec as well
     axs[0,0].plot(lnzs, (he_int + hp_int)/Nlaps, color=col, lw=1.5)
+    axs[0,0].plot(lnzs, (he_thermal)/Nlaps, color=col, linestyle="dashdot", lw=1.5)
 
     print("Energy integrated multiplicity: ",integrate(lnzs, (he_int + hp_int)/Nlaps))
 
@@ -338,7 +347,7 @@ if __name__ == "__main__":
                 norm=norm,
                 orientation='horizontal',
                 ticklocation='top')
-        cb1.set_label(r'$t/t_\mathrm{esc}$')
+        cb1.set_label(r'$(t-t_{0})/t_\mathrm{esc}$')
 
     pos = axs[0,0].get_position()
     print('ax pos:', pos)
