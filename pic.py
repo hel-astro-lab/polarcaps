@@ -655,7 +655,7 @@ if __name__ == "__main__":
     gap = pypic.Gap()
     gap.B0          = conf.bstar # background magnetic field
     gap.E0          = conf.bstar*conf.vrot # E_rot
-    gap.j_ext       = conf.jm_scaling*conf.qe*conf.ppc*conf.cfl # strength of the external current
+    gap.j_ext       = conf.jm_scaling*conf.qe*conf.ppc*conf.cfl**2 # strength of the external current, j_ext*dt
 
     gap.gap_length  = conf.rad_pcap # polar cap length in dx
     gap.Nx          = conf.Lx # box length
@@ -833,7 +833,6 @@ if __name__ == "__main__":
 
         # external particle boundaries
         sch.operate( dict(name='star', solver='lwall', method='delete_prtcls', nhood='local', ) )
-
 
         ##################################################
         # data reduction and I/O
