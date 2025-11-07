@@ -669,7 +669,7 @@ if __name__ == "__main__":
     gap.e_profile_mode = 1
     gap.b_profile_mode = 0
 
-    gap.inj_rate_pairs = conf.ninj_pairs*conf.ppc # num of e^- e^+ pairs injected per dt
+    gap.inj_rate_pairs = conf.ninj_pairs          # num of e^- e^+ pairs injected per dt
     gap.inj_rate_phots = conf.ninj_phots          # num of photons injected per dt
     gap.temp_pairs     = conf.delgam # injection (Maxwell-Juttner) temperature for pairs
     gap.temp_phots     = conf.delgam_x    # injection (black-body) temperature for photons
