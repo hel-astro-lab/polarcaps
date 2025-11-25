@@ -232,6 +232,14 @@ class Configuration_Pulsar(Configuration):
         efac = 1.0/efac
         lmfp2_per_h = comp_scale*efac
 
+
+        # Calculation of 1-photon pair creation mean free path for a 1-time Compton scattered photon
+        lmfp1comp_per_h  = self.rad_curv/(x1*self.bratio) # prefactor
+        lmfp1comp_per_h *= 1.0/( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*x1**2 ) )**(3/8) )
+                            - np.log( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*x1**2 ) )**(3/8) )) )
+        lmfp1comp_per_h *= 1.0/self.rad_pcap # into units of gap height
+
+
         #--------------------------------------------------
         # extra undefined parameters
         # TO BE REMOVED
@@ -296,8 +304,9 @@ class Configuration_Pulsar(Configuration):
             print("phys:    g_syn/g_gap:", self.gam_rad_synch/self.gam_gap)
             print("phys:    g_com/g_gap:", self.gam_rad_comp/self.gam_gap)
 
-            print("phys:  1-photon mfp/H:", lmfp1_per_h)
-            print("phys:  2-photon mfp/H:", lmfp2_per_h)
+            print("phys:  1-photon (after synchrotron) mfp/H:", lmfp1_per_h)
+            print("phys:  1-photon (after Compton) mfp/H:", lmfp1comp_per_h)
+            print("phys:  2-photon (after Compton) mfp/H:", lmfp2_per_h)
 
             print("phys:         len_rad:", self.len_rad)
             print("phys:           xcurv:", self.xsyn)
