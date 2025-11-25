@@ -46,7 +46,7 @@ if __name__ == "__main__":
     plt.rc('ytick', right = True)
 
     plt.rc('font',  family='serif',)
-    plt.rc('text',  usetex=False)
+    plt.rc('text',  usetex=True)
 
     plt.rc('xtick', labelsize=7)
     plt.rc('ytick', labelsize=7)
@@ -160,8 +160,8 @@ if __name__ == "__main__":
         return np.sum(ys*dxs)
 
 
-    tmin = 5.5
-    tmax = 7.5
+    tmin = 3.5 #5.5
+    tmax = 5.5 #7.5
     tspan = tmax - tmin
 
     norm = matplotlib.colors.Normalize(vmin=0, vmax=tspan)

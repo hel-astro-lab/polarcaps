@@ -176,6 +176,7 @@ if __name__ == "__main__":
 
         f5.close()
 
+
         #--------------------------------------------------
 
         hhlims = [1,1]
@@ -291,12 +292,12 @@ if __name__ == "__main__":
         # histogram into units of n_GJ
         n_units = toolset.N_box/toolset.N_wgt # de-unitize what we have in the qed_toolset
         n_units *= 1.0/conf.ppc # normalize to n_GJ
-        n_units *= toolset.Nhist/conf.Lx # normalize to per cell 
+        n_units *= toolset.Nhist/conf.Lx # normalize to per cell
 
         # conversion factor into units of n_GJ
         nx_units = toolset.N_box*toolset.N_time/toolset.N_wgt # de-unitize what we have in qed_toolset
         nx_units *= 1/conf.ppc      # normalize to n_GJ
-        nx_units *= conf.Lx/toolset.Nhist # normalize to per cell 
+        nx_units *= toolset.Nhist/conf.Lx # normalize to per cell
 
         #NOTE: after these units, integral over the x axis gives total number of particles in units of multiplicity
 

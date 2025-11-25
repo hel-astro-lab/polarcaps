@@ -107,7 +107,10 @@ if __name__ == "__main__":
     laps = np.array( list( range(0, conf.Nt, conf.interval) ) )
     #tt = laps/conf.t_norm
 
-    hmin = int( conf.rad_pcap*0.0 )
+    #hmin = int( conf.rad_pcap*0.0 )
+    #hmax = int( conf.rad_pcap*1.0 )
+
+    hmin = int( conf.rad_pcap*0.5 )
     hmax = int( conf.rad_pcap*1.0 )
 
     # limits for the height-energy histogram
@@ -153,8 +156,8 @@ if __name__ == "__main__":
         return np.sum(ys*dxs)
 
 
-    tmin = 6.0 #0.0
-    tmax = 10.0 #2.0
+    tmin = 5.5 #6.0 #0.0
+    tmax = 7.5 #10.0 #2.0
 
     tspan = tmax - tmin
 
@@ -299,6 +302,7 @@ if __name__ == "__main__":
         # conversion factor into units of n_GJ
         nx_units = toolset.N_box*toolset.N_time/toolset.N_wgt
         nx_units *= 1/(hmax2-hmin2) # normalize by area into xx per cell
+        nx_units *= toolset.Nhist/conf.Lx # normalize to per cell
         nx_units *= 1/conf.ppc # normalize to n_GJ
 
         hx = np.sum(hph[hmin2:hmax2,:], axis=0)*nx_units #/xs2**2
