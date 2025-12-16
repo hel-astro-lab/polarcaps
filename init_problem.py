@@ -7,7 +7,7 @@ from pytools import simplify_string, simplify_large_num
 
 from numpy import sqrt, pi
 import numpy as np
-
+import scipy.special
 
 
 class Configuration_Pulsar(Configuration):
@@ -216,10 +216,13 @@ class Configuration_Pulsar(Configuration):
         self.xsyn = 1.5*self.bratio*(self.rg/self.rad_curv)*self.gam_rad_synch**3
 
         # 1-photon pair creation mean free path
-
         lmfp1_per_h  = self.rad_curv/(self.xsyn*self.bratio) # prefactor
-        lmfp1_per_h *= 1.0/( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*self.xsyn**2 ) )**(3/8) )
-                            - np.log( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*self.xsyn**2 ) )**(3/8) )) )
+        #lmfp1_per_h *= 1.0/( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*self.xsyn**2 ) )**(3/8) )
+        #                    - np.log( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*self.xsyn**2 ) )**(3/8) )) )
+        Afac = self.lamC*self.xsyn**2*self.bratio/(alphaf*self.rad_curv)
+        LW = 0.333/(Afac)**(3.0/8.0)
+        chia = 1.0 / scipy.special.lambertw(LW).real
+        lmfp1_per_h *= chia
         lmfp1_per_h *= 1.0/self.rad_pcap # into units of gap height
 
         #--------------------------------------------------
@@ -235,8 +238,12 @@ class Configuration_Pulsar(Configuration):
 
         # Calculation of 1-photon pair creation mean free path for a 1-time Compton scattered photon
         lmfp1comp_per_h  = self.rad_curv/(x1*self.bratio) # prefactor
-        lmfp1comp_per_h *= 1.0/( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*x1**2 ) )**(3/8) )
-                            - np.log( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*x1**2 ) )**(3/8) )) )
+        #lmfp1comp_per_h *= 1.0/( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*x1**2 ) )**(3/8) )
+        #                    - np.log( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*x1**2 ) )**(3/8) )) )
+        Afac = self.lamC*x1**2*self.bratio/(alphaf*self.rad_curv)
+        LW = 0.333/(Afac)**(3.0/8.0)
+        chia = 1.0 / scipy.special.lambertw(LW).real
+        lmfp1comp_per_h *= chia
         lmfp1comp_per_h *= 1.0/self.rad_pcap # into units of gap height
 
 
