@@ -247,6 +247,10 @@ class Configuration_Pulsar(Configuration):
         lmfp1comp_per_h *= 1.0/self.rad_pcap # into units of gap height
 
 
+        # Calculation of Compton cooling mean free path for particle moving at gam_rad_comp:
+        lmfp_compcool_per_h = 9.0*np.pi*self.cfl**5*self.Nmp/(2.0*self.gam_rad_comp*n_phot*x2*self.h_pcap)
+
+
         #--------------------------------------------------
         # extra undefined parameters
         # TO BE REMOVED
@@ -314,6 +318,8 @@ class Configuration_Pulsar(Configuration):
             print("phys:  1-photon (after synchrotron) mfp/H:", lmfp1_per_h)
             print("phys:  1-photon (after Compton) mfp/H:", lmfp1comp_per_h)
             print("phys:  2-photon (after Compton) mfp/H:", lmfp2_per_h)
+
+            print("phys:  Compton cooling mfp/H:", lmfp_compcool_per_h)
 
             print("phys:         len_rad:", self.len_rad)
             print("phys:           xcurv:", self.xsyn)
