@@ -29,7 +29,10 @@ warnings.filterwarnings('ignore')
 
 #--------------------------------------------------
 # Field initialization (guide field)
-def insert_em_fields(grid, conf, do_initialization=True):
+def insert_em_fields(grid, conf, do_initialization=True, Ex_sol=None):
+
+    # total number of x cells in the global domain
+    Nx_global = conf.Nx * conf.NxMesh
 
     for tile in pytools.tiles_all(grid):
         g = tile.get_grids(0)
@@ -53,13 +56,24 @@ def insert_em_fields(grid, conf, do_initialization=True):
                             #iglob, jglob, kglob = pytools.ind2loc((ii, jj, kk), (l, m, n), conf)
                             #r = np.sqrt(iglob ** 2 + jglob ** 2 + kglob ** 2)
 
-                            g.ex[l,m,n] = 0.0
+                            # global x index (includes halos)
+                            i_global = ii[0] * conf.NxMesh + l
+
+                            # set Ex from Ex_sol if provided and in bounds
+                            if Ex_sol is not None and 0 <= i_global < Nx_global:
+                                g.ex[l, m, n] = Ex_sol[i_global]
+                            else:
+                                g.ex[l, m, n] = 0.0
+
+                            #print('i_global:', i_global, ' E', g.ex[l,m,n]/conf.e_norm)
+
                             g.ey[l,m,n] = 0.0
                             g.ez[l,m,n] = 0.0
 
-                            g.bx[l,m,n] = 0.0
-                            g.by[l,m,n] = 0.0 
-                            g.bz[l,m,n] = 0.0 #conf.binit
+                            if Ex_sol is None:
+                                g.bx[l,m,n] = 0.0
+                                g.by[l,m,n] = 0.0
+                                g.bz[l,m,n] = 0.0 #conf.binit
 
                         elif conf.use_maxwell_split: # static component
                             1
@@ -680,12 +694,76 @@ if __name__ == "__main__":
 
     sch.lwall = gap # lastly, add to scheduler
 
+    #-------------------------------------------------- 
+    # solve Ex from \partial_x E_x = \rho
+    if True:
+        Nx        = conf.Nx*conf.NxMesh + 2
+        rhos_rank = np.zeros((conf.Nspecies, Nx))
+        rhos      = np.zeros_like(rhos_rank)
+
+        # get number densities in each cell
+        for tile in pytools.tiles_all(grid):
+            ii,jj,kk = pytools.get_index(tile, conf)
+            for ispcs in range(conf.Nspecies):
+                container = tile.get_container(ispcs)
+                xlocs = np.array( container.loc(0) ) # x
+
+                # pointwise deposition; WRONG
+                #xarr      = np.arange(conf.Nx*conf.NxMesh+1)
+                #hist, edges = np.histogram(xlocs, bins=xarr)
+                #rhos_rank[ispcs, :] += hist
+
+                # 1st order shape function deposition
+                q = container.q
+                for n in range(len(xlocs)):
+                    x = xlocs[n]
+                    i = int(x)
+                    dx= x - i
+                    cx= 1.0 - dx
+
+                    sl=0.5
+                    for l in [-1,0,1]:
+                        sl = 0.75-sl # results in 0.25, 0.5, 0.25 variation
+                        rhos_rank[ispcs, i+l  ] += q*sl*cx
+                        rhos_rank[ispcs, i+l+1] += q*sl*dx
+                    #if ii < 2:
+                    #    print(x,i,dx)
+
+
+        Ncnts = Nx*conf.Nspecies
+        MPI.COMM_WORLD.Allreduce(
+                [rhos_rank, Ncnts, MPI.DOUBLE],
+                [rhos,      Ncnts, MPI.DOUBLE],
+                op=MPI.SUM)
+
+        if sch.is_master:
+            # total charge density
+            # self.prtcl_types = ['e-', 'e+', 'ph', 'p']
+            print("charge dens: ", rhos[0,:]) # -
+        rho = rhos[0,:] + rhos[1,:] + rhos[3,:]
+
+        # get current Ex
+        
+
+        # solve Ex from charge
+        eta_co = conf.nGJ*conf.qe
+        eta_tot = rho - eta_co
+        Ex_sol = np.zeros_like(conf.Nx*conf.NxMesh)
+        Ex_sol = -np.cumsum(eta_tot) # E_x = \int rho(x) dx
+
+        #if sch.is_master:
+        #    for i in range(conf.Nx*conf.NxMesh):
+        #        #print('i:', i, i/conf.rad_pcap, ' rho', rho[i], ' r013:', rhos[0,i], rhos[1,i], rhos[3,i], ' E', Ex_sol[i])
+        #        print('i:', i, i/conf.rad_pcap, ' rho', eta_tot[i], ' E', Ex_sol[i]/conf.e_norm)
+
 
     # induce initial magnetic and electric field from the star
     if io_stat["do_initialization"]:
         for tile in pytools.tiles_all(grid):
             sch.lwall.insert_em(tile)
 
+        #Replace the E grid (but keep the B unchanged):
+        insert_em_fields(grid, conf, do_initialization=True, Ex_sol=Ex_sol)
     # --------------------------------------------------
     # --------------------------------------------------
     # --------------------------------------------------
@@ -702,7 +780,6 @@ if __name__ == "__main__":
     sch.operate( dict(name='mpi_b',  solver='mpi', method='b', ) )
     sch.operate( dict(name='mpi_e',  solver='mpi', method='e', ) )
     sch.operate( dict(name='upd_bcs ',solver='tile',method='update_boundaries',args=[grid, [1,2,] ], nhood='local',) )
-
 
     # simulation loop
     time = lap * (conf.cfl / conf.c_omp)
@@ -833,6 +910,7 @@ if __name__ == "__main__":
 
         # external particle boundaries
         sch.operate( dict(name='star', solver='lwall', method='delete_prtcls', nhood='local', ) )
+
 
         ##################################################
         # data reduction and I/O
