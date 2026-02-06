@@ -697,7 +697,7 @@ if __name__ == "__main__":
     #-------------------------------------------------- 
     # solve Ex from \partial_x E_x = \rho
     if True:
-        Nx        = conf.Nx*conf.NxMesh + 2
+        Nx        = conf.Nx*conf.NxMesh + 3
         rhos_rank = np.zeros((conf.Nspecies, Nx))
         rhos      = np.zeros_like(rhos_rank)
 
