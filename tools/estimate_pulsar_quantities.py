@@ -63,7 +63,7 @@ print("bratio: ",bratio)
 print()
 
 gam_gap = echarge*beta_pc*Bfield*r_pcap/(2*m_e*c**2)
-gam_rad_syn = gam_gap**0.25*(r_g/rad_curv)**-0.5*bratio**-0.5*( 1.5*lamC/r_pcap/alphaf)**0.25
+gam_rad_syn = gam_gap**0.25*(r_g/rad_curv)**-0.5*bratio**-0.5*( 1.5*lamCbar/r_pcap/alphaf)**0.25
 gam_thr_syn = (4.0*rad_curv/(3.0*bratio*r_g))**(1.0/3.0)
 
 kTperhc = kev2erg*tkev/(hplanck*c)
@@ -86,7 +86,7 @@ print()
 t_esc = r_pcap/c
 t_acc = m_e*c/(echarge*beta_pc*Bfield)
 
-t_x_curv = lamC*rad_curv/(alphaf*bratio*c*r_g*gam_rad_syn)
+t_x_curv = lamCbar*rad_curv/(alphaf*bratio*c*r_g*gam_rad_syn)
 lmfp_curv = t_x_curv*c
 
 if(gam_rad_compton < gam_rad_syn):
@@ -111,6 +111,10 @@ xsyn = 1.5*bratio*(r_g/rad_curv)*gam_rad_syn**3
 print()
 print("xsyn [m_e x c^2]: ",xsyn)
 
+
+if gam_rad_compton > gam_gap:
+    gam_rad_compton = gam_gap
+
 # characteristic one-time scattered photon energy
 xcomp = x2+x2*(4.0/3.0)*gam_rad_compton**2
 print("xcomp [m_e x c^2]: ",xcomp)
@@ -126,7 +130,6 @@ from estimation_functions import comp_lmfp_1phot
 lmfp_1phot, lmfp_1phot_approx = comp_lmfp_1phot(x1,bratio,rad_curv,period)
 print("lmfps_1phot/Rpc: ", lmfp_1phot/r_pcap)
 
-
 #Next 2-photon mean free path (between curvature and thermal photons):
 from estimation_functions import comp_lmfp_2phot
 lmfp_2phot = comp_lmfp_2phot(x1,tkev)
@@ -140,6 +143,26 @@ t_pp1 = lmfp_1phot/c
 
 print("t_pp1 [s]: ",t_pp1)
 print("t_pp2 [s]: ",t_pp2)
+
+
+
+#Estimate limiting temperatures:
+
+Const1 = (0.029*np.pi**0.5*echarge*hplanck**3*c**1.5/(2**0.5*sigT))**0.5
+Const2 = (3.0*echarge**3*lamCbar*Bschw**2/(4.0*alphaf*m_e**3))**0.25*((2.0*np.pi)**3/(c**15))**(1.0/8.0)
+T_gam_rad_equal = (Const1*Const2**(-1)*Bfield**(1.0/4.0)*period**(-3.0/8.0)*r_star**(3.0/8.0)*rad_curv**(-0.5))**0.5/kev2erg
+
+#Double checking that formulas match:
+#print(gam_gap, 2.0*np.pi**2*echarge*Bfield*r_star**3/(m_e*c**4*period**2))
+#print(gam_rad_compton, Const1*Bfield**0.5*period**(-0.75)*r_star**0.75*(tkev*kev2erg)**-2)
+#print(gam_rad_syn, Const2*Bfield**0.25*period**(-3.0/8.0)*r_star**(3.0/8.0)*rad_curv**0.5)
+
+
+#print(Const1*Bfield**0.5*period**(-0.75)*r_star**0.75*(T_gam_rad_equal*kev2erg)**-2, Const2*Bfield**0.25*period**(-3.0/8.0)*r_star**(3.0/8.0)*rad_curv**0.5)
+
+#print(Const1/Const2)
+
+print("T_gam_rad_equal [keV]: ", T_gam_rad_equal)
 
 
 
