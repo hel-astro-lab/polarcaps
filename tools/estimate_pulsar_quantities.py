@@ -144,8 +144,6 @@ t_pp1 = lmfp_1phot/c
 print("t_pp1 [s]: ",t_pp1)
 print("t_pp2 [s]: ",t_pp2)
 
-
-
 #Estimate limiting temperatures:
 
 Const1 = (0.029*np.pi**0.5*echarge*hplanck**3*c**1.5/(2**0.5*sigT))**0.5
@@ -157,13 +155,15 @@ T_gam_rad_equal = (Const1*Const2**(-1)*Bfield**(1.0/4.0)*period**(-3.0/8.0)*r_st
 #print(gam_rad_compton, Const1*Bfield**0.5*period**(-0.75)*r_star**0.75*(tkev*kev2erg)**-2)
 #print(gam_rad_syn, Const2*Bfield**0.25*period**(-3.0/8.0)*r_star**(3.0/8.0)*rad_curv**0.5)
 
+print("Const1:",Const1)
+print("(Const1/Const2)**0.5:",(Const1/Const2)**0.5)
 
-#print(Const1*Bfield**0.5*period**(-0.75)*r_star**0.75*(T_gam_rad_equal*kev2erg)**-2, Const2*Bfield**0.25*period**(-3.0/8.0)*r_star**(3.0/8.0)*rad_curv**0.5)
+print("T_gam_rad_equal [keV], T_gam_rad_equal [K]: ", T_gam_rad_equal, T_gam_rad_equal*11604525.0062)
 
-#print(Const1/Const2)
+prefac1 = (3.0*m_e*c**5*hplanck**3)**0.5/(4.0*51.9*np.pi*sigT*Const1)**0.5*(2.0*np.pi/c)**(-0.25)
+T_comp_lmpf1 = prefac1*Bfield**(-0.25)*r_star**(-9.0/8.0)*period**(5.0/8.0)/kev2erg
 
-print("T_gam_rad_equal [keV]: ", T_gam_rad_equal)
+print("Const3: ",prefac1)
 
-
-
+print("T_comp_lmpf1 [keV], T_comp_lmpf1 [K]: ", T_comp_lmpf1, T_comp_lmpf1*11604525.0062)
 
