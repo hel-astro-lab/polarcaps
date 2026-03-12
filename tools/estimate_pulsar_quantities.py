@@ -1,7 +1,7 @@
 import numpy as np
 
-#setup="rp"
-setup="msp"
+setup="rp"
+#setup="msp"
 #setup="msp_hot"
 #setup="wd"
 
@@ -36,6 +36,8 @@ keV2Kelvin = 11604525.0062
 
 if tgrid_plot:
     tkev = tkelvin_grid/keV2Kelvin
+else:
+    tkev = np.array([tkev])
 
 hplanck = 6.6261e-27 #erg s
 c = 2.9979e10 #cm/s
@@ -138,13 +140,16 @@ t_acc = m_e*c/(echarge*beta_pc*Bfield)
 t_x_curv = lamCbar*rad_curv/(alphaf*bratio*c*r_g*gam_rad_syn)
 lmfp_curv = t_x_curv*c
 
-gam_smallest = np.minimum(gam_rad_compton, gam_rad_syn)
-gam_smallest = np.minimum(gam_smallest,np.array([gam_gap]*len(gam_rad_compton)))
+if setup=="rp":
+    gam_smallest = np.minimum(gam_rad_compton, gam_rad_syn)
+    gam_smallest = np.minimum(gam_smallest,np.array([gam_gap]*len(gam_rad_compton)))
+else:
+    gam_smallest = np.minimum(gam_rad_compton, np.array([gam_gap]*len(gam_rad_compton)))
 
 #gam_smallest = np.minimum(gam_rad_compton,np.array([gam_gap]*len(gam_rad_compton)))
 #gam_smallest = gam_gap
 
-lmfp_compton = gam_smallest*3.0*m_e*c**2/(4.0*sigT*gam_smallest**2*U_x)
+#lmfp_compton = gam_smallest*3.0*m_e*c**2/(4.0*sigT*gam_smallest**2*U_x)
 
 #exit()
 
@@ -179,65 +184,77 @@ gam_rad_compton = np.minimum(gam_rad_compton, gam_gap)
 #xcomp = x2*(4.0/3.0)*gam_rad_compton**(2*3)
 #xcomp = x2*gam_rad_compton**2/(1+gam_rad_compton*x2)
 
+#gam_scaling = [1.0]
+gam_scaling = [1e-4,1e-3,1e-2,1e-1,1e0]
+linestyles = ["solid","dashed","dashdot","dotted",(0, (1, 1))]
+
+lmfp_1phot_arr = []*len(gam_scaling)
+lmfp_2phot_arr = []*len(gam_scaling)
+lmfp_compton_arr = []*len(gam_scaling)
+
+for ig in range(0,len(gam_scaling)):
+
+    xcomp = x2*(gam_scaling[ig]*gam_smallest)**2/(1+gam_scaling[ig]*gam_smallest*x2)
+
+    #xcomp = x2+x2*(4.0/3.0)*(0.1*gam_rad_compton)**2
+    #xcomp = x2*(0.05*gam_rad_compton)**2/(1+(0.05*gam_rad_compton)*x2)
+    #xcomp = np.minimum(xcomp,gam_rad_compton)
+    print("xcomp [m_e x c^2]: ",xcomp)
+    print()
+
+    P_C_KN = 4.0*sigT*c*(gam_scaling[ig]*gam_smallest)**2*U_x*f_kn_exact(gam_scaling[ig]*gam_smallest,a)/3.0
+    lmfp_compton_KN = gam_scaling[ig]*gam_smallest*m_e*c**3/P_C_KN
+    lmfp_compton_arr.append(lmfp_compton_KN)
 
 
-#gam_scaling = [1e-4,1e-3,1e-2,1e-1,1e0]
-#for ig in gam_scaling:
+    if setup=="rp":
+        xsyn = 1.5*bratio*(r_g/rad_curv)*(gam_scaling[ig]*gam_smallest)**3    
+        x1 = xsyn
+    else:
+        x1 = xcomp
 
-xcomp = x2*(gam_gap)**2/(1+gam_gap*x2)
+    #Next 1-photon mean free path:
+    from estimation_functions import comp_lmfp_1phot
+    lmfp_1phot, lmfp_1phot_approx = comp_lmfp_1phot(x1,bratio,rad_curv,period)
+    print("lmfps_1phot/Rpc: ", lmfp_1phot/r_pcap)
+    lmfp_1phot_arr.append(lmfp_1phot)
 
-#xcomp = x2+x2*(4.0/3.0)*(0.1*gam_rad_compton)**2
-#xcomp = x2*(0.05*gam_rad_compton)**2/(1+(0.05*gam_rad_compton)*x2)
-#xcomp = np.minimum(xcomp,gam_rad_compton)
-print("xcomp [m_e x c^2]: ",xcomp)
-print()
+    #Next 2-photon mean free path (between curvature and thermal photons):
+    from estimation_functions import comp_lmfp_2phot
+    lmfp_2phot = comp_lmfp_2phot(x1,tkev)
+    print("lmfps_2phot/Rpc: ", lmfp_2phot/r_pcap)
+    lmfp_2phot_arr.append(lmfp_2phot)
 
-if setup=="rp":
-    x1 = xsyn
-else:
-    x1 = xcomp
+    print("lmfp_compton/R_pc: ",lmfp_compton/r_pcap)
+    print("lmfp_curv/R_pc: ",lmfp_curv/r_pcap)
 
-#Next 1-photon mean free path:
-from estimation_functions import comp_lmfp_1phot
-lmfp_1phot, lmfp_1phot_approx = comp_lmfp_1phot(x1,bratio,rad_curv,period)
-print("lmfps_1phot/Rpc: ", lmfp_1phot/r_pcap)
+    t_pp2 = lmfp_2phot/c
+    t_pp1 = lmfp_1phot/c
 
-#Next 2-photon mean free path (between curvature and thermal photons):
-from estimation_functions import comp_lmfp_2phot
-lmfp_2phot = comp_lmfp_2phot(x1,tkev)
-print("lmfps_2phot/Rpc: ", lmfp_2phot/r_pcap)
+    print("t_pp1 [s]: ",t_pp1)
+    print("t_pp2 [s]: ",t_pp2)
 
-print("lmfp_compton/R_pc: ",lmfp_compton/r_pcap)
-print("lmfp_curv/R_pc: ",lmfp_curv/r_pcap)
+    #Estimate limiting temperatures:
 
-t_pp2 = lmfp_2phot/c
-t_pp1 = lmfp_1phot/c
+    Const1 = (0.029*np.pi**0.5*echarge*hplanck**3*c**1.5/(2**0.5*sigT))**0.5
+    Const2 = (3.0*echarge**3*lamCbar*Bschw**2/(4.0*alphaf*m_e**3))**0.25*((2.0*np.pi)**3/(c**15))**(1.0/8.0)
+    T_gam_rad_equal = (Const1*Const2**(-1)*Bfield**(1.0/4.0)*period**(-3.0/8.0)*r_star**(3.0/8.0)*rad_curv**(-0.5))**0.5/kev2erg
 
-print("t_pp1 [s]: ",t_pp1)
-print("t_pp2 [s]: ",t_pp2)
+    #Double checking that formulas match:
+    #print(gam_gap, 2.0*np.pi**2*echarge*Bfield*r_stlinestylesar**3/(m_e*c**4*period**2))
+    #print(gam_rad_compton, Const1*Bfield**0.5*period**(-0.75)*r_star**0.75*(tkev*kev2erg)**-2)
+    #print(gam_rad_syn, Const2*Bfield**0.25*period**(-3.0/8.0)*r_star**(3.0/8.0)*rad_curv**0.5)
+    #print("Const1:",Const1)
+    #print("(Const1/Const2)**0.5:",(Const1/Const2)**0.5)
 
-#Estimate limiting temperatures:
+    #print("T_gam_rad_equal [keV], T_gam_rad_equal [K]: ", T_gam_rad_equal, T_gam_rad_equal*keV2Kelvin)
 
-Const1 = (0.029*np.pi**0.5*echarge*hplanck**3*c**1.5/(2**0.5*sigT))**0.5
-Const2 = (3.0*echarge**3*lamCbar*Bschw**2/(4.0*alphaf*m_e**3))**0.25*((2.0*np.pi)**3/(c**15))**(1.0/8.0)
-T_gam_rad_equal = (Const1*Const2**(-1)*Bfield**(1.0/4.0)*period**(-3.0/8.0)*r_star**(3.0/8.0)*rad_curv**(-0.5))**0.5/kev2erg
+    prefac1 = (3.0*m_e*c**5*hplanck**3)**0.5/(4.0*51.9*np.pi*sigT*Const1)**0.5*(2.0*np.pi/c)**(-0.25)
+    T_comp_lmpf1 = prefac1*Bfield**(-0.25)*r_star**(-9.0/8.0)*period**(5.0/8.0)/kev2erg
 
-#Double checking that formulas match:
-#print(gam_gap, 2.0*np.pi**2*echarge*Bfield*r_star**3/(m_e*c**4*period**2))
-#print(gam_rad_compton, Const1*Bfield**0.5*period**(-0.75)*r_star**0.75*(tkev*kev2erg)**-2)
-#print(gam_rad_syn, Const2*Bfield**0.25*period**(-3.0/8.0)*r_star**(3.0/8.0)*rad_curv**0.5)
+    #print("Const3: ",prefac1)
 
-print("Const1:",Const1)
-print("(Const1/Const2)**0.5:",(Const1/Const2)**0.5)
-
-print("T_gam_rad_equal [keV], T_gam_rad_equal [K]: ", T_gam_rad_equal, T_gam_rad_equal*keV2Kelvin)
-
-prefac1 = (3.0*m_e*c**5*hplanck**3)**0.5/(4.0*51.9*np.pi*sigT*Const1)**0.5*(2.0*np.pi/c)**(-0.25)
-T_comp_lmpf1 = prefac1*Bfield**(-0.25)*r_star**(-9.0/8.0)*period**(5.0/8.0)/kev2erg
-
-print("Const3: ",prefac1)
-
-print("T_comp_lmpf1 [keV], T_comp_lmpf1 [K]: ", T_comp_lmpf1, T_comp_lmpf1*keV2Kelvin)
+    #print("T_comp_lmpf1 [keV], T_comp_lmpf1 [K]: ", T_comp_lmpf1, T_comp_lmpf1*keV2Kelvin)
 
 if tgrid_plot:
 
@@ -255,28 +272,28 @@ if tgrid_plot:
     rc("axes", linewidth=lwidth)
     ax = plt.subplot(1,1,1)
 
-    ax.loglog(tkev*keV2Kelvin, lmfp_2phot/r_pcap,"-g",linewidth=lwidth, label="2-photon")
-    ax.loglog(tkev*keV2Kelvin, lmfp_1phot/r_pcap,"-b",linewidth=lwidth, label="1-photon")
-    ax.loglog(tkev*keV2Kelvin, lmfp_compton/r_pcap,"-r",linewidth=lwidth, label="Compton")
+    for ig in range(0,len(gam_scaling)):
+        ax.loglog(tkev*keV2Kelvin, lmfp_2phot_arr[ig]/r_pcap, color="g", linestyle = linestyles[ig], linewidth=lwidth, label="2-photon")
+        ax.loglog(tkev*keV2Kelvin, lmfp_1phot_arr[ig]/r_pcap, color="b", linestyle = linestyles[ig], linewidth=lwidth, label="1-photon")
+        #ax.loglog(tkev*keV2Kelvin, lmfp_compton_arr[ig]/r_pcap, color="r", linestyle = linestyles[ig], linewidth=lwidth, label="Compton")
 
-
-    if setup=="wd":
-        x_target1 = 0.07*keV2Kelvin
-        y_target1 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_2phot/r_pcap)
-        y_target2 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_1phot/r_pcap)    
-        ax.loglog(x_target1, y_target1, 'og', ms=8)
-        ax.loglog(x_target1, y_target2, 'ob', ms=8)
-    else:
-        x_target1 = 0.1*keV2Kelvin
-        x_target2 = 0.5*keV2Kelvin        
-        y_target1 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_2phot/r_pcap)
-        y_target2 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_1phot/r_pcap)    
-        ax.loglog(x_target1, y_target1, 'og', ms=8)
-        ax.loglog(x_target1, y_target2, 'ob', ms=8)    
-        y_target1 = np.interp(x_target2, tkev*keV2Kelvin, lmfp_2phot/r_pcap)
-        y_target2 = np.interp(x_target2, tkev*keV2Kelvin, lmfp_1phot/r_pcap)    
-        ax.loglog(x_target2, y_target1, 'og', ms=8)
-        ax.loglog(x_target2, y_target2, 'ob', ms=8)  
+        if setup=="wd":
+            x_target1 = 0.07*keV2Kelvin
+            y_target1 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_2phot_arr[ig]/r_pcap)
+            y_target2 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_1phot_arr[ig]/r_pcap)    
+            ax.loglog(x_target1, y_target1, 'og', ms=8)
+            ax.loglog(x_target1, y_target2, 'ob', ms=8)
+        else:
+            x_target1 = 0.1*keV2Kelvin
+            x_target2 = 0.5*keV2Kelvin        
+            y_target1 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_2phot_arr[ig]/r_pcap)
+            y_target2 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_1phot_arr[ig]/r_pcap)    
+            ax.loglog(x_target1, y_target1, 'og', ms=8)
+            ax.loglog(x_target1, y_target2, 'ob', ms=8)    
+            y_target1 = np.interp(x_target2, tkev*keV2Kelvin, lmfp_2phot_arr[ig]/r_pcap)
+            y_target2 = np.interp(x_target2, tkev*keV2Kelvin, lmfp_1phot_arr[ig]/r_pcap)    
+            ax.loglog(x_target2, y_target1, 'og', ms=8)
+            ax.loglog(x_target2, y_target2, 'ob', ms=8)  
 
     ax.axhline(y=1.0, color='grey', linestyle='-',linewidth=lwidth)
 
@@ -310,7 +327,36 @@ if tgrid_plot:
     secax.tick_params(axis='both', which='both', width=lwidth,length=5.0) 
     #ax.set_title("$\gamma_{\mathrm{rad}}$",fontsize=lbfontsz)
 
-plt.legend(fontsize=22)
-plt.tight_layout()
-fig.savefig("lmfp_vs_x.png",dpi=300.0)
+    #legend_lines = [
+    #    Line2D([0], [0], color="g", label="2-photon"),
+    #    Line2D([0], [0], color="b", label="1-photon"),
+    #]
+    legend_lines = [
+        Line2D([0], [0], color='black', linestyle=linestyles[0], label="$0.0001\gamma_{\mathrm{max}}$"),
+        Line2D([0], [0], color='black', linestyle=linestyles[1], label="$0.001\gamma_{\mathrm{max}}$"),
+        Line2D([0], [0], color='black', linestyle=linestyles[2], label="$0.01\gamma_{\mathrm{max}}$"),
+        Line2D([0], [0], color='black', linestyle=linestyles[3], label="$0.1\gamma_{\mathrm{max}}$"),
+        Line2D([0], [0], color='black', linestyle=linestyles[4], label="$\gamma_{\mathrm{max}}$"),                
+    ]     
+    plt.legend(handles=legend_lines, fontsize=22)
+
+    #plt.legend(fontsize=22)
+    
+    boxlabel = "MSP"
+    if setup=="wd":
+        boxlabel = "WD"
+    elif setup=="rp":
+        boxlabel = "RP"
+    
+    ax.text(
+        0.5, 0.95,                 # position
+        boxlabel,
+        transform=ax.transAxes,     # use axes coordinates
+        fontsize=22,
+        verticalalignment="top",
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+    )    
+    
+    plt.tight_layout()
+    fig.savefig("lmfp_vs_x.png",dpi=300.0)
 
