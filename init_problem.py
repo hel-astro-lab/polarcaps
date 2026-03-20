@@ -203,11 +203,15 @@ class Configuration_Pulsar(Configuration):
         self.gam_rad_synch *= ( 1.5*self.lamC/self.h_pcap/alphaf)**0.25
 
         ninj_phots_per_cell = self.ninj_phots*self.wph
-        self.gam_rad_comp = self.gam_gap**0.5
-        self.gam_rad_comp *= self.delgam_x**-0.5 #m_e c^2 / kT = 1.0 / delgam_x
+        self.gam_rad_comp_thom = self.gam_gap**0.5
+        self.gam_rad_comp_thom *= self.delgam_x**-0.5 #m_e c^2 / kT = 1.0 / delgam_x
         
         n_phot = max(ninj_phots_per_cell, 1) # target number density of the photon gas 
-        self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp/(n_phot*self.h_pcap))**0.5
+        self.gam_rad_comp_thom *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp/(n_phot*self.h_pcap))**0.5
+
+        a = 4.0*2.7*self.delgam_x
+        from estimates.estimation_functions import solve_gamma_brent as solve_gamma_brent
+        self.gam_rad_comp = solve_gamma_brent(a, self.gam_rad_comp_thom**2)
 
         # radiation length (distance that the particle travels before reaching the radiation limit)
         self.len_rad = (self.gam_rad_synch/self.gam_gap)*self.h_pcap # simpler v2
@@ -229,7 +233,10 @@ class Configuration_Pulsar(Configuration):
         # Calculation of 2-photon pair creation mean free path
         x2 = 2.7*self.delgam_x
         comp_scale = 6.0*np.pi*self.cfl**5*self.Nmp/(n_phot*self.h_pcap)
-        x1 = x2 + x2*(4.0/3.0)*self.gam_rad_comp**2
+        gam_smaller = np.minimum(self.gam_rad_comp,self.gam_gap)#*1e-2 #Can scale this smaller to increase 2-photon mfp
+        x1 = x2*(gam_smaller**2)/(1+gam_smaller*x2)
+        #x1 = x2 + x2*(4.0/3.0)*gam_smaller**2 #Thomson
+
         xpr = x1*x2
         efac = 0.652*(xpr**2-1.0)*np.log(xpr)*np.heaviside(xpr-1.0,1.0)/xpr**3
         efac = 1.0/efac
@@ -248,8 +255,9 @@ class Configuration_Pulsar(Configuration):
 
 
         # Calculation of Compton cooling mean free path for particle moving at gam_rad_comp:
-        lmfp_compcool_per_h = 9.0*np.pi*self.cfl**5*self.Nmp/(2.0*self.gam_rad_comp*n_phot*x2*self.h_pcap)
-
+        from estimates.estimation_functions import f_kn_exact as f_kn_exact
+        #lmfp_compcool_per_h = 9.0*np.pi*self.cfl**5*self.Nmp/(2.0*self.gam_rad_comp*n_phot*x2*self.h_pcap)
+        lmfp_compcool_per_h = 9.0*np.pi*self.cfl**5*self.Nmp/(2.0*gam_smaller*n_phot*x2*self.h_pcap*f_kn_exact(gam_smaller,4.0*x2))
 
         #--------------------------------------------------
         # extra undefined parameters
