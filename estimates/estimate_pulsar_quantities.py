@@ -154,11 +154,11 @@ lmfp_compton_KN = gam_smallest*m_e*c**3/P_C_KN
 lmfp_compton = lmfp_compton_KN
 
 
-#f_sigma_KN = lambda x: (3/4)*(
-#    ((1+x)/x**3)*(2*x*(1+x)/(1+2*x) - np.log1p(2*x))
-#    + np.log1p(2*x)/(2*x)
-#    - (1+3*x)/(1+2*x)**2
-#)
+f_sigma_KN = lambda x: (3/4)*(
+    ((1+x)/x**3)*(2*x*(1+x)/(1+2*x) - np.log1p(2*x))
+    + np.log1p(2*x)/(2*x)
+    - (1+3*x)/(1+2*x)**2
+)
 
 #x = 4*gam_smallest*av_ene/(m_e*c**2)
 #lmfp_compton_KN_bfsc = 1.0/(nBB*sigT*f_sigma_KN(x))
