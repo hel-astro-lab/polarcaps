@@ -1,7 +1,7 @@
 import numpy as np
 
-setup="rp"
-#setup="msp"
+#setup="rp"
+setup="msp"
 #setup="msp_hot"
 #setup="wd"
 
@@ -89,7 +89,7 @@ gam_rad_compton = np.sqrt((3.0*m_e*c**2*gam_gap)/(4.0*sigT*U_x*r_pcap))
 a = 4.0*x2 #0.00002 #0.0001 #4.0*x2
 C = gam_rad_compton**2 #1e10
 #print("a, b: ",a, a*np.sqrt(C))
-print("b: ",a*np.sqrt(C))
+#print("b: ",a*np.sqrt(C))
 
 from estimation_functions import solve_gamma_brent as solve_gamma_brent
 from estimation_functions import solve_gamma_newton as solve_gamma_newton
@@ -140,22 +140,39 @@ t_acc = m_e*c/(echarge*beta_pc*Bfield)
 t_x_curv = lamCbar*rad_curv/(alphaf*bratio*c*r_g*gam_rad_syn)
 lmfp_curv = t_x_curv*c
 
-if setup=="rp":
-    gam_smallest = np.minimum(gam_rad_compton, gam_rad_syn)
-    gam_smallest = np.minimum(gam_smallest,np.array([gam_gap]*len(gam_rad_compton)))
-else:
-    gam_smallest = np.minimum(gam_rad_compton, np.array([gam_gap]*len(gam_rad_compton)))
+gam_smallest = np.minimum(gam_rad_compton, gam_rad_syn)
+gam_smallest = np.minimum(gam_smallest,np.array([gam_gap]*len(gam_rad_compton)))
 
-#gam_smallest = np.minimum(gam_rad_compton,np.array([gam_gap]*len(gam_rad_compton)))
-#gam_smallest = gam_gap
+#for ie in range(0,len(gam_smallest)):
+#    print(tkev[ie], gam_smallest[ie])
+#exit()
 
 #lmfp_compton = gam_smallest*3.0*m_e*c**2/(4.0*sigT*gam_smallest**2*U_x)
-
-#exit()
 
 P_C_KN = 4.0*sigT*c*gam_smallest**2*U_x*f_kn_exact(gam_smallest,a)/3.0
 lmfp_compton_KN = gam_smallest*m_e*c**3/P_C_KN
 lmfp_compton = lmfp_compton_KN
+
+
+#f_sigma_KN = lambda x: (3/4)*(
+#    ((1+x)/x**3)*(2*x*(1+x)/(1+2*x) - np.log1p(2*x))
+#    + np.log1p(2*x)/(2*x)
+#    - (1+3*x)/(1+2*x)**2
+#)
+
+#x = 4*gam_smallest*av_ene/(m_e*c**2)
+#lmfp_compton_KN_bfsc = 1.0/(nBB*sigT*f_sigma_KN(x))
+
+#print(gam_smallest)
+#print(lmfp_compton_KN / lmfp_compton_KN_bfsc)
+#print((3.0/4.0)*m_e*c**2/(gam_smallest*av_ene))
+
+#N_sc = nBB * sigT * f_sigma_KN(x) * r_pcap
+#print(N_sc)
+#print(n_gj*N_sc*r_pcap)
+#exit()
+
+#lmfp_compton = lmfp_compton_KN_bfsc
 
 t_x_comp = lmfp_compton/c
 
@@ -168,8 +185,11 @@ print("t_x_comp [s]: ",t_x_comp)
 print("t_esc [s]: ",t_esc)
 print("t_p,co [s]: ",t_p_gj)
 
+#exit()
+
 # characteristic synchrotron photon energy
 xsyn = 1.5*bratio*(r_g/rad_curv)*gam_rad_syn**3
+#xsyn = 1.5*bratio*(r_g/rad_curv)*(1e-1*gam_rad_syn)**3
 print()
 print("xsyn [m_e x c^2]: ",xsyn)
 
@@ -185,8 +205,14 @@ gam_rad_compton = np.minimum(gam_rad_compton, gam_gap)
 #xcomp = x2*gam_rad_compton**2/(1+gam_rad_compton*x2)
 
 #gam_scaling = [1.0]
-gam_scaling = [1e-4,1e-3,1e-2,1e-1,1e0]
-linestyles = ["solid","dashed","dashdot","dotted",(0, (1, 1))]
+if setup=="wd":
+    gam_scaling = [1e-2,1e-1,1e0]
+    linestyles = ["dashed","dotted","solid"]
+    labels = ["$10^{-2}\,\gamma_{\mathrm{max}}$","$10^{-1}\,\gamma_{\mathrm{max}}$","$\gamma_{\mathrm{max}}$"]    
+else:
+    gam_scaling = [1e-3,1e-2,1e0]
+    linestyles = ["dashdot","dashed","solid"]
+    labels = ["$10^{-3}\,\gamma_{\mathrm{max}}$","$10^{-2}\,\gamma_{\mathrm{max}}$","$\gamma_{\mathrm{max}}$"]
 
 lmfp_1phot_arr = []*len(gam_scaling)
 lmfp_2phot_arr = []*len(gam_scaling)
@@ -196,22 +222,29 @@ for ig in range(0,len(gam_scaling)):
 
     xcomp = x2*(gam_scaling[ig]*gam_smallest)**2/(1+gam_scaling[ig]*gam_smallest*x2)
 
-    #xcomp = x2+x2*(4.0/3.0)*(0.1*gam_rad_compton)**2
-    #xcomp = x2*(0.05*gam_rad_compton)**2/(1+(0.05*gam_rad_compton)*x2)
-    #xcomp = np.minimum(xcomp,gam_rad_compton)
     print("xcomp [m_e x c^2]: ",xcomp)
     print()
 
     P_C_KN = 4.0*sigT*c*(gam_scaling[ig]*gam_smallest)**2*U_x*f_kn_exact(gam_scaling[ig]*gam_smallest,a)/3.0
     lmfp_compton_KN = gam_scaling[ig]*gam_smallest*m_e*c**3/P_C_KN
-    lmfp_compton_arr.append(lmfp_compton_KN)
-
+    
+    x = 4*gam_scaling[ig]*gam_smallest*av_ene/(m_e*c**2)
+    lmfp_compton_KN_bfsc = 1.0/(nBB*sigT*f_sigma_KN(x))    
+    
+    #lmfp_compton_arr.append(lmfp_compton_KN)
+    lmfp_compton_arr.append(lmfp_compton_KN_bfsc)
 
     if setup=="rp":
         xsyn = 1.5*bratio*(r_g/rad_curv)*(gam_scaling[ig]*gam_smallest)**3    
         x1 = xsyn
     else:
         x1 = xcomp
+        #xsyn = 1.5*bratio*(r_g/rad_curv)*(gam_scaling[ig]*gam_smallest)**3    
+        #x1 = xsyn 
+        #print(xcomp)
+        #print(xsyn)
+        #if(ig==2):
+        #    exit()
 
     #Next 1-photon mean free path:
     from estimation_functions import comp_lmfp_1phot
@@ -277,35 +310,37 @@ if tgrid_plot:
         ax.loglog(tkev*keV2Kelvin, lmfp_1phot_arr[ig]/r_pcap, color="b", linestyle = linestyles[ig], linewidth=lwidth, label="1-photon")
         #ax.loglog(tkev*keV2Kelvin, lmfp_compton_arr[ig]/r_pcap, color="r", linestyle = linestyles[ig], linewidth=lwidth, label="Compton")
 
-        if setup=="wd":
-            x_target1 = 0.07*keV2Kelvin
-            y_target1 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_2phot_arr[ig]/r_pcap)
-            y_target2 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_1phot_arr[ig]/r_pcap)    
-            ax.loglog(x_target1, y_target1, 'og', ms=8)
-            ax.loglog(x_target1, y_target2, 'ob', ms=8)
-        else:
-            x_target1 = 0.1*keV2Kelvin
-            x_target2 = 0.5*keV2Kelvin        
-            y_target1 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_2phot_arr[ig]/r_pcap)
-            y_target2 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_1phot_arr[ig]/r_pcap)    
-            ax.loglog(x_target1, y_target1, 'og', ms=8)
-            ax.loglog(x_target1, y_target2, 'ob', ms=8)    
-            y_target1 = np.interp(x_target2, tkev*keV2Kelvin, lmfp_2phot_arr[ig]/r_pcap)
-            y_target2 = np.interp(x_target2, tkev*keV2Kelvin, lmfp_1phot_arr[ig]/r_pcap)    
-            ax.loglog(x_target2, y_target1, 'og', ms=8)
-            ax.loglog(x_target2, y_target2, 'ob', ms=8)  
+        if False:
+            if setup=="wd":
+                x_target1 = 0.05*keV2Kelvin
+                y_target1 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_2phot_arr[ig]/r_pcap)
+                y_target2 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_1phot_arr[ig]/r_pcap)    
+                ax.loglog(x_target1, y_target1, 'og', ms=8)
+                ax.loglog(x_target1, y_target2, 'ob', ms=8)
+            else:
+                x_target1 = 0.1*keV2Kelvin
+                x_target2 = 0.3*keV2Kelvin        
+                y_target1 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_2phot_arr[ig]/r_pcap)
+                y_target2 = np.interp(x_target1, tkev*keV2Kelvin, lmfp_1phot_arr[ig]/r_pcap)    
+                ax.loglog(x_target1, y_target1, 'og', ms=8)
+                ax.loglog(x_target1, y_target2, 'ob', ms=8)    
+                y_target1 = np.interp(x_target2, tkev*keV2Kelvin, lmfp_2phot_arr[ig]/r_pcap)
+                y_target2 = np.interp(x_target2, tkev*keV2Kelvin, lmfp_1phot_arr[ig]/r_pcap)    
+                ax.loglog(x_target2, y_target1, 'og', ms=8)
+                ax.loglog(x_target2, y_target2, 'ob', ms=8)  
 
     ax.axhline(y=1.0, color='grey', linestyle='-',linewidth=lwidth)
 
-    ax.set_xlabel("$T_{\mathrm{BB}} [K]$",fontsize=lbfontsz)
+    ax.set_xlabel("$T_{\mathrm{BB}} [\mathrm{K}]$",fontsize=lbfontsz)
     ax.set_ylabel("$l_{\mathrm{mfp}}/H_{\mathrm{gap}}$",fontsize=lbfontsz)
     #ax.set_ylim(1e-3,1e3)
-    ax.set_ylim(1e-3,1e6)
     
     if setup=="wd":
-          ax.set_xlim(5e4,1e6)  
+        ax.set_xlim(5e4,1e6)
+        ax.set_ylim(1e-2,1e4)        
     else:
         ax.set_xlim(8e4,1e7)
+        ax.set_ylim(1e-3,1e5)
 
 
     # --- add top axis ---
@@ -328,16 +363,19 @@ if tgrid_plot:
     #ax.set_title("$\gamma_{\mathrm{rad}}$",fontsize=lbfontsz)
 
     #legend_lines = [
-    #    Line2D([0], [0], color="g", label="2-photon"),
-    #    Line2D([0], [0], color="b", label="1-photon"),
+    #    Line2D([0], [0], color='black', linestyle=linestyles[0], label="$0.0001\gamma_{\mathrm{max}}$"),
+    #    Line2D([0], [0], color='black', linestyle=linestyles[1], label="$0.001\gamma_{\mathrm{max}}$"),
+    #    Line2D([0], [0], color='black', linestyle=linestyles[2], label="$0.01\gamma_{\mathrm{max}}$"),
+    #    Line2D([0], [0], color='black', linestyle=linestyles[3], label="$0.1\gamma_{\mathrm{max}}$"),
+    #    Line2D([0], [0], color='black', linestyle=linestyles[4], label="$\gamma_{\mathrm{max}}$"),                
     #]
+    
     legend_lines = [
-        Line2D([0], [0], color='black', linestyle=linestyles[0], label="$0.0001\gamma_{\mathrm{max}}$"),
-        Line2D([0], [0], color='black', linestyle=linestyles[1], label="$0.001\gamma_{\mathrm{max}}$"),
-        Line2D([0], [0], color='black', linestyle=linestyles[2], label="$0.01\gamma_{\mathrm{max}}$"),
-        Line2D([0], [0], color='black', linestyle=linestyles[3], label="$0.1\gamma_{\mathrm{max}}$"),
-        Line2D([0], [0], color='black', linestyle=linestyles[4], label="$\gamma_{\mathrm{max}}$"),                
-    ]     
+        Line2D([0], [0], color='black', linestyle=linestyles[0], label=labels[0]),
+        Line2D([0], [0], color='black', linestyle=linestyles[1], label=labels[1]),
+        Line2D([0], [0], color='black', linestyle=linestyles[2], label=labels[2]),                
+    ]         
+       
     plt.legend(handles=legend_lines, fontsize=22)
 
     #plt.legend(fontsize=22)
