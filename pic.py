@@ -43,7 +43,6 @@ def insert_em_fields(grid, conf, do_initialization=True, Ex_sol=None):
             ii,jj,kk = (*tile.index, 0)
         else:
             ii,jj,kk = tile.index
-
         # insert values into Yee lattices; includes halos from -3 to n+3
         if do_initialization:
             for n in range(-3, conf.NzMesh + 3):
@@ -697,7 +696,7 @@ if __name__ == "__main__":
     #-------------------------------------------------- 
     # solve Ex from \partial_x E_x = \rho
     if True:
-        Nx        = conf.Nx*conf.NxMesh + 3
+        Nx        = conf.Nx*conf.NxMesh + 2
         rhos_rank = np.zeros((conf.Nspecies, Nx))
         rhos      = np.zeros_like(rhos_rank)
 
