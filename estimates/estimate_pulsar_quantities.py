@@ -185,6 +185,12 @@ print("t_x_comp [s]: ",t_x_comp)
 print("t_esc [s]: ",t_esc)
 print("t_p,co [s]: ",t_p_gj)
 
+
+mpl = 10
+g3 = 1e-2
+omega_B = echarge*Bfield/(m_e*c)
+osc_freq = (mpl*g3*omega_B*beta_pc/t_esc)**0.5
+print("osc_freq [Hz]:", osc_freq)
 #exit()
 
 # characteristic synchrotron photon energy

@@ -258,6 +258,8 @@ if __name__ == "__main__":
     #g3 = 1e-3
 
     wosc = ( M * (tesc/tacc)*g3 )**0.5
+
+    #Note: this is actually kosc*h_pcap = (wosc/cfl)*h_pcap = wosc*tesc
     print("wosc", wosc)
 
     ks = wosc*np.ones(2)

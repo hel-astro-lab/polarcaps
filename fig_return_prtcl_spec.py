@@ -46,7 +46,7 @@ if __name__ == "__main__":
     plt.rc('ytick', right = True)
 
     plt.rc('font',  family='serif',)
-    plt.rc('text',  usetex=False)
+    plt.rc('text',  usetex=True)
 
     plt.rc('xtick', labelsize=7)
     plt.rc('ytick', labelsize=7)
@@ -158,8 +158,8 @@ if __name__ == "__main__":
         return np.sum(ys*dxs)
 
 
-    tmin = 6.0 #0.0
-    tmax = 10.0 #2.0
+    tmin = 0.0 #6.0 #0.0
+    tmax = 4.0 #10.0 #2.0
     tspan = tmax - tmin
 
     norm = matplotlib.colors.Normalize(vmin=0, vmax=tspan)
@@ -290,12 +290,31 @@ if __name__ == "__main__":
     axs[0,0].plot(lnzs, (he_int + hp_int)/Nlaps, color=col, lw=1.5)
     axs[0,0].plot(lnzs, (he_thermal_int)/Nlaps, color=col, linestyle="dashdot", lw=1.5)
 
+    #return_spec = (he_int + hp_int) / Nlaps
+    #outname = fdir + "return_prtcl_spec_black_curve.npz"
+    #np.savez(
+    #    outname,
+    #    lnzs=lnzs,
+    #    dmdlog10gbeta=return_spec,
+    #    Nlaps=Nlaps,
+    #    tmin=tmin,
+    #    tmax=tmax,
+    #)
+
     print("Energy integrated multiplicity: ",integrate(lnzs, (he_int + hp_int)/Nlaps))
 
     #axs[1,0].plot(lnxs, hx_int,          color=col, lw=1.5)
 
     print("integrated he:", he_int)
     print("integrated hp:", hp_int)
+
+
+
+    gamma = 10.0**lnzs
+    mpl_avg = (he_int + hp_int)/Nlaps
+    gamma_avg = integrate(lnzs,gamma * mpl_avg) / integrate(lnzs,mpl_avg)
+
+    print("Average Lorentz factor: ",gamma_avg)
 
     #-------------------------------------------------- 
     axs[0,0].set_xlabel(r"$\log_{10} \gamma\beta$")
@@ -314,7 +333,7 @@ if __name__ == "__main__":
     #gams = np.array([1e4, 8e6])
     #dmdg = gams**-0.3
     gams = np.array([1e2, 1e5])
-    dmdg = gams**-0.9
+    dmdg = gams**-0.8
     dmdg[:] *= 1e2/dmdg[0]
     axs[0,0].plot(np.log10(gams), dmdg, color="k", linestyle="dashed", lw=1.5)
 
@@ -322,8 +341,8 @@ if __name__ == "__main__":
     #manual peak
     #gams = 400.0*np.ones(2)
     #dmdg = [3e5, 5e6]
-    gams = 30.0*np.ones(2)
-    dmdg = [1e2, 1e3]
+    gams = 50.0*np.ones(2)
+    dmdg = [5e1, 5e2]
     axs[0,0].plot(np.log10(gams), dmdg, color="k", linestyle="dashed", lw=1.5)
 
 
@@ -348,7 +367,8 @@ if __name__ == "__main__":
                 norm=norm,
                 orientation='horizontal',
                 ticklocation='top')
-        cb1.set_label(r'$(t-t_{0})/t_\mathrm{esc}$')
+        #cb1.set_label(r'$(t-t_{0})/t_\mathrm{esc}$')
+        cb1.set_label(r'$t/t_\mathrm{esc}$')
 
     pos = axs[0,0].get_position()
     print('ax pos:', pos)
