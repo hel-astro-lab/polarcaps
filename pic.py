@@ -547,13 +547,17 @@ if __name__ == "__main__":
 
     # Different run-time modes for automating the MC interaction selection
     qed_mode_msp = conf.qed_mode_msp
+    if qed_mode_msp:
+        qed_mode_msp_2ph = conf.qed_mode_msp_2ph
+        qed_mode_msp_1ph = conf.qed_mode_msp_1ph
     qed_mode_rp  = conf.qed_mode_rp
     
     # Set 2-body MC processes 
     if qed_mode_msp:
         if sch.is_master: print("loading MSP 2-body QED processes..."); sys.stdout.flush()
 
-        mc.add_interaction(a) # ON                      # phot-ann
+        if qed_mode_msp_2ph:
+            mc.add_interaction(a) # ON                      # phot-ann
         #mc.add_interaction(b) # ON                      # pair-ann
         #mc.add_interaction(c) # off for double counting # pair-ann
         mc.add_interaction(d) # ON                      # Compton
@@ -584,6 +588,8 @@ if __name__ == "__main__":
 
     if qed_mode_msp:
         if sch.is_master: print("loading MSP 1-body QED processes..."); sys.stdout.flush()
+        if qed_mode_msp_1ph:
+            mc.add_interaction(b ) #  multi photon pair creation
         #none
     elif qed_mode_rp:
         if sch.is_master: print("loading RP 1-body QED processes..."); sys.stdout.flush()
@@ -809,7 +815,7 @@ if __name__ == "__main__":
 
             #--------------------------------------------------
             # 1-to-2 processes
-            if qed_mode_rp:
+            if qed_mode_rp or qed_mode_msp_1ph:
                 timer.start_comp("qed1")
                 for tile in pytools.tiles_local(grid):
                     mc.solve_onebody(tile)

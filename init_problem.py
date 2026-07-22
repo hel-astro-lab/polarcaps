@@ -233,7 +233,7 @@ class Configuration_Pulsar(Configuration):
         # Calculation of 2-photon pair creation mean free path
         x2 = 2.7*self.delgam_x
         comp_scale = 6.0*np.pi*self.cfl**5*self.Nmp/(n_phot*self.h_pcap)
-        gam_smaller = np.minimum(self.gam_rad_comp,self.gam_gap)#*1e-2 #Can scale this smaller to increase 2-photon mfp
+        gam_smaller = np.minimum(self.gam_rad_comp,self.gam_gap)*1e-2 #Scaled smaller to increase 2-photon mfp
         x1 = x2*(gam_smaller**2)/(1+gam_smaller*x2)
         #x1 = x2 + x2*(4.0/3.0)*gam_smaller**2 #Thomson
 
