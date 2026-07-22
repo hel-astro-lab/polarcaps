@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
 
     #--------------------------------------------------
-    fig = plt.figure(1, figsize=(2.2, 8.0)) # single figure
+    fig = plt.figure(1, figsize=(2.0, 6.0)) # narrow figure
 
     #fig = plt.figure(1, figsize=(3.25, 8.0)) # single figure
     #fig = plt.figure(1, figsize=(7.0,  5.5)) # two-column figure
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     plt.rc('ytick', right = True)
 
     plt.rc('font',  family='serif',)
-    plt.rc('text',  usetex=False)
+    plt.rc('text',  usetex=True)
 
     plt.rc('xtick', labelsize=6)
     plt.rc('ytick', labelsize=6)
@@ -59,13 +59,13 @@ if __name__ == "__main__":
 
     #--------------------------------------------------
     if True: # regular gridspec
-        nrow_fig = 6
+        nrow_fig = 4
         ncol_fig = 1
 
         gs = plt.GridSpec(nrow_fig, ncol_fig)
 
         gs.update(wspace = 0.2)
-        gs.update(hspace = 0.2)
+        gs.update(hspace = 0.12)
 
         axs = np.empty( (nrow_fig,ncol_fig), dtype=object)
 
@@ -84,35 +84,29 @@ if __name__ == "__main__":
 
     axs[0,0].set_ylabel(r"$p_-$ ($m_e c$)")
     axs[1,0].set_ylabel(r"$p_+$ ($m_e c$)")
-    axs[2,0].set_ylabel(r"$x$ ($m_e c^2$)")
+    axs[2,0].set_ylabel(r"$\varepsilon$ ($m_e c^2$)")
     axs[3,0].set_ylabel(r"$E/E_\mathrm{rot}$")
-    axs[4,0].set_ylabel(r"$j/j_m$")
-    #axs[5,0].set_ylabel(r"$B/B_0 - 1$")
-    axs[5,0].set_ylabel(r"$\langle E \rangle_\mathrm{LF}/E_\mathrm{rot}$")
+
+    hmin = -0.05  #0.0
+    hmax = 1.0 #1.25 #1.2 #0.05 #0.05 #7.0
 
 
-    hmin = -0.1
-    hmax = 1.0 #7.0
     for j in range(ncol_fig):
         for i in range(nrow_fig):
             axs[i,j].set_xlim((hmin, hmax))
 
-    axs[3,0].set_ylim((-1, 1))
-    axs[3,0].set_ylim((-1.2, 1.2))
-    axs[4,0].set_ylim((-1.2, 3.2))
-    #axs[5,0].set_ylim((-0.00005, 0.00005))
+    #for j in range(ncol_fig):
+    #    for i in range(nrow_fig):
+    #        #axs[i,j].set_xlim((0, 0.1)) # left start
+    #        axs[i,j].set_xlim((0.9, 1.0)) #right end
 
-    axs[5,0].set_ylim((-1, 1))
-    axs[5,0].set_yscale("symlog", linthresh=1e-7)
+    axs[3,0].set_ylim((-1.0, 0.2))
+    #axs[3,0].set_ylim((-0.6, 0.2))
+    #axs[3,0].set_ylim((-0.3, 0.2))
+    #axs[3,0].set_ylim((-0.02, 0.02))    
+    #axs[3,0].set_ylim((-0.005, 0.005))
 
-
-
-    axs[5,0].set_xlabel(r"$h/h_\mathrm{pc}$")
-
-    for j in range(ncol_fig):
-        for i in range(nrow_fig):
-            axs[i,j].fill_between([-0.5, 0.0], -100, 100, color='gray', alpha=0.4, edgecolor=None) 
-
+    axs[3,0].set_xlabel(r"$x/H_\mathrm{gap}$")
 
     # grid configuration
     if conf.oneD:
@@ -141,15 +135,21 @@ if __name__ == "__main__":
 
         hem = f5['h2_ene_e-'][()]
         hep = f5['h2_ene_e+'][()]
+        hip = f5['h2_ene_p'] [()]
         hph = f5['h2_ene_ph'][()]
 
         f5.close()
 
+
+        print(np.max(hph))
+        #exit()
         #--------------------------------------------------
 
         hhlims = [1,1]
-        hhlims[0] = -(conf.rad_curv_shift + conf.height_atms)/conf.rad_pcap #(0 - ceny)/conf.rad_pcap
+        hhlims[0] = 0 #-(conf.rad_curv_shift + conf.height_atms)/conf.rad_pcap #(0 - ceny)/conf.rad_pcap
         hhlims[1] = Lh/conf.rad_pcap
+
+        hh = np.linspace(hhlims[0], hhlims[1], toolset.Nhist) # height grid for the histogram data
 
         print('hhlims', hhlims)
         print(toolset.pxlims[1],  toolset.pxlims[0] )
@@ -159,11 +159,11 @@ if __name__ == "__main__":
         for i in range(0,3): 
             axs[i,0].set_ylim((-px_log_extent, px_log_extent))
 
-
         print(toolset.xxlims[1],  toolset.xxlims[0] )
         xx_log_extent = toolset.xxlims[1] - toolset.xxlims[0] 
         print('xx_log_extent:', xx_log_extent)
 
+        #electrons
         imem = axs[0,0].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
                          extent=[hhlims[0], hhlims[1], 
                                  -px_log_extent, px_log_extent], 
@@ -174,8 +174,10 @@ if __name__ == "__main__":
                          vmin=np.log10(toolset.pylims[0]),
                          vmax=np.log10(toolset.pylims[1]),
                          zorder=1,
+                         rasterized=True,
                          )
 
+        #positrons
         imep = axs[1,0].imshow( np.zeros((toolset.Nhist, 2*toolset.Nhist)),
                          extent=[hhlims[0], hhlims[1], 
                                  -px_log_extent, px_log_extent], 
@@ -186,6 +188,7 @@ if __name__ == "__main__":
                          vmin=np.log10(toolset.pylims[0]),
                          vmax=np.log10(toolset.pylims[1]),
                          zorder=1,
+                         rasterized=True,
                          )
 
         # height vs ene; photons
@@ -199,11 +202,12 @@ if __name__ == "__main__":
                           vmin=np.log10( toolset.xylims[0]),
                           vmax=np.log10( toolset.xylims[1]),
                           zorder=1,
+                          rasterized=True,
                           )
 
         imem.set_data(np.log10( hem.T)) 
         imep.set_data(np.log10( hep.T)) 
-        imph.set_data(np.log10( hph.T)) 
+        imph.set_data(np.log10( hph.T))
 
 
     # custom tick formatter to manipulate the mangled values back to real values
@@ -237,16 +241,28 @@ if __name__ == "__main__":
                     s = int(xps)
                     return f"-$10^{s}$"
 
-    #yticks = [-10, -6, -2, 2, 6, 10] # narrower grid for previous pxlims (-2, 6)
-    yticks = [-10, -6, -2, 2, 6, 10] # expanded grid for pxlims (-2, -7)
+    axs[0,0].set_ylim((-px_log_extent, px_log_extent))
+    axs[1,0].set_ylim((-px_log_extent, px_log_extent))
+    axs[2,0].set_ylim((-xx_log_extent, xx_log_extent))
+
+    yticks = [-10, -6, -2, 2, 6, 10] # expanded grid for pxlims (-2, -12)
+
     axs[0,0].set_yticks(yticks)
     axs[1,0].set_yticks(yticks)
-    axs[2,0].set_yticks(yticks)
 
     majorformatter = CustomScalarFormatter()
     axs[0,0].yaxis.set_major_formatter(majorformatter)
     axs[1,0].yaxis.set_major_formatter(majorformatter)
+
+
+    yticks = [-8, -6, -4, -2, 2, 4, 6, 8] # expanded grid for pxlims (-2, -12)
+    axs[2,0].set_yticks(yticks)
     axs[2,0].yaxis.set_major_formatter(majorformatter)
+
+
+    axs[0,0].axhline(y=0, linestyle='dashed', color='k', lw=0.4)
+    axs[1,0].axhline(y=0, linestyle='dashed', color='k', lw=0.4)
+    axs[2,0].axhline(y=0, linestyle='dashed', color='k', lw=0.4)
 
 
     #--------------------------------------------------
@@ -283,29 +299,33 @@ if __name__ == "__main__":
 
 
         # now plot varios thresholds
-        for gref in [conf.gam_gap, conf.gam_rad]:
+        gam_thr = 1e3
+        #for gref in [conf.gam_gap, conf.gam_rad]:
+        for gref in [conf.gam_gap, gam_thr]:
             i1 = find_arg_nearest(garr, -gref)
             i2 = find_arg_nearest(garr, +gref)
 
-            print('i1:', i1, 'g', garr[i1], 'ggap', -gref)
-            print('i2:', i2, 'g', garr[i2], 'ggap', +gref)
+            print('i1:', i1, 'g', garr[i1], 'ggap', -gref, np.log10(gref))
+            print('i2:', i2, 'g', garr[i2], 'ggap', +gref, np.log10(gref))
 
-            axs[0,0].axhline(y=pvals[i1], linestyle='solid', color='C0', lw=0.4)
-            axs[0,0].axhline(y=pvals[i2], linestyle='solid', color='C0', lw=0.4)
-        
-            axs[1,0].axhline(y=pvals[i1], linestyle='solid', color='C0', lw=0.4)
-            axs[1,0].axhline(y=pvals[i2], linestyle='solid', color='C0', lw=0.4)
+            axs[0,0].axhline(y=pvals[i1], linestyle='solid', color='k', lw=0.4)
+            axs[0,0].axhline(y=pvals[i2], linestyle='solid', color='k', lw=0.4)
 
-        for xref in [conf.xsyn]:
+            axs[1,0].axhline(y=pvals[i1], linestyle='solid', color='k', lw=0.4)
+            axs[1,0].axhline(y=pvals[i2], linestyle='solid', color='k', lw=0.4)
+
+        #print("conf.syn:", conf.xsyn)
+        #exit()
+
+        for xref in [1e3]:
             i1 = find_arg_nearest(xarr, -xref)
             i2 = find_arg_nearest(xarr, +xref)
 
-            print('i1:', i1, 'x', xarr[i1], 'xref', -xref)
-            print('i2:', i2, 'x', xarr[i2], 'xref', +xref)
+            print('i1:', i1, 'x', xarr[i1], 'xref', -xref, np.log10(xref))
+            print('i2:', i2, 'x', xarr[i2], 'xref', +xref, np.log10(xref))
 
-            axs[2,0].axhline(y=xvals[i1], linestyle='solid', color='C0', lw=0.4)
-            axs[2,0].axhline(y=xvals[i2], linestyle='solid', color='C0', lw=0.4)
-
+            axs[2,0].axhline(y=xvals[i1], linestyle='solid', color='k', lw=0.4)
+            axs[2,0].axhline(y=xvals[i2], linestyle='solid', color='k', lw=0.4)
 
 
     #--------------------------------------------------
@@ -354,59 +374,30 @@ if __name__ == "__main__":
         print('e', e)
         print('j', j)
         print('b', b)
-
-        # smooth current 
-        if True:
-            jx = savgol_filter(jx, 300, 2)
-
         
-        axs[3,0].plot(hh, ex, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
-        axs[3,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
-        axs[3,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
+        axs[3,0].plot(hh, ex, lw=0.8, linestyle='solid',  color='C0', alpha=0.8)
 
-        axs[4,0].plot(hh, jx, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
-        axs[4,0].plot(hh, jy, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
-        axs[4,0].plot(hh, jz, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
+        print("jx L:", jx[0:15])
+        print("jx R:", jx[-15:-1])
 
-
-
-        ex_flt = savgol_filter(ex, 300, 1)
-        axs[5,0].plot(hh, ex_flt, lw=0.8, linestyle='solid', color='C0', alpha=0.8)
-        axs[5,0].plot(hh, ey, lw=0.8, linestyle='solid', color='C1', alpha=0.8)
-        axs[5,0].plot(hh, ez, lw=0.8, linestyle='solid', color='C2', alpha=0.8)
-        axs[5,0].plot(hh, bx-1.0, lw=0.8, linestyle='dashed', color='C0', alpha=0.8)
-
+    #--------------------------------------------------
+    for j in range(ncol_fig):
+        for i in range(nrow_fig):
+            axs[i,j].fill_between([-0.5, 0.0], -100, 1e20, color='gray', alpha=0.4, edgecolor=None) 
 
     #--------------------------------------------------
     # time stamp
 
-    #print('r_pc:', conf.rad_pcap)
     print('t:', args.lap/conf.t_norm)
-    stitle = r"$t c/R_\mathrm{pc}$ = " + "{:3.1f}".format(args.lap/conf.t_norm)
+    stitle = r"$t/t_\mathrm{esc}$ = " + "{:3.1f}".format(args.lap/conf.t_norm)
     axs[0,0].set_title(stitle, fontsize=10)
 
 
     #--------------------------------------------------
-    axleft    = 0.25
+    axleft    = 0.28
     axbottom  = 0.05
     axright   = 0.97
     axtop     = 0.95
-
-    if False:
-        pos1 = axs[0,0].get_position()
-
-        axwidth  = axright - axleft
-        axheight = (axtop - axbottom)*0.03
-        axpad = 0.02
-        cax = fig.add_axes([axleft, axtop + axpad, axwidth, axheight])
-
-        cb1 = matplotlib.colorbar.ColorbarBase(
-                cax,
-                cmap=cmap,
-                norm=norm,
-                orientation='horizontal',
-                ticklocation='top')
-        cb1.set_label(r'power-law index $a$')
 
     pos = axs[0,0].get_position()
     print('ax pos:', pos)
@@ -417,11 +408,12 @@ if __name__ == "__main__":
 
     slap = str(args.lap).rjust(8, '0')
 
-    #fname = fdir + 'fig_casc_' + slap + '.pdf' 
+    #fname = fdir + 'fig_gap_PRL_' + slap + '.pdf' 
     #plt.savefig(fname)
 
-    fname = fdir + 'fig_gap_' + slap + '.png' 
-    plt.savefig(fname, dpi=300)
+    #fname = fdir + 'fig_gap_PRL_' + slap + '.png' 
+    fname = fdir + 'fig_gap_PRL_' + slap + '.pdf' 
+    plt.savefig(fname, dpi=300,bbox_inches='tight')
 
 
 

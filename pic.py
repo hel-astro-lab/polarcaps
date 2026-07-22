@@ -10,13 +10,12 @@ import pytools  # runko python tools
 import pyrunko
 
 # problem specific modules
-from init_problem import Configuration_Turbulence as Configuration
+from init_problem import Configuration_Pulsar as Configuration
 from init_problem import velocity_profile
 from init_problem import density_profile
 from init_problem import weigth_profile
 
 from qed_toolset import QEDToolset
-
 
 #--------------------------------------------------
 live_plot = True
@@ -30,7 +29,10 @@ warnings.filterwarnings('ignore')
 
 #--------------------------------------------------
 # Field initialization (guide field)
-def insert_em_fields(grid, conf, do_initialization=True):
+def insert_em_fields(grid, conf, do_initialization=True, Ex_sol=None):
+
+    # total number of x cells in the global domain
+    Nx_global = conf.Nx * conf.NxMesh
 
     for tile in pytools.tiles_all(grid):
         g = tile.get_grids(0)
@@ -41,7 +43,6 @@ def insert_em_fields(grid, conf, do_initialization=True):
             ii,jj,kk = (*tile.index, 0)
         else:
             ii,jj,kk = tile.index
-
         # insert values into Yee lattices; includes halos from -3 to n+3
         if do_initialization:
             for n in range(-3, conf.NzMesh + 3):
@@ -54,13 +55,24 @@ def insert_em_fields(grid, conf, do_initialization=True):
                             #iglob, jglob, kglob = pytools.ind2loc((ii, jj, kk), (l, m, n), conf)
                             #r = np.sqrt(iglob ** 2 + jglob ** 2 + kglob ** 2)
 
-                            g.ex[l,m,n] = 0.0
+                            # global x index (includes halos)
+                            i_global = ii[0] * conf.NxMesh + l
+
+                            # set Ex from Ex_sol if provided and in bounds
+                            if Ex_sol is not None and 0 <= i_global < Nx_global:
+                                g.ex[l, m, n] = Ex_sol[i_global]
+                            else:
+                                g.ex[l, m, n] = 0.0
+
+                            #print('i_global:', i_global, ' E', g.ex[l,m,n]/conf.e_norm)
+
                             g.ey[l,m,n] = 0.0
                             g.ez[l,m,n] = 0.0
 
-                            g.bx[l,m,n] = 0.0
-                            g.by[l,m,n] = 0.0 
-                            g.bz[l,m,n] = 0.0 #conf.binit
+                            if Ex_sol is None:
+                                g.bx[l,m,n] = 0.0
+                                g.by[l,m,n] = 0.0
+                                g.bz[l,m,n] = 0.0 #conf.binit
 
                         elif conf.use_maxwell_split: # static component
                             1
@@ -77,14 +89,15 @@ if __name__ == "__main__":
     # initialize auxiliary tools
     sch  = pytools.Scheduler() # Set MPI aware task scheduler
     args = pytools.parse_args() # parse command line arguments
-    tplt = pytools.TerminalPlot(13, 13) # terminal plotting tool
-
 
     # create conf object with simulation parameters based on them
     conf = Configuration(args.conf_filename, do_print=sch.is_master)
     sch.conf = conf # remember to update scheduler
-
     if conf.mpi_task_mode: sch.switch_to_task_mode()
+
+    # terminal plotting 
+    if conf.oneD:                tplt = pytools.TerminalPlot(38, 1) 
+    if conf.twoD or conf.threeD: tplt = pytools.TerminalPlot(13, 13)
 
     # --------------------------------------------------
     # Timer for profiling
@@ -203,23 +216,23 @@ if __name__ == "__main__":
         axs[0,3].set_ylabel(r'$\tau$') 
         #axs[0,3].set_yscale('linear')
         axs[0,3].set_yscale('log')
-        axs[0,3].set_ylim((1e-4, 1.0))
+        axs[0,3].set_ylim((1e-2, 1.4))
 
         axs[1,2].set_xlabel(r'$t$ ($H/c$)')
         axs[1,2].set_ylabel(r'$U_x/U_\pm$') 
-        axs[1,2].set_ylim((1e-2, 1e0))
+        axs[1,2].set_ylim((1e-4, 1e0))
 
         axs[1,3].set_xlabel(r'$t$ ($H/c$)')
         axs[1,3].set_ylabel(r'energy $\ell$') 
-        axs[1,3].set_ylim((1e-2, 1e4))
+        axs[1,3].set_ylim((1e-2, 1e8))
 
         axs[2,2].set_xlabel(r'lap')
         axs[2,2].set_ylabel(r'$n_p/n_0$') 
-        axs[2,2].set_ylim((1e-3, 1e1))
+        axs[2,2].set_ylim((1e-3, 1e4))
 
         axs[2,3].set_xlabel(r'lap')
         axs[2,3].set_ylabel(r'$N_p/N_0$') 
-        axs[2,3].set_ylim((1e-3, 1e1))
+        axs[2,3].set_ylim((1e-3, 1e4))
 
         # 2d histogram
         axs[3,0].set_xscale("linear")
@@ -363,7 +376,6 @@ if __name__ == "__main__":
     # get current restart file status
     io_stat = pytools.check_for_restart(conf)
 
-
     # no restart file; initialize simulation
     if io_stat["do_initialization"]:
         if sch.is_master: print("initializing simulation...")
@@ -375,7 +387,14 @@ if __name__ == "__main__":
         # injecting plasma particles
         # NOTE: we still need to call injector to set the container types; density_profile ensure = 0
         if not(conf.use_injector): 
-            prtcl_stat = pytools.pic.inject(grid, velocity_profile, density_profile, conf)
+
+            def unit_w(xloc, ispcs, conf):
+                if ispcs == 2: 
+                    return conf.wph
+                else:
+                    return 1
+
+            prtcl_stat = pytools.pic.inject(grid, velocity_profile, density_profile, conf, w_func=unit_w)
             if sch.is_example_worker: 
                 print("injected:")
                 print("     e- prtcls: {}".format(prtcl_stat[0]))
@@ -412,7 +431,6 @@ if __name__ == "__main__":
 
     if sch.is_master: print("load balancing grid..."); sys.stdout.flush()
 
-
     # update boundaries
     grid.analyze_boundaries()
     grid.send_tiles()
@@ -431,11 +449,11 @@ if __name__ == "__main__":
     if sch.is_master: print("loading solvers..."); sys.stdout.flush()
 
 
-    #sch.fldpropE = pyfld.FDTD2_pml()
-    #sch.fldpropB = pyfld.FDTD2_pml()
+    sch.fldpropE = pyfld.FDTD2_pml()
+    sch.fldpropB = pyfld.FDTD2_pml()
 
-    sch.fldpropE = pyfld.FDTD2()
-    sch.fldpropB = pyfld.FDTD2()
+    #sch.fldpropE = pyfld.FDTD2()
+    #sch.fldpropB = pyfld.FDTD2()
 
     #sch.fldpropE = pyfld.FDTD4()
     #sch.fldpropB = pyfld.FDTD4()
@@ -448,17 +466,17 @@ if __name__ == "__main__":
     # set PML absorption region into the pusher
  
     # setup perfectly matching layer; vacuum outside boundaries
-    #for prop in [ sch.fldpropE, sch.fldpropB]:
-    #    prop.cenx = conf.Lx//2
-    #    prop.ceny = conf.Ly//2 
-    #    prop.cenz = 0
+    for prop in [ sch.fldpropE, sch.fldpropB]:
+        prop.cenx = 0 
+        prop.ceny = 0
+        prop.cenz = 0
 
-    #    prop.radx = conf.Lx//2 # box x half length
-    #    prop.rady = conf.Ly//2 # box y half length
-    #    prop.radz = 1;        # box z half length
+        prop.radx = 0.98*conf.Lx # box x length
+        prop.rady = 1       # box y length
+        prop.radz = 1;      # box z half length
 
-    #    prop.norm_abs = conf.cfl/3.0 # PML coefficient
-    #    prop.rad_lim = 0.80 # PML sphere damping radius
+        prop.norm_abs = conf.cfl/3.0 # PML coefficient
+        prop.rad_lim = 0.90 # PML sphere damping radius
 
 
     # --------------------------------------------------
@@ -503,7 +521,17 @@ if __name__ == "__main__":
 
     # QED
     mc = pyqed.Pairing()
-    mc.prob_norm = 1/(conf.N_time*conf.N_wgt*conf.N_qdt) # units of [per prtcl per time]
+    #mc.prob_norm = 1/(conf.N_time*conf.N_wgt*conf.N_qdt) # units of [per prtcl per time]
+
+    if hasattr(conf, 'max_tile_prtcl_num'):
+        mc.max_tile_prtcl_num = conf.ppc*conf.NxMesh*conf.max_tile_prtcl_num #maximum cap for prtcls per species per tile
+    if hasattr(conf, 'max_tile_phot_num'):
+        mc.max_tile_phot_num = conf.ppc*conf.NxMesh*conf.max_tile_phot_num #maximum cap for photons per species per tile
+
+
+    #New version:
+    #TS: I am not sure if conf.N_time*conf.N_wgt*conf.N_qdt is still needed
+    mc.prob_norm = conf.N_twobody/(conf.N_time*conf.N_wgt*conf.N_qdt) # units of [per prtcl per time]
 
     # histogram edges of leaking photons
     mc.update_hist_lims(toolset.xxlims[0], toolset.xxlims[1], toolset.Nhist)
@@ -516,14 +544,28 @@ if __name__ == "__main__":
     f = pyrunko.qed.Compton("e-", "ph")
     g = pyrunko.qed.Compton("e+", "ph")
 
-    #mc.add_interaction(a) # ON                      # phot-ann
-    #mc.add_interaction(b) # ON                      # pair-ann
-    #mc.add_interaction(c) # off for double counting # pair-ann
-    #mc.add_interaction(d) # ON
-    #mc.add_interaction(e) # ON
-    #mc.add_interaction(f) # off for double counting
-    #mc.add_interaction(g) # off for double counting
 
+    # Different run-time modes for automating the MC interaction selection
+    qed_mode_msp = conf.qed_mode_msp
+    qed_mode_rp  = conf.qed_mode_rp
+    
+    # Set 2-body MC processes 
+    if qed_mode_msp:
+        if sch.is_master: print("loading MSP 2-body QED processes..."); sys.stdout.flush()
+
+        mc.add_interaction(a) # ON                      # phot-ann
+        #mc.add_interaction(b) # ON                      # pair-ann
+        #mc.add_interaction(c) # off for double counting # pair-ann
+        mc.add_interaction(d) # ON                      # Compton
+        mc.add_interaction(e) # ON                      # Compton
+        #mc.add_interaction(f) # off for double counting
+        #mc.add_interaction(g) # off for double counting
+
+    elif qed_mode_rp:
+        if sch.is_master: print("loading RP 2-body QED processes..."); sys.stdout.flush()
+        #none
+        #mc.add_interaction(d) # ON
+        #mc.add_interaction(e) # ON
 
     #--------------------------------------------------
     mc.prob_norm_onebody = conf.N_onebody/conf.N_qdt # units of [TODO]
@@ -537,15 +579,25 @@ if __name__ == "__main__":
 
     # set critical magnetic field 
     for intr in [a0, a1, b]:
-        intr.B_QED = conf.binit/conf.B_QED
+        intr.B_QED = conf.B_QED #B_QED is now Schwinger field already in init_problem.py
 
-    mc.add_interaction(a0) # electron synchrotorn
-    mc.add_interaction(a1) # positron synchrotron
-    #mc.add_interaction(b ) #  multi photon pair creation
+
+    if qed_mode_msp:
+        if sch.is_master: print("loading MSP 1-body QED processes..."); sys.stdout.flush()
+        #none
+    elif qed_mode_rp:
+        if sch.is_master: print("loading RP 1-body QED processes..."); sys.stdout.flush()
+
+        mc.add_interaction(a0) # electron synchrotron
+        mc.add_interaction(a1) # positron synchrotron
+        mc.add_interaction(b ) #  multi photon pair creation
+
 
     if conf.oneD: # set 1D curvature parameters for QED reactions
         mc.use_vir_curvature = True
-        mc.vir_pitch_ang  = conf.c_omp/np.sqrt(conf.sigma)/conf.rad_curv # r_g/R_curv
+        mc.vir_pitch_ang  = conf.rg/conf.rad_curv # r_g/R_curv
+        mc.r_curv = conf.rad_curv
+        mc.r_gap  = conf.rad_pcap # cutoff distance for pair creation
 
 
     # --------------------------------------------------
@@ -607,64 +659,110 @@ if __name__ == "__main__":
         slice_yz_writer = pyfld.FieldSliceWriter( conf.outdir, 
                 conf.Nx, conf.NxMesh, conf.Ny, conf.NyMesh, conf.Nz, conf.NzMesh, st, 2, 1)
 
-        slice_xy_writer.ind = int(0.8*conf.Lz) # bottom slice; z = 8 slice through atmosphere
+        slice_xy_writer.ind = int(0.8*conf.Lz) # bottom slice; z = 8 slice 
         slice_xz_writer.ind = int(0.5*conf.Ly) # mid slice 
         slice_yz_writer.ind = int(0.5*conf.Lx) # mid slice 
 
 
     # --------------------------------------------------
-    height_atms = conf.height_atms #0.005*conf.rad_star
+    gap = pypic.Gap()
+    gap.B0          = conf.bstar # background magnetic field
+    gap.E0          = conf.bstar*conf.vrot # E_rot
+    gap.j_ext       = conf.jm_scaling*conf.qe*conf.ppc*conf.cfl**2 # strength of the external current, j_ext*dt
 
-    #star = pyfld.Conductor()
-    star = pypic.Star()
-    #for obj in [star, sch.pusher]:
-    for obj in [star]: # NOTE omitting pusher if it is not pulsarpusher
-        obj.radius    = conf.rad_star
-        obj.radius_pc = conf.rad_pcap
-        obj.period    = conf.period_star # NOTE should be period_star for normal runs 
+    gap.gap_length  = conf.rad_pcap # polar cap length in dx
+    gap.Nx          = conf.Lx # box length
+    gap.x_left      = conf.surface_location #5.0 #conf.rad_star
+    gap.delta_left  = conf.delta_left # 0.1 # left (star) smoothing length; small value gives a sharp surface
 
-        if conf.oneD:
-            obj.cenx   = -conf.rad_star + conf.rad_curv_shift
-            obj.ceny   = 0
-            obj.cenz   = 0 
-        elif conf.twoD:
-            obj.cenx   = conf.Lx//2 + 0.5
-            obj.ceny   = -conf.rad_star + conf.rad_curv_shift
-            obj.cenz   = 0 
-        elif conf.threeD:
-            obj.cenx   = conf.Lx//2 #+ 0.5
-            obj.ceny   = conf.Ly//2 #+ 0.5
-            obj.cenz   = -conf.rad_star + conf.rad_curv_shift
+    #r_buffer        = 0.05*conf.rad_pcap # length of rightmost buffer zone
+    gap.x_right     = conf.Lx - 1 #- r_buffer 
+    gap.delta_right = conf.delta_right #0.1 #0.5*r_buffer # right (vacuum) smoothing length
 
-        # NOTE omitting pusher if it is not pulsarpusher
-        #sch.pusher.grav_const = conf.delgam**2/(2*height_atms)
+    gap.e_profile_mode = 1
+    gap.b_profile_mode = 0
 
-    star.B0       = conf.b_dipole_norm    # TODO normalization here?
-    star.chi_om   = np.deg2rad(conf.chi)  # rotation axis inclination
-    star.phase_mu = 0.0
-    star.phase_om = 0.0
-    star.delta    = 0.5*conf.height_atms #4.0 #1  # in units of cells; radial smoothing function sharpness; 2x delta = about tanh limit
-
-    star.Nx = conf.Lx
-    star.Ny = conf.Ly
-    star.Nz = conf.Lz
+    gap.inj_rate_pairs = conf.ninj_pairs          # num of e^- e^+ pairs injected per dt
+    gap.inj_rate_phots = conf.ninj_phots          # num of photons injected per dt
+    gap.temp_pairs     = conf.delgam # injection (Maxwell-Juttner) temperature for pairs
+    gap.temp_phots     = conf.delgam_x    # injection (black-body) temperature for photons
+    gap.wph            = conf.wph # initial weight of the injected photons
     
-    star.delta_pc  = 2 # transverse polar cap smoothing (g(x) function)
+    atmos_height       = 0.05*conf.rad_pcap  # make nominal atmospheric scale height 5% of gap
+    gap.grav_const     = conf.delgam**2/(2*atmos_height) # surface gravity constant
 
-    star.temp_pairs = conf.delgam
-    star.temp_phots = conf.delgam_x
-    star.ninj_pairs = conf.ninj_pairs #0 #0.05
-    star.ninj_phots = conf.ninj_phots #0.0
-    star.ninj_min_pairs = conf.ninj_min_pairs #0.1
-    star.ninj_min_phots = conf.ninj_min_phots #0.0
+    sch.lwall = gap # lastly, add to scheduler
 
-    sch.lwall = star # add to scheduler
+    #-------------------------------------------------- 
+    # solve Ex from \partial_x E_x = \rho
+    if True:
+        Nx        = conf.Nx*conf.NxMesh + 2
+        rhos_rank = np.zeros((conf.Nspecies, Nx))
+        rhos      = np.zeros_like(rhos_rank)
+
+        # get number densities in each cell
+        for tile in pytools.tiles_all(grid):
+            ii,jj,kk = pytools.get_index(tile, conf)
+            for ispcs in range(conf.Nspecies):
+                container = tile.get_container(ispcs)
+                xlocs = np.array( container.loc(0) ) # x
+
+                # pointwise deposition; WRONG
+                #xarr      = np.arange(conf.Nx*conf.NxMesh+1)
+                #hist, edges = np.histogram(xlocs, bins=xarr)
+                #rhos_rank[ispcs, :] += hist
+
+                # 1st order shape function deposition
+                q = container.q
+                for n in range(len(xlocs)):
+                    x = xlocs[n]
+                    i = int(x)
+                    dx= x - i
+                    cx= 1.0 - dx
+
+                    sl=0.5
+                    for l in [-1,0,1]:
+                        sl = 0.75-sl # results in 0.25, 0.5, 0.25 variation
+                        rhos_rank[ispcs, i+l  ] += q*sl*cx
+                        rhos_rank[ispcs, i+l+1] += q*sl*dx
+                    #if ii < 2:
+                    #    print(x,i,dx)
+
+
+        Ncnts = Nx*conf.Nspecies
+        MPI.COMM_WORLD.Allreduce(
+                [rhos_rank, Ncnts, MPI.DOUBLE],
+                [rhos,      Ncnts, MPI.DOUBLE],
+                op=MPI.SUM)
+
+        if sch.is_master:
+            # total charge density
+            # self.prtcl_types = ['e-', 'e+', 'ph', 'p']
+            print("charge dens: ", rhos[0,:]) # -
+        rho = rhos[0,:] + rhos[1,:] + rhos[3,:]
+
+        # get current Ex
+        
+
+        # solve Ex from charge
+        eta_co = conf.nGJ*conf.qe
+        eta_tot = rho - eta_co
+        Ex_sol = np.zeros_like(conf.Nx*conf.NxMesh)
+        Ex_sol = -np.cumsum(eta_tot) # E_x = \int rho(x) dx
+
+        #if sch.is_master:
+        #    for i in range(conf.Nx*conf.NxMesh):
+        #        #print('i:', i, i/conf.rad_pcap, ' rho', rho[i], ' r013:', rhos[0,i], rhos[1,i], rhos[3,i], ' E', Ex_sol[i])
+        #        print('i:', i, i/conf.rad_pcap, ' rho', eta_tot[i], ' E', Ex_sol[i]/conf.e_norm)
 
 
     # induce initial magnetic and electric field from the star
-    for tile in pytools.tiles_all(grid):
-        star.insert_em(tile)
+    if io_stat["do_initialization"]:
+        for tile in pytools.tiles_all(grid):
+            sch.lwall.insert_em(tile)
 
+        #Replace the E grid (but keep the B unchanged):
+        insert_em_fields(grid, conf, do_initialization=True, Ex_sol=Ex_sol)
     # --------------------------------------------------
     # --------------------------------------------------
     # --------------------------------------------------
@@ -677,47 +775,56 @@ if __name__ == "__main__":
     ##################################################
     # simulation time step loop
 
+    # initial step to sync tiles
+    sch.operate( dict(name='mpi_b',  solver='mpi', method='b', ) )
+    sch.operate( dict(name='mpi_e',  solver='mpi', method='e', ) )
+    sch.operate( dict(name='upd_bcs ',solver='tile',method='update_boundaries',args=[grid, [1,2,] ], nhood='local',) )
+
     # simulation loop
     time = lap * (conf.cfl / conf.c_omp)
     for lap in range(lap, conf.Nt + 1):
 
-        # ramp up plate smoothly
-        #ramp_up_laps = 1.0*conf.rad_pcap/conf.cfl # duration of the ramp up in polar cap light crossing times
-        #pc_freq = min(max(1,lap)/ramp_up_laps, 1.0)*(1/conf.period_star) # polar cap rotation frequency
-        #pc_freq = 1e-5/conf.period_star # polar cap rotation frequency
-        #star.period = 1/pc_freq
+        # ramp up j_ext gradually
+        #j_ramp = min(1.0, max(0.0, lap/conf.t_norm - 1.0))
+        #sch.lwall.j_ext = j_ramp*conf.jm_scaling*conf.qe*conf.ppc*conf.cfl 
 
-        # rotate star's Omega vector with the period
-        sch.lwall.phase_om += conf.Om_star
+        # switch prtcl cap off after about one discharge
+        #if lap/conf.t_norm > 2.0:
+        #    mc.max_tile_prtcl_num = conf.ppc*conf.NxMesh*10000000
+        #    mc.max_tile_phot_num  = conf.ppc*conf.NxMesh*10000000
+
+        # clear currents 
+        sch.operate( dict(name='clear_cur', solver='tile', method='clear_current', nhood='all', ) )
+
+        #--------------------------------------------------
+        # advance first half of b
+        sch.operate( dict(name='push_half_b1', solver='fldpropB', method='push_half_b', nhood='local',) )
+        sch.operate( dict(name='mpi_b1',       solver='mpi',      method='b', ) )
+        sch.operate( dict(name='upd_bc_b',     solver='tile',     method='update_boundaries',args=[grid, [2,] ], nhood='local',) )
+        sch.operate( dict(name='wall_bc_b',    solver='lwall',    method='update_b',    nhood='local',) )
 
         # --------------------------------------------------
-        # QED interaction loop
+        # QED
         if conf.qed_mode and lap % conf.qed_step == 0:
 
-            #timer.start_comp("ph_inj")
-            #if conf.zeta_xinj1 > 0 and conf.lum_ph1 > 0:
-            #    for tile in pytools.tiles_local(grid):
-            #        mc.inject_photons(tile, conf.kTbb1, conf.wph_inj1, conf.Nph_inj1 )
-
-            #if conf.zeta_xinj2 > 0 and conf.lum_ph2 > 0:
-            #    for tile in pytools.tiles_local(grid):
-            #        mc.inject_photons(tile, conf.kTbb2, conf.wph_inj2, conf.Nph_inj2 )
-            #timer.stop_comp("ph_inj")
-
-            #timer.start_comp("ep_inj")
-            #for tile in pytools.tiles_local(grid):
-            #    if conf.zeta_pinj > 0 and conf.lum_ep > 0:
-            #        mc.inject_plaw_pairs(tile, conf.pslope, conf.pmin, conf.pmax, conf.wep_inj, conf.Nep_inj )
-            #timer.stop_comp("ep_inj")
+            #--------------------------------------------------
+            # 1-to-2 processes
+            if qed_mode_rp:
+                timer.start_comp("qed1")
+                for tile in pytools.tiles_local(grid):
+                    mc.solve_onebody(tile)
+                timer.stop_comp("qed1")
 
             #--------------------------------------------------
-            #timer.start_comp("qed")
-            #for tile in pytools.tiles_local(grid):
-            #    i,j,k = pytools.get_index(tile, conf)
-            #    mc.solve_twobody(tile)
-            #timer.stop_comp("qed")
+            # 2-to-2 processes
+            if qed_mode_msp:
+                timer.start_comp("qed2")
+                for tile in pytools.tiles_local(grid):
+                    mc.solve_twobody(tile)
+                timer.stop_comp("qed2")
 
             #--------------------------------------------------
+            # optical depth in tiles (for IO only)
             timer.start_comp("ph_esc")
 
             # ver2: local tau
@@ -729,7 +836,6 @@ if __name__ == "__main__":
 
                 # TODO
                 #mc.leak_photons(tile, conf.t_c/conf.dt/conf.N_qdt, conf.tau_ext)  # apply photon escape
-
                 tau_tile_min = mc.tau_global if mc.tau_global < tau_tile_min else tau_tile_min
                 tau_tile_max = mc.tau_global if mc.tau_global > tau_tile_max else tau_tile_max
 
@@ -737,163 +843,72 @@ if __name__ == "__main__":
             toolset.tau_tile_min = tau_tile_min
             toolset.tau_tile_max = tau_tile_max
 
-
-            # ver1; global tau
-            #mc.tau_global = 0.0 # clear tau measure 
-            #for tile in pytools.tiles_local(grid): 
-            #    mc.comp_tau(tile, conf.N_tau) # sum over tiles # TODO
-            #
-            # MPI sum over ranks TODO no tau reduction
-            #tau_global = mc.tau_global
-            #tau_global = MPI.COMM_WORLD.allreduce(tau_global, op=MPI.SUM)
-            #mc.tau_global = tau_global
-
-            #for tile in pytools.tiles_local(grid):
-            #    mc.leak_photons(tile, conf.t_c/conf.dt, conf.tau_ext)  # apply photon escape
-
             timer.stop_comp("ph_esc")
 
-            # TODO testing second particle comm after QED
 
-            # local and global particle exchange 
-            #sch.operate( dict(name='check_outg_prtcls',     solver='tile',  method='check_outgoing_particles',     nhood='local', ) )
-            #sch.operate( dict(name='pack_outg_prtcls',      solver='tile',  method='pack_outgoing_particles',      nhood='boundary', ) )
-
-            #sch.operate( dict(name='mpi_prtcls',            solver='mpi',   method='p1',                           nhood='all', ) )
-            #sch.operate( dict(name='mpi_prtcls',            solver='mpi',   method='p2',                           nhood='all', ) )
-
-            #sch.operate( dict(name='unpack_vir_prtcls',     solver='tile',  method='unpack_incoming_particles',    nhood='virtual', ) )
-            #sch.operate( dict(name='check_outg_vir_prtcls', solver='tile',  method='check_outgoing_particles',     nhood='virtual', ) )
-            #sch.operate( dict(name='get_inc_prtcls',        solver='tile',  method='get_incoming_particles',       nhood='local', args=[grid,]) )
-
-            #sch.operate( dict(name='del_trnsfrd_prtcls',    solver='tile',  method='delete_transferred_particles', nhood='local', ) )
-            #sch.operate( dict(name='del_vir_prtcls',        solver='tile',  method='delete_all_particles',         nhood='virtual', ) )
-
+        #user injection
+        sch.operate( dict(name='star',      solver='lwall', method='inject_prtcls', nhood='local', ) )
 
         # --------------------------------------------------
-        # comm E and B
-        sch.operate( dict(name='mpi_b0', solver='mpi', method='b', ) )
-        sch.operate( dict(name='mpi_e0', solver='mpi', method='e', ) )
-        sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid,[1,2] ], nhood='local', ) )
+        # move particles 
+        sch.operate( dict(name='interp', solver='fintp',  method='solve', nhood='local', ) )
+        sch.operate( dict(name='push',   solver='pusher', method='solve', nhood='local', args=[0]) ) # e^-        
+        sch.operate( dict(name='push',   solver='pusher', method='solve', nhood='local', args=[1]) ) # e^+
+        sch.operate( dict(name='push',   solver='pusherx',method='solve', nhood='local', args=[2]) ) # x
+        sch.operate( dict(name='push',   solver='pusher', method='solve', nhood='local', args=[3]) ) # p
+        sch.operate( dict(name='ext_driving',solver='lwall', method='drive_prtcls', nhood='local',) ) # external driving
 
         # --------------------------------------------------
-        # push B half
-        sch.operate( dict(name='push_half_b1', solver='fldpropB', method='push_half_b', nhood='local',) )
-        sch.operate( dict(name='wall_bc_b',    solver='lwall',    method='update_b',    nhood='local',) )
-
-        # comm B
-        sch.operate( dict(name='mpi_b1',    solver='mpi', method='b',                 ) )
-        sch.operate( dict(name='upd_bc ',   solver='tile',method='update_boundaries',args=[grid, [2,] ], nhood='local',) )
-
-
-        # interpolate fields and push particles in x and u
-        #sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
-        #sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', ) )
-
-        #--------------------------------------------------
-        # single-body QED interactions
-        if conf.qed_mode and lap % conf.qed_step == 0:
-            timer.start_comp("qed_onebody")
-            for tile in pytools.tiles_local(grid):
-                #print("calling onebody")
-                mc.solve_onebody(tile)
-            timer.stop_comp("qed_onebody")
-
-        # --------------------------------------------------
-        # move particles (only locals tiles)
-
-        # NOTE need to recalculate the interpolation step since new particles dont have up-to-date Bpart and Epart; 
-        #      this is clearly a design error in mc.solve_onebody...
-        # DONE new PulsarPusher calculates the fields inside the prtcl loop so this is fixed
-        #      for every other pusher, need to uncomment this
-        sch.operate( dict(name='interp_em', solver='fintp',  method='solve', nhood='local', ) )
-
-        sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[0]) ) # e^-
-        sch.operate( dict(name='push',      solver='pusher', method='solve', nhood='local', args=[1]) ) # e^+
-        sch.operate( dict(name='push',      solver='pusherx',method='solve', nhood='local', args=[2]) ) # x
-
-        # clear currents; need to call this before wall operations since they can deposit currents too 
-        sch.operate( dict(name='clear_cur', solver='tile',   method='clear_current', nhood='all', ) )
-
-        # apply moving/reflecting/injecting walls
-        #if lap*conf.cfl > 1.0*conf.rad_pcap: # apply after a fraction of the disk light crossing time 
-        sch.operate( dict(name='star',     solver='lwall', method='solve', nhood='local', ) )
-
-
-        # --------------------------------------------------
-        # advance half B 
+        # advance second half of B 
         sch.operate( dict(name='push_half_b2', solver='fldpropB', method='push_half_b', nhood='local', ) )
+        sch.operate( dict(name='mpi_b2',       solver='mpi',      method='b',                 ) )
+        sch.operate( dict(name='upd_bc_b',     solver='tile',     method='update_boundaries', args=[grid, [2,] ], nhood='local',) )
         sch.operate( dict(name='wall_bc_b',    solver='lwall',    method='update_b',    nhood='local',) ) # dynamic B
-
-        # comm B
-        sch.operate( dict(name='mpi_b2', solver='mpi', method='b',                 ) )
-        sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid, [2,] ], nhood='local',) )
 
         # --------------------------------------------------
         # push E
         sch.operate( dict(name='push_e',    solver='fldpropE', method='push_e',  nhood='local', ) )
-        sch.operate( dict(name='wall_bc_e', solver='lwall',    method='update_e',nhood='local', ) )
-
-
-        # TODO current deposit + MPI was here
-
-        # --------------------------------------------------
-        # particle communication (only local/boundary tiles)
-
-        # local and global particle exchange 
-        sch.operate( dict(name='check_outg_prtcls',     solver='tile',  method='check_outgoing_particles',     nhood='local', ) )
-        sch.operate( dict(name='pack_outg_prtcls',      solver='tile',  method='pack_outgoing_particles',      nhood='boundary', ) )
-
-        sch.operate( dict(name='mpi_prtcls',            solver='mpi',   method='p1',                           nhood='all', ) )
-        sch.operate( dict(name='mpi_prtcls',            solver='mpi',   method='p2',                           nhood='all', ) )
-
-        sch.operate( dict(name='unpack_vir_prtcls',     solver='tile',  method='unpack_incoming_particles',    nhood='virtual', ) )
-        sch.operate( dict(name='check_outg_vir_prtcls', solver='tile',  method='check_outgoing_particles',     nhood='virtual', ) )
-        sch.operate( dict(name='get_inc_prtcls',        solver='tile',  method='get_incoming_particles',       nhood='local', args=[grid,]) )
-
-        sch.operate( dict(name='del_trnsfrd_prtcls',    solver='tile',  method='delete_transferred_particles', nhood='local', ) )
-        sch.operate( dict(name='del_vir_prtcls',        solver='tile',  method='delete_all_particles',         nhood='virtual', ) )
-
 
         # --------------------------------------------------
         # current calculation; charge conserving current deposition
-        # clear virtual current arrays for boundary addition after mpi, send currents, and exchange between tiles
         sch.operate( dict(name='comp_curr',     solver='currint', method='solve',             nhood='local', ) )
-        sch.operate( dict(name='clear_vir_cur', solver='tile',    method='clear_current',     nhood='virtual', ) )
+        sch.operate( dict(name='add_jext',      solver='lwall',   method='add_jext',          nhood='local', ) )
         sch.operate( dict(name='mpi_cur',       solver='mpi',     method='j',                 nhood='all', ) )
-        sch.operate( dict(name='cur_exchange',  solver='tile',    method='exchange_currents', nhood='local', args=[grid,], ) )
+        sch.operate( dict(name='cur_exchange',  solver='tile',    method='exchange_currents', nhood='all', args=[grid,], ) )
 
         # --------------------------------------------------
         # filter
         for fj in range(conf.npasses):
+            sch.operate( dict(name='upd_bc_j',     solver='tile',  method='update_boundaries',args=[grid, [0,] ], nhood='local', ) ) 
+            sch.operate( dict(name='wall_bc_j',    solver='lwall', method='update_j',         nhood='local', ) )
+            sch.operate( dict(name='filter',       solver='flt',   method='solve',            nhood='local', ) )
 
-
-            # flt uses halo=2 padding so only every 3rd (0,1,2) pass needs update
-            if fj % 2 == 0:
-                sch.operate( dict(name='mpi_cur_flt', solver='mpi', method='j', ) )
-                sch.operate( dict(name='upd_bc',      solver='tile',method='update_boundaries',args=[grid, [0,] ], nhood='local', ) )
+            if fj % 2 == 0 and fj < conf.npasses - 1: # sync mpi every 2nd pass; do not sync on the last cycle
+                sch.operate( dict(name='clear_vir_cur',solver='tile',  method='clear_current',nhood='virtual', ) )
+                sch.operate( dict(name='mpi_cur_flt',  solver='mpi',   method='j',            nhood='all',   ) ) 
                 MPI.COMM_WORLD.barrier()
-            sch.operate( dict(name='filter', solver='flt', method='solve', nhood='local', ) )
-
-
-        # --------------------------------------------------
-        # add antenna
-        #sch.antenna.update_rnd_phases()
-        #antenna.get_brms(grid)
-        #sch.operate( dict(name='add_antenna', solver='antenna', method='add_ext_cur', nhood='local', ) )
-
-        #if conf.oneD: # rotating frame current (TODO does not work)
-        #    #update bcs
-        #    sch.operate( dict(name='mpi_b3', solver='mpi', method='b', ) )
-        #    sch.operate( dict(name='mpi_e3', solver='mpi', method='e', ) )
-        #    sch.operate( dict(name='upd_bc', solver='tile',method='update_boundaries', args=[grid,[1,2] ], nhood='local', ) )
-        #    sch.operate( dict(name='add_jm', solver='lwall', method='update_j',                 nhood='local', ) )
-
 
         # --------------------------------------------------
         # add current to E
-        #sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current',       nhood='local', ) )
-        sch.operate( dict(name='wall_bc_e', solver='lwall', method='update_e',              nhood='local', ) )
+        sch.operate( dict(name='add_cur',   solver='tile',  method='deposit_current', nhood='local', ) )
+        sch.operate( dict(name='mpi_e0',    solver='mpi',   method='e', ) )
+        sch.operate( dict(name='upd_bc_e',  solver='tile',  method='update_boundaries', args=[grid,[1,] ], nhood='local', ) )
+        sch.operate( dict(name='wall_bc_e', solver='lwall', method='update_e',        nhood='local', ) )
+
+        # --------------------------------------------------
+        # particle communication (only local/boundary tiles)
+        sch.operate( dict(name='check_outg_prtcls',    solver='tile',method='check_outgoing_particles',    nhood='local', ) )
+        sch.operate( dict(name='pack_outg_prtcls',     solver='tile',method='pack_outgoing_particles',     nhood='boundary', ) )
+        sch.operate( dict(name='mpi_prtcls',           solver='mpi', method='p1',                          nhood='all', ) )
+        sch.operate( dict(name='mpi_prtcls',           solver='mpi', method='p2',                          nhood='all', ) )
+        sch.operate( dict(name='unpack_vir_prtcls',    solver='tile',method='unpack_incoming_particles',   nhood='virtual', ) )
+        sch.operate( dict(name='check_outg_vir_prtcls',solver='tile',method='check_outgoing_particles',    nhood='virtual', ) )
+        sch.operate( dict(name='get_inc_prtcls',       solver='tile',method='get_incoming_particles',      nhood='local', args=[grid,]))
+        sch.operate( dict(name='del_trnsfrd_prtcls',   solver='tile',method='delete_transferred_particles',nhood='local', ) )
+        sch.operate( dict(name='del_vir_prtcls',       solver='tile',method='delete_all_particles',        nhood='virtual', ) )
+
+        # external particle boundaries
+        sch.operate( dict(name='star', solver='lwall', method='delete_prtcls', nhood='local', ) )
 
 
         ##################################################
@@ -943,23 +958,13 @@ if __name__ == "__main__":
             #--------------------------------------------------
             # terminal plot 
             if sch.is_master:
-
-                #epar
-                #d = fld_writer.get_slice(1) # use ex xy-slice as the image
-                #d_norm = 0.1*conf.binit #
-
-                # rho
-                #d = fld_writer.get_slice(9) # rho
-                #d_norm = conf.ppc
-                #tplt.plot(np.abs(d)/d_norm)
-
                 tplt.col_mode = False
 
                 if conf.oneD:
-                    #tplt.plot_panels( (2,3),
-                    #)
-                    print('terminal plot not implemented')
-
+                    tplt.plot_panels( (2,1),
+                    dict(axs=(0,0), data=fld_writer.get_slice( 0)/conf.e_norm ,   name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
+                    dict(axs=(1,0), data=fld_writer.get_slice( 9)/conf.p_norm   , name='ne', cmap='viridis',vmin= 0, vmax=100),
+                    )
                 elif conf.twoD:
                     tplt.plot_panels( (2,3),
                     dict(axs=(0,0), data=fld_writer.get_slice( 0)/conf.e_norm ,   name='ex', cmap='RdBu'   ,vmin=-1, vmax=1),
@@ -984,11 +989,6 @@ if __name__ == "__main__":
             #print statistics
             if sch.is_master:
                 print('simulation time    {:7d} ({:7.1f} omp)   {:5.1f}%'.format( int(lap), time, 100.0*lap/conf.Nt))
-                #print('sim time {:7d} ({:7.1f} omp) ({:5.1f} H/c) ({:7.2f} l0/c) {:5.2f}%'.format(int(lap), 
-                #                                                                         time, 
-                #                                                                         lap*conf.dt/conf.t_c,
-                #                                                                         sch.antenna.tcur,
-                #                                                                         100.0*lap/conf.Nt))
 
 
             #--------------------------------------------------
@@ -1028,11 +1028,6 @@ if __name__ == "__main__":
             timer.stats("io")
 
 
-        ###################################################
-        # QED plotting
-        if conf.qed_mode and lap % conf.N_qdt == 0:
-            toolset.update_stats(grid, lap, conf)
-
 
         if lap % conf.plot_interval == 0 and live_plot:
 
@@ -1043,6 +1038,9 @@ if __name__ == "__main__":
                 toolset.update_esc_stats(mc, lap, conf) # needs to be called w/ plot_interval
                 toolset.update_esc_hists(mc, lap, conf) # needs to be called w/ plot_interval
                 mc.clear_hist() # remember to clear histogram after reading
+
+            # save data snapshot 
+            if conf.qed_mode: toolset.update_stats(grid, lap, conf)
 
             if conf.qed_mode and sch.is_master:
 
@@ -1069,19 +1067,46 @@ if __name__ == "__main__":
                 #    axs[0,2].plot(toolset.lnxs, toolset.h1_enes['esc'], drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
 
                 zs = toolset.zs
-                axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e-']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
-                axs[0,2].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw = lw, linestyle=ls,)
+                axs[0,1].plot(toolset.lnzs, toolset.h1_enes['e-']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw=lw, linestyle=ls,)
+                axs[0,2].plot(toolset.lnzs, toolset.h1_enes['e+']*zs, drawstyle='steps-pre', color=col, alpha=1.0, lw=lw, linestyle=ls,)
+
+                particles = toolset.h1_enes['e-']*zs
+                gammas = 10**toolset.lnzs
+
+                # maximum
+                try:
+                    last_nonzero = np.max(np.nonzero(particles))
+                    gam_max = gammas[last_nonzero]
+                except:
+                    gam_max = 1.0
+
+                # mean
+                gam_avg = np.sum( gammas*particles )/np.sum(particles)
+
+                # mode
+                imod = np.argmax(particles)
+                gam_mod = gammas[imod]
+
+                #print("gam_max:", gam_max, 
+                #      "rad(",gam_max/conf.gam_rad,")",
+                #      "gap(",gam_max/conf.gam_gap,")",
+                #      " gam_avg:", gam_avg, 
+                #      "rad(",gam_avg/conf.gam_rad,")",
+                #      #"gap(",gam_avg/conf.gam_gap,")",
+                #      " gam_mod:", gam_mod, 
+                #      "rad(",gam_mod/conf.gam_rad,")",
+                #      #"gap(",gam_mod/conf.gam_gap,")",
+                #      )
 
 
                 #--------------------------------------------------
                 if True: # TODO radiative balance
-                    print("g_gap:", conf.gam_gap, " g_rad:", conf.gam_rad)
-
+                    #print("g_gap:", conf.gam_gap, " g_rad:", conf.gam_rad)
                     axs[0,1].axvline(np.log10(conf.gam_gap), color='C0')
                     axs[0,2].axvline(np.log10(conf.gam_gap), color='C0')
 
-                    axs[0,1].axvline(np.log10(conf.gam_rad), color='C1')
-                    axs[0,2].axvline(np.log10(conf.gam_rad), color='C1')
+                    axs[0,1].axvline(np.log10(conf.gam_rad), color='C1', linestyle="dashed")
+                    axs[0,2].axvline(np.log10(conf.gam_rad), color='C1', linestyle="dashed")
 
 
                 # LP weight spectrum
@@ -1119,7 +1144,7 @@ if __name__ == "__main__":
                 axs[1,3].plot(ts[-1], toolset.storage.data['ene_ph'][-1], color='C2', marker='x')
 
                 #--------------------------------------------------
-                if True: # TODO debug; check energy losses
+                if False: # TODO debug; check energy losses
                     # TODO
                     alphaf = 1/137
                     rg = conf.c_omp/np.sqrt(conf.sigma)
@@ -1207,10 +1232,8 @@ if __name__ == "__main__":
             timer.stats("io2")
             #--------------------------------------------------
 
-
-            timer.start("step")  # refresh lap counter (avoids IO profiling)
-
             sys.stdout.flush()
+            timer.start("step")  # refresh lap counter (avoids IO profiling)
 
         # next step
         time += conf.cfl / conf.c_omp

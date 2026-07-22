@@ -37,6 +37,7 @@ class Configuration_Pulsar(Configuration):
             #--------------------------------------------------
             # particle info
             self.outdir += "p" + simplify_string(self.ppc)
+            self.outdir += "x" + simplify_string(self.xpc)            
             self.outdir += "np" + simplify_string(self.npasses)
             self.outdir += "_"
 
@@ -189,6 +190,24 @@ class Configuration_Pulsar(Configuration):
         self.gam_rad *= self.bratio**-0.5
         self.gam_rad *= ( 1.5*self.lamC/self.h_pcap/alphaf)**0.25
 
+        ninj_phots_per_cell = self.ninj_phots*self.xpc
+        
+        #print(ninj_phots_per_cell*(self.h_pcap/self.cfl)) #xpc_test = 136533333333.33334 for ninj=1e7 and xpc=3
+        #print(ninj_phots_per_cell*(1.0/self.cfl)) #xpc_test = 66666666.66666667 for ninj=1e7 and xpc=3        
+        #exit()
+        #Just for this test with manual injection:
+        #ninj_phots_per_cell = self.xpc/(self.h_pcap/self.cfl)
+        #ninj_phots_per_cell = self.xpc*self.cfl
+        #if(self.xpc == 0):
+        #    ninj_phots_per_cell = 1e-20
+        
+        self.gam_rad_comp = self.gam_gap**0.5
+        self.gam_rad_comp *= self.delgam_x**-0.5 #m_e c^2 / kT = 1.0 / delgam_x
+        #self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**5*self.Nmp/(ninj_phots_per_cell*self.h_pcap))**0.5
+        
+        #Use this formula when manually adding the photons:
+        self.gam_rad_comp *= (0.28*6.0*np.pi*self.cfl**4*self.Nmp/(self.xpc*self.h_pcap))**0.5
+
         # radiation length (distance that the particle travels before reaching the limit)
         self.len_rad = (self.gam_rad/self.gam_gap)*self.h_pcap # simpler v2
 
@@ -252,11 +271,15 @@ class Configuration_Pulsar(Configuration):
             print("phys:")
             print("phys:        gam_gap:", self.gam_gap)
             print("phys:        gam_rad:", self.gam_rad)
+            print("phys:        gam_rad_comp:", self.gam_rad_comp)            
             print("phys:    g_rad/g_gap:", self.gam_rad/self.gam_gap)
+            print("phys:    g_rad_comp/g_gap:", self.gam_rad_comp/self.gam_gap)            
 
             print("phys:        len_rad:", self.len_rad)
             print("star:    xcurv:", (3.0/2.0)*self.bratio*(self.rg/self.rad_curv)*self.gam_rad**3)
-          
+
+        self.gam_rad = self.gam_rad_comp
+        #exit()
         #--------------------------------------------------
         # default normalization
 
@@ -312,6 +335,7 @@ def velocity_profile(xloc, ispcs, conf):
         )
     elif ispcs == 2: # photons
         ux, uy, uz, uu = pytools.sample_blackbody(delgam)
+        #ux = np.abs(ux) #to have photons moving only to positive x-direction
 
         #if np.isnan(ux) or np.isnan(uy) or np.isnan(uz) or np.isnan(uu):
         #    sys.exit()
