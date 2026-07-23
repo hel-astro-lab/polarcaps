@@ -117,7 +117,7 @@ if __name__ == "__main__":
         import matplotlib
         import matplotlib.pyplot as plt
         from matplotlib.colors import Normalize
-        from matplotlib.cm import get_cmap
+        from matplotlib.pyplot import get_cmap
         from matplotlib import colorbar
 
         fig = plt.figure(1, figsize=(12.0, 12.0))
