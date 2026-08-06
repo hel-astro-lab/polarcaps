@@ -220,11 +220,9 @@ class Configuration_Pulsar(Configuration):
         self.xsyn = 1.5*self.bratio*(self.rg/self.rad_curv)*self.gam_rad_synch**3
 
         # 1-photon pair creation mean free path
-        lmfp1_per_h  = self.rad_curv/(self.xsyn*self.bratio) # prefactor
-        #lmfp1_per_h *= 1.0/( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*self.xsyn**2 ) )**(3/8) )
-        #                    - np.log( np.log(0.333*(alphaf*self.rad_curv/( self.lamC*self.bratio*self.xsyn**2 ) )**(3/8) )) )
+        lmfp1_per_h = (8.0/9.0) * self.rad_curv / (self.xsyn * self.bratio) # prefactor
         Afac = self.lamC*self.xsyn**2*self.bratio/(alphaf*self.rad_curv)
-        LW = 0.333/(Afac)**(3.0/8.0)
+        LW = (2.0/5.0) * Afac**(-1.0/3.0)
         chia = 1.0 / scipy.special.lambertw(LW).real
         lmfp1_per_h *= chia
         lmfp1_per_h *= 1.0/self.rad_pcap # into units of gap height

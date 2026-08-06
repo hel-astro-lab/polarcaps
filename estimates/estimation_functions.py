@@ -18,8 +18,6 @@ def comp_lmfp_1phot(x_in, b_in, r_curv, p_in):
 
     x_arr = np.atleast_1d(x_in)  # ensure array
 
-    period = p_in
-    R_LC = c * period / (2.0 * np.pi)
     rhoc = r_curv
     bs = b_in
 
@@ -27,22 +25,30 @@ def comp_lmfp_1phot(x_in, b_in, r_curv, p_in):
     lmfp_approx_out = np.zeros_like(x_arr, dtype=float)
 
     for i, epsy in enumerate(x_arr):
-        A = 0.1425 * alphaf * rhoc / (lamC * epsy**2 * bs)
 
-        def func(x):
-            return A * x**(8.0/3.0) * np.exp(-8.0/(3.0*x)) - 1
+        # Footnote 5:
+        # tau_BW ≈ 0.086 * alpha_f R_curv/(lambda_C x^2 b)
+        #          * chi_a^3 * exp[-8/(3 chi_a)]
+        A = 0.086 * alphaf * rhoc / (lamCbar * epsy**2 * bs)
 
-        root = fsolve(func, 1.0)[0]
-        chia = root
+        def func(chi):
+            return A * chi**3 * np.exp(-8.0/(3.0*chi)) - 1.0
+
+        chia = fsolve(func, 1.0)[0]
 
         lmfp = rhoc * chia / (bs * epsy)
 
-        Afac = lamC * epsy**2 * bs / (alphaf * rhoc)
-        chiaWa = 1.0 / (
-            np.log(0.333 / Afac**(3.0/8.0))
-            - np.log(np.log(0.333 / Afac**(3.0/8.0)))
+        # Eq. (21), using W(z) ≈ ln(z) - ln[ln(z)]
+        Warg = (
+            alphaf * rhoc /
+            (16.0 * lamCbar * epsy**2 * bs)
+        )**(1.0/3.0)
+
+        chia_approx = (8.0/9.0) / (
+            np.log(Warg) - np.log(np.log(Warg))
         )
-        lmfp_approx = (rhoc / (bs * epsy)) * chiaWa
+
+        lmfp_approx = rhoc * chia_approx / (bs * epsy)
 
         lmfp_out[i] = lmfp
         lmfp_approx_out[i] = lmfp_approx
