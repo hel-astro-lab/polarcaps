@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
     #axs[0,0].set_ylabel(r"$E/E_\mathrm{rot}$")
     #axs[1,0].set_ylabel(r"$k \hat{S}_{k} (k)$")
-    axs[0,0].set_ylabel(r"$|\hat{E}_{k}^2|$")
+    axs[0,0].set_ylabel(r"$|\hat{E}_{k}|^2$")
 
     #axs[0,0].set_xlabel(r"$h/H_\mathrm{pc}$")
     axs[0,0].set_xlabel(r"$k H_\mathrm{gap}$")
@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
     axs[0,0].set_xscale("log")
     axs[0,0].set_yscale("log")
-    axs[0,0].set_xlim((1.0, 1e4))
+    axs[0,0].set_xlim((1e1, 5e4))
     #axs[0,0].set_ylim((1e-8, 1e8))
     axs[0,0].set_ylim((1e-8, 1e2))
 
@@ -193,8 +193,8 @@ if __name__ == "__main__":
         # spec
 
         nx = len(ex)
-        dx = 1.0/Lh
-        ks = np.fft.rfftfreq(nx, d=dx)
+        dx = 1.0/conf.rad_pcap
+        ks = 2.0*np.pi*np.fft.rfftfreq(nx, d=dx)
 
         # fourier spec of EM fields
         #ex_s  = ks*np.abs( np.fft.rfft(ex) )
@@ -218,10 +218,10 @@ if __name__ == "__main__":
         hwin = np.hamming(len(ex)) # add Hamming window to the data since this is not a periodic function in x
 
         # E field energy
-        ex_s  = np.fft.rfft(hwin*ex)**2
-        ey_s  = np.fft.rfft(hwin*ey)**2
-        ez_s  = np.fft.rfft(hwin*ez)**2
-        ex_s2 = np.fft.rfft(hwin*ex_flt)**2
+        ex_s  = np.abs(np.fft.rfft(hwin*ex))**2
+        ey_s  = np.abs(np.fft.rfft(hwin*ey))**2
+        ez_s  = np.abs(np.fft.rfft(hwin*ez))**2
+        ex_s2 = np.abs(np.fft.rfft(hwin*ex_flt))**2
 
         #axs[0,0].plot(ks, np.abs(ey_s), lw=lw, linestyle='solid', color='C1', alpha=0.8)
         #axs[0,0].plot(ks, np.abs(ez_s), lw=lw, linestyle='solid', color='C2', alpha=0.8)
@@ -230,7 +230,7 @@ if __name__ == "__main__":
         #axs[0,0].plot(ks, np.abs(ez_s)*1e6, lw=lw, linestyle='solid', color='C2', alpha=0.8)
         ##axs[1,0].plot(ks, np.abs(ex_s2), lw=lw,linestyle='solid', color='C3', alpha=0.8)
 
-        axs[0,0].plot(ks, np.abs(ex_s), lw=lw, linestyle='solid', color='C0', alpha=0.8)
+        axs[0,0].plot(ks, ex_s, lw=lw, linestyle='solid', color='C0', alpha=0.8)
 
     #--------------------------------------------------
     # time stamp
@@ -243,14 +243,14 @@ if __name__ == "__main__":
     #--------------------------------------------------
     # manual slopes
 
-    ks = np.array([1e2, 1e3])
+    ks = 2.0*np.pi*np.array([1e2, 1e3])
     ek = ks**-1.0
-    ek[:] *= 5e0/ek[0]
+    ek[:] *= 3e0/ek[0]
     axs[0,0].plot(ks, ek, color="k", linestyle="dashed", lw=1.5)
 
-    ks = np.array([2e3, 6e3])
+    ks = 2.0*np.pi*np.array([2e3, 6e3])
     ek = ks**-5.0
-    ek[:] *= 2e-1/ek[0]
+    ek[:] *= 8e-2/ek[0]
     axs[0,0].plot(ks, ek, color="k", linestyle="dashed", lw=1.5)
 
     #--------------------------------------------------
@@ -282,7 +282,7 @@ if __name__ == "__main__":
     ks_low_msp_phys = ( M_low * 1.0e9*g3_low )**0.5 * np.ones(2)
     ks_high_msp_phys = ( M_high * 1.0e9*g3_high )**0.5 * np.ones(2)
 
-    ek = [5e-1, 5e1]
+    ek = [9e-1, 9e1]
     axs[0,0].plot(ks_low, ek, color="r", linestyle="dashed", lw=1.5)
     axs[0,0].plot(ks_high, ek, color="r", linestyle="dashed", lw=1.5)
 
@@ -324,6 +324,3 @@ if __name__ == "__main__":
     #fname = fdir + 'fig_kspec_PRL_' + slap + '.png' 
     fname = fdir + 'fig_kspec_PRL_' + slap + '.pdf'     
     plt.savefig(fname, dpi=300,bbox_inches='tight')
-
-
-
