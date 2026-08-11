@@ -186,16 +186,18 @@ print("t_esc [s]: ",t_esc)
 print("t_p,co [s]: ",t_p_gj)
 
 
-mpl = 10
-g3 = 1e-2
+mpl_min = 10
+mpl_max = 100
+g3_min = 1e-2
+g3_max = 1e-1
 omega_B = echarge*Bfield/(m_e*c)
-osc_freq = (mpl*g3*omega_B*beta_pc/t_esc)**0.5
-print("osc_freq [Hz]:", osc_freq)
+osc_freq_min = (mpl_min*g3_min*omega_B*beta_pc/t_esc)**0.5
+osc_freq_max = (mpl_max*g3_max*omega_B*beta_pc/t_esc)**0.5
+print("osc_freq [MHz]:", osc_freq_min/(1e6*2.0*np.pi), " - ", osc_freq_max/(1e6*2.0*np.pi))
 #exit()
 
 # characteristic synchrotron photon energy
-xsyn = 1.5*bratio*(r_g/rad_curv)*gam_rad_syn**3
-#xsyn = 1.5*bratio*(r_g/rad_curv)*(1e-1*gam_rad_syn)**3
+xsyn = 1.5*bratio*(r_g/rad_curv)*gam_smallest**3
 print()
 print("xsyn [m_e x c^2]: ",xsyn)
 
