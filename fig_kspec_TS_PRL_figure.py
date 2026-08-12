@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
     #axs[0,0].set_ylabel(r"$E/E_\mathrm{rot}$")
     #axs[1,0].set_ylabel(r"$k \hat{S}_{k} (k)$")
-    axs[0,0].set_ylabel(r"$|\hat{E}_{k}|^2$")
+    axs[0,0].set_ylabel(r"$|\hat{E}_{x}|^2$")
 
     #axs[0,0].set_xlabel(r"$h/H_\mathrm{pc}$")
     axs[0,0].set_xlabel(r"$k H_\mathrm{gap}$")
