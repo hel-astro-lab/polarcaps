@@ -103,7 +103,7 @@ if __name__ == "__main__":
     axs[0,0].set_yscale("log")
     axs[0,0].set_xlim((1e1, 5e4))
     #axs[0,0].set_ylim((1e-8, 1e8))
-    axs[0,0].set_ylim((1e-8, 1e2))
+    axs[0,0].set_ylim((1e-7, 5e2))
 
 
     # grid configuration
@@ -282,7 +282,7 @@ if __name__ == "__main__":
     ks_low_msp_phys = ( M_low * 1.0e9*g3_low )**0.5 * np.ones(2)
     ks_high_msp_phys = ( M_high * 1.0e9*g3_high )**0.5 * np.ones(2)
 
-    ek = [9e-1, 9e1]
+    ek = [5e0, 2e2]
     axs[0,0].plot(ks_low, ek, color="r", linestyle="dashed", lw=1.5)
     axs[0,0].plot(ks_high, ek, color="r", linestyle="dashed", lw=1.5)
 
