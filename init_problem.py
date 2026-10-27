@@ -232,13 +232,37 @@ class Configuration_Pulsar(Configuration):
         x2 = 2.7*self.delgam_x
         comp_scale = 6.0*np.pi*self.cfl**5*self.Nmp/(n_phot*self.h_pcap)
         gam_smaller = np.minimum(self.gam_rad_comp,self.gam_gap)*1e-2 #Scaled smaller to increase 2-photon mfp
-        x1 = x2*(gam_smaller**2)/(1+gam_smaller*x2)
+        x1 = 4.0*x2*(gam_smaller**2)/(1.0 + 4.0*gam_smaller*x2) # head-on IC energy, Eq. (6) in the paper
         #x1 = x2 + x2*(4.0/3.0)*gam_smaller**2 #Thomson
 
         xpr = x1*x2
         efac = 0.652*(xpr**2-1.0)*np.log(xpr)*np.heaviside(xpr-1.0,1.0)/xpr**3
         efac = 1.0/efac
-        lmfp2_per_h = comp_scale*efac
+        lmfp2_per_h = comp_scale*efac # angle-averaged (Coppi & Blandford 1990), head-on IC
+
+        # 2-photon mfp for a fixed collision angle psi = theta (Eqs. A10, A13, A14 in the paper);
+        # comp_scale = 1/(sigma_T n_ph H), so l_mfp/H = comp_scale/[(1-cos theta) sigma_gg(s)/sigma_T]
+        def sigma_bw(s): # Breit-Wheeler cross section in units of sigma_T; threshold s = 1
+            if s <= 1.0: return 0.0
+            b = np.sqrt(1.0 - 1.0/s) # beta_cm
+            return (3.0/16.0)*(1.0 - b*b)*((3.0 - b**4)*np.log((1.0 + b)/(1.0 - b)) - 2.0*b*(2.0 - b*b))
+
+        # 1-photon mfp for a photon of energy x (same estimate as lmfp1comp_per_h below)
+        def lmfp1_per_h_of_x(x):
+            l = self.rad_curv/(x*self.bratio)
+            Afac = self.lamC*x**2*self.bratio/(alphaf*self.rad_curv)
+            LW = 0.333/(Afac)**(3.0/8.0)
+            l *= 1.0/scipy.special.lambertw(LW).real
+            return l/self.rad_pcap # into units of gap height
+
+        lmfp2_angle_per_h = {}
+        lmfp1_angle_per_h = {}
+        for psi_deg in (180.0, 90.0, 30.0, 10.0):
+            omc = 1.0 - np.cos(np.radians(psi_deg)) # 1 - cos(psi), using beta ~ 1
+            x1a = 2.0*x2*gam_smaller**2*omc/(1.0 + 2.0*gam_smaller*x2*omc) # IC energy at angle psi, Eq. (A10)
+            sg = sigma_bw(0.5*x1a*x2*omc)
+            lmfp2_angle_per_h[psi_deg] = comp_scale/(omc*sg) if sg > 0.0 else np.inf
+            lmfp1_angle_per_h[psi_deg] = lmfp1_per_h_of_x(x1a) # depends on psi only through the photon energy
 
 
         # Calculation of 1-photon pair creation mean free path for a 1-time Compton scattered photon
@@ -313,6 +337,8 @@ class Configuration_Pulsar(Configuration):
 
             print("time")
             print("time:         t_esc:", self.rad_pcap/self.cfl, " laps")
+            print("time:         t_acc:", self.cfl/self.vrot/self.bstar, " laps")
+            print("time:         t_acc/t_esc:", self.cfl**2/self.vrot/self.bstar/self.rad_pcap)
 
             print("phys:")
             print("phys:        gam_gap:", self.gam_gap)
@@ -324,6 +350,10 @@ class Configuration_Pulsar(Configuration):
             print("phys:  1-photon (after synchrotron) mfp/H:", lmfp1_per_h)
             print("phys:  1-photon (after Compton) mfp/H:", lmfp1comp_per_h)
             print("phys:  2-photon (after Compton) mfp/H:", lmfp2_per_h)
+            for psi_deg, lm in lmfp1_angle_per_h.items():
+                print("phys:  1-photon (after Compton, psi={:g} deg) mfp/H:".format(psi_deg), lm)
+            for psi_deg, lm in lmfp2_angle_per_h.items():
+                print("phys:  2-photon (after Compton, psi=theta={:g} deg) mfp/H:".format(psi_deg), lm)
 
             print("phys:  Compton cooling mfp/H:", lmfp_compcool_per_h)
 

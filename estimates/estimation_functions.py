@@ -184,3 +184,83 @@ def solve_gamma_newton(a, C):
     gamma0 = np.sqrt(C)  # Thomson guess
     return newton(balance_eq, gamma0, fprime=balance_eq_prime, args=(a, C))    
        
+
+
+# -------------------------------------------------
+# Angle-dependent Compton and two-photon estimates
+# -------------------------------------------------
+def comp_eps_ic(gamma, eps_bb, psi):
+    """
+    Maximum (back-scattered) IC photon energy [m_e c^2] for a soft photon of
+    energy eps_bb [m_e c^2] colliding with a particle of Lorentz factor gamma
+    at angle psi [rad] between the particle velocity and the photon direction
+    (psi = pi is head-on). Valid also in the KN regime:
+        eps_IC = 2 gamma^2 eps (1 - beta cos psi) / (1 + 2 gamma eps (1 - beta cos psi)).
+    For psi = pi (and beta ~ 1) this reduces to 4 gamma^2 eps / (1 + 4 gamma eps).
+    """
+    beta = np.sqrt(1.0 - 1.0/gamma**2)
+    a = gamma*eps_bb*(1.0 - beta*np.cos(psi))
+    return 2.0*gamma*a/(1.0 + 2.0*a)
+
+
+def sigma_bw(s):
+    """
+    Breit-Wheeler two-photon pair-production cross section in units of sigma_T
+    as a function of s = eps1 eps2 (1 - cos theta)/2 (threshold s = 1),
+    e.g. Gould & Schreder (1967).
+    """
+    s = np.asarray(s, dtype=float)
+    out = np.zeros_like(s)
+    m = s > 1.0
+    b = np.sqrt(1.0 - 1.0/s[m])
+    out[m] = (3.0/16.0)*(1.0 - b**2)*((3.0 - b**4)*np.log((1.0 + b)/(1.0 - b))
+                                     - 2.0*b*(2.0 - b**2))
+    return out
+
+
+def comp_lmfp_2phot_angle(x1, Tkev, theta):
+    """
+    Two-photon pair-production mean free path [cm] of a photon with energy
+    x1 [m_e c^2] moving through a blackbody photon field of temperature
+    Tkev [keV] whose photons all collide with it at the fixed angle theta [rad]
+    (theta = pi is head-on). The target photons are taken to be monoenergetic,
+    eps2 = 2.7 kT (as in comp_lmfp_2phot), with the blackbody number density n_BB:
+        1/l = (1 - cos theta) n_BB sigma_T sigma_BW(eps1 eps2 (1 - cos theta)/2),
+    where sigma_BW is given by sigma_bw (in units of sigma_T).
+    """
+    sigT = 6.65246e-25
+    hplanck = 6.6261e-27
+    c = 2.9979e10
+    kev2erg = 1.602176633e-9
+    x1, Tkev = np.broadcast_arrays(np.atleast_1d(x1).astype(float),
+                                   np.atleast_1d(Tkev).astype(float))
+    Theta = Tkev/511.0
+    kTperhc = kev2erg*Tkev/(hplanck*c)
+    nBB = 16.0*np.pi*1.202*kTperhc**3
+    omc = 1.0 - np.cos(theta)
+    s = x1*2.7*Theta*omc/2.0
+    rate = omc*nBB*sigT*sigma_bw(s)
+    with np.errstate(divide="ignore"):
+        return np.where(rate > 0.0, 1.0/np.where(rate > 0.0, rate, 1.0), np.inf)
+
+
+def sigma_KN(x):
+    """Total Klein-Nishina cross section in units of sigma_T; x = photon energy in the electron
+    rest frame [m_e c^2]."""
+    x = np.asarray(x, dtype=float)
+    return 0.75*(((1+x)/x**3)*(2*x*(1+x)/(1+2*x) - np.log1p(2*x))
+                 + np.log1p(2*x)/(2*x) - (1+3*x)/(1+2*x)**2)
+
+
+def comp_lmfp_scatter_iso(gamma, eps, nBB, nmu=2001):
+    """Compton scattering length [cm] (mean distance between scatterings) of a particle with Lorentz
+    factor gamma in an isotropic, monoenergetic photon field (energy eps [m_e c^2], density nBB):
+        1/l = nBB sigma_T < (1 - beta mu) sigma_KN(eps') >_mu ,  eps' = gamma eps (1 - beta mu).
+    gamma, eps and nBB may be arrays of equal shape."""
+    sigT = 6.65246e-25
+    gamma, eps, nBB = np.broadcast_arrays(np.asarray(gamma, float), np.asarray(eps, float), np.asarray(nBB, float))
+    mu = np.linspace(-1.0, 1.0, nmu)
+    beta = np.sqrt(1.0 - 1.0/gamma**2)[..., None]
+    fac = (1.0 - beta*mu)
+    avg = np.trapezoid(fac*sigma_KN(gamma[..., None]*eps[..., None]*fac), mu, axis=-1)/2.0
+    return 1.0/(nBB*sigT*avg)

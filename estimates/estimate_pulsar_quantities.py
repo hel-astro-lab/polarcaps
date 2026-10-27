@@ -1,9 +1,25 @@
 import numpy as np
+import sys
 
 #setup="rp"
 setup="msp"
 #setup="msp_hot"
 #setup="wd"
+
+# ---------------------------------------------------------------
+# Options for the mean-free-path figure
+# ---------------------------------------------------------------
+# psi_deg: collision angle between the particle and the soft photon in the
+#          Compton up-scattering (180 = head-on)
+psi_deg = 180.0
+# pair_mode = "coppi": angle-averaged (isotropic) two-photon mfp of Coppi & Blandford (1990)
+# pair_mode = "angle": fixed collision angle theta = psi also in the two-photon process
+pair_mode = "coppi"
+
+# optional command-line overrides: python estimate_pulsar_quantities.py msp angle 180
+if len(sys.argv) > 1: setup = sys.argv[1]
+if len(sys.argv) > 2: pair_mode = sys.argv[2]
+if len(sys.argv) > 3: psi_deg = float(sys.argv[3])
 
 if setup=="rp":
     tkev = 0.015 #keV
@@ -154,25 +170,6 @@ lmfp_compton_KN = gam_smallest*m_e*c**3/P_C_KN
 lmfp_compton = lmfp_compton_KN
 
 
-f_sigma_KN = lambda x: (3/4)*(
-    ((1+x)/x**3)*(2*x*(1+x)/(1+2*x) - np.log1p(2*x))
-    + np.log1p(2*x)/(2*x)
-    - (1+3*x)/(1+2*x)**2
-)
-
-#x = 4*gam_smallest*av_ene/(m_e*c**2)
-#lmfp_compton_KN_bfsc = 1.0/(nBB*sigT*f_sigma_KN(x))
-
-#print(gam_smallest)
-#print(lmfp_compton_KN / lmfp_compton_KN_bfsc)
-#print((3.0/4.0)*m_e*c**2/(gam_smallest*av_ene))
-
-#N_sc = nBB * sigT * f_sigma_KN(x) * r_pcap
-#print(N_sc)
-#print(n_gj*N_sc*r_pcap)
-#exit()
-
-#lmfp_compton = lmfp_compton_KN_bfsc
 
 t_x_comp = lmfp_compton/c
 
@@ -213,14 +210,17 @@ gam_rad_compton = np.minimum(gam_rad_compton, gam_gap)
 #xcomp = x2*gam_rad_compton**2/(1+gam_rad_compton*x2)
 
 #gam_scaling = [1.0]
+from estimation_functions import comp_eps_ic, comp_lmfp_2phot_angle, comp_lmfp_scatter_iso
+
 if setup=="wd":
     gam_scaling = [1e-2,1e-1,1e0]
     linestyles = ["dashed","dotted","solid"]
-    labels = ["$10^{-2}\,\gamma_{\mathrm{max}}$","$10^{-1}\,\gamma_{\mathrm{max}}$","$\gamma_{\mathrm{max}}$"]    
+    labels = [r"$10^{-2}\,\gamma_{\mathrm{max}}$",r"$10^{-1}\,\gamma_{\mathrm{max}}$",r"$\gamma_{\mathrm{max}}$"]    
 else:
     gam_scaling = [1e-3,1e-2,1e0]
     linestyles = ["dashdot","dashed","solid"]
-    labels = ["$10^{-3}\,\gamma_{\mathrm{max}}$","$10^{-2}\,\gamma_{\mathrm{max}}$","$\gamma_{\mathrm{max}}$"]
+    labels = [r"$10^{-3}\,\gamma_{\mathrm{max}}$",r"$10^{-2}\,\gamma_{\mathrm{max}}$",r"$\gamma_{\mathrm{max}}$"]
+psi_list = [np.radians(psi_deg)]*len(gam_scaling)
 
 lmfp_1phot_arr = []*len(gam_scaling)
 lmfp_2phot_arr = []*len(gam_scaling)
@@ -228,7 +228,8 @@ lmfp_compton_arr = []*len(gam_scaling)
 
 for ig in range(0,len(gam_scaling)):
 
-    xcomp = x2*(gam_scaling[ig]*gam_smallest)**2/(1+gam_scaling[ig]*gam_smallest*x2)
+    # IC photon energy for collision angle psi (psi = pi gives 4 g^2 e/(1 + 4 g e)):
+    xcomp = comp_eps_ic(gam_scaling[ig]*gam_smallest, x2, psi_list[ig])
 
     print("xcomp [m_e x c^2]: ",xcomp)
     print()
@@ -236,8 +237,8 @@ for ig in range(0,len(gam_scaling)):
     P_C_KN = 4.0*sigT*c*(gam_scaling[ig]*gam_smallest)**2*U_x*f_kn_exact(gam_scaling[ig]*gam_smallest,a)/3.0
     lmfp_compton_KN = gam_scaling[ig]*gam_smallest*m_e*c**3/P_C_KN
     
-    x = 4*gam_scaling[ig]*gam_smallest*av_ene/(m_e*c**2)
-    lmfp_compton_KN_bfsc = 1.0/(nBB*sigT*f_sigma_KN(x))    
+    # Compton scattering length (distance between scatterings) in an isotropic photon field
+    lmfp_compton_KN_bfsc = comp_lmfp_scatter_iso(gam_scaling[ig]*gam_smallest, x2, nBB)
     
     #lmfp_compton_arr.append(lmfp_compton_KN)
     lmfp_compton_arr.append(lmfp_compton_KN_bfsc)
@@ -262,7 +263,10 @@ for ig in range(0,len(gam_scaling)):
 
     #Next 2-photon mean free path (between curvature and thermal photons):
     from estimation_functions import comp_lmfp_2phot
-    lmfp_2phot = comp_lmfp_2phot(x1,tkev)
+    if pair_mode=="angle":
+        lmfp_2phot = comp_lmfp_2phot_angle(x1,tkev,psi_list[ig])
+    else:
+        lmfp_2phot = comp_lmfp_2phot(x1,tkev)
     print("lmfps_2phot/Rpc: ", lmfp_2phot/r_pcap)
     lmfp_2phot_arr.append(lmfp_2phot)
 
@@ -339,8 +343,8 @@ if tgrid_plot:
 
     ax.axhline(y=1.0, color='grey', linestyle='-',linewidth=lwidth)
 
-    ax.set_xlabel("$T_{\mathrm{BB}} [\mathrm{K}]$",fontsize=lbfontsz)
-    ax.set_ylabel("$l_{\mathrm{mfp}}/H_{\mathrm{gap}}$",fontsize=lbfontsz)
+    ax.set_xlabel(r"$T_{\mathrm{BB}} [\mathrm{K}]$",fontsize=lbfontsz)
+    ax.set_ylabel(r"$l_{\mathrm{mfp}}/H_{\mathrm{gap}}$",fontsize=lbfontsz)
     #ax.set_ylim(1e-3,1e3)
     
     if setup=="wd":
@@ -357,7 +361,7 @@ if tgrid_plot:
         functions=(lambda K: K / keV2Kelvin,
                    lambda keV: keV * keV2Kelvin)
     )
-    secax.set_xlabel("$k_\mathrm{B}T_{\mathrm{BB}} [\mathrm{keV}]$",fontsize=lbfontsz,labelpad=12) 
+    secax.set_xlabel(r"$k_\mathrm{B}T_{\mathrm{BB}} [\mathrm{keV}]$",fontsize=lbfontsz,labelpad=12) 
 
     if setup=="wd":
         secax.set_xticks([0.005, 0.01, 0.02, 0.05])
@@ -366,25 +370,25 @@ if tgrid_plot:
         secax.set_xticks([0.01, 0.03, 0.1, 0.2, 0.5])
         secax.set_xticklabels(["$0.01$","$0.03$","$0.1$","$0.2$", "$0.5$"])
 
+    from matplotlib.ticker import NullFormatter
+    ax.xaxis.set_minor_formatter(NullFormatter())
+    secax.xaxis.set_minor_formatter(NullFormatter())
     ax.tick_params(axis='both', which='both', width=lwidth, length=5.0) 
     secax.tick_params(axis='both', which='both', width=lwidth,length=5.0) 
-    #ax.set_title("$\gamma_{\mathrm{rad}}$",fontsize=lbfontsz)
+    #ax.set_title(r"$\gamma_{\mathrm{rad}}$",fontsize=lbfontsz)
 
     #legend_lines = [
-    #    Line2D([0], [0], color='black', linestyle=linestyles[0], label="$0.0001\gamma_{\mathrm{max}}$"),
-    #    Line2D([0], [0], color='black', linestyle=linestyles[1], label="$0.001\gamma_{\mathrm{max}}$"),
-    #    Line2D([0], [0], color='black', linestyle=linestyles[2], label="$0.01\gamma_{\mathrm{max}}$"),
-    #    Line2D([0], [0], color='black', linestyle=linestyles[3], label="$0.1\gamma_{\mathrm{max}}$"),
-    #    Line2D([0], [0], color='black', linestyle=linestyles[4], label="$\gamma_{\mathrm{max}}$"),                
+    #    Line2D([0], [0], color='black', linestyle=linestyles[0], label=r"$0.0001\gamma_{\mathrm{max}}$"),
+    #    Line2D([0], [0], color='black', linestyle=linestyles[1], label=r"$0.001\gamma_{\mathrm{max}}$"),
+    #    Line2D([0], [0], color='black', linestyle=linestyles[2], label=r"$0.01\gamma_{\mathrm{max}}$"),
+    #    Line2D([0], [0], color='black', linestyle=linestyles[3], label=r"$0.1\gamma_{\mathrm{max}}$"),
+    #    Line2D([0], [0], color='black', linestyle=linestyles[4], label=r"$\gamma_{\mathrm{max}}$"),                
     #]
     
-    legend_lines = [
-        Line2D([0], [0], color='black', linestyle=linestyles[0], label=labels[0]),
-        Line2D([0], [0], color='black', linestyle=linestyles[1], label=labels[1]),
-        Line2D([0], [0], color='black', linestyle=linestyles[2], label=labels[2]),                
-    ]         
-       
-    plt.legend(handles=legend_lines, fontsize=22)
+    legend_lines = [Line2D([0], [0], color='black', linestyle=linestyles[i], label=labels[i])
+                    for i in range(len(labels))]
+
+    plt.legend(handles=legend_lines, fontsize=22, loc="upper right")
 
     #plt.legend(fontsize=22)
     
@@ -393,16 +397,28 @@ if tgrid_plot:
         boxlabel = "WD"
     elif setup=="rp":
         boxlabel = "RP"
-    
+    if psi_deg!=180.0 or pair_mode!="coppi":
+        boxlabel = boxlabel + r", $\psi = %g^\circ$" % psi_deg
+        if pair_mode=="angle":
+            boxlabel = boxlabel + "\n" + r"$\gamma\gamma$: $\theta = \psi$"
+        else:
+            boxlabel = boxlabel + "\n" + r"$\gamma\gamma$: angle-averaged"
+
+    box_xy, box_va = (0.3, 0.95), "top"
+    if psi_deg!=180.0 or pair_mode!="coppi":
+        box_xy, box_va = (0.04, 0.04), "bottom"   # lower left, away from the legend
     ax.text(
-        0.5, 0.95,                 # position
+        box_xy[0], box_xy[1],                 # position
         boxlabel,
         transform=ax.transAxes,     # use axes coordinates
         fontsize=22,
-        verticalalignment="top",
+        verticalalignment=box_va,
         bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
     )    
     
     plt.tight_layout()
-    fig.savefig("lmfp_vs_x.png",dpi=300.0)
+    if psi_deg!=180.0 or pair_mode!="coppi":
+        fig.savefig("lmfp_%s_psi%g_%s.png" % (setup.upper(), psi_deg, pair_mode), dpi=300.0)
+    else:
+        fig.savefig("lmfp_vs_x.png",dpi=300.0)
 
